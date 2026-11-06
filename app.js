@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 58; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 59; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -710,7 +710,7 @@
         <span class="sp"></span><button class="chip${CX.hand === 'R' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="R">右手</button><button class="chip${CX.hand === 'L' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="L">左手</button><button class="chip${CX.hand === 'B' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="B">双手</button></div></div>
       <p class="explain"><b>${D(c.sym)}</b>：以 ${D(c.root.name)} 为根音的${c.quality.zh}，${qi[2]}，听起来${qi[1]}。${invi ? `${INV[invi][0]}：最下面弹 ${D(bottom.name)}（${INV[invi][1]}），所以写成 ${D(c.sym)}，斜线后面就是最低音。` : '原位：根音 ' + D(c.root.name) + ' 在最下面。'}键盘上的数字是手指（1 = 拇指，5 = 小指）${CX.hand === 'B' ? '，蓝色是左手（低八度），橙色是右手' : CX.hand === 'L' ? '，左手在低八度' : ''}。<a href="#know-k0">看不懂？</a></p>
       ${pager('chord', [
-        ['小进行', `${(() => { const ctx = chordContext(c); return ctx ? `<h3>先在小进行里听它</h3><p class="fine">${ctx[1]} · 点一下听，跟着弹</p>${progRow(c.root.name, ctx[0])}` : '<p class="fine">这个和弦没有常用的小进行。</p>'; })()}`],
+        ['小进行', `${(() => { const ctx = chordContext(c); return ctx ? `<h3>先在小进行里听它</h3><p class="fine">${ctx[1]} · 点一下听，跟着弹</p>${progRow(c.root.name, ctx[0])}<div class="pills"><button class="pill rlprog" data-act="rollprog" data-k="${esc(c.root.name)}" data-c="${esc(ctx[0].join(','))}" data-t="${esc(ctx[0].map(D).join(' → '))}">▶ 跟练这个小进行 · 全屏</button></div>` : '<p class="fine">这个和弦没有常用的小进行。</p>'; })()}`],
         ['曲子里', `<h3>在曲子里找到它</h3>${chordFinds(c)}<a class="link" href="#browse-${encodeURIComponent(c.root.name + c.q)}"><small>浏览</small><b>曲库里所有和弦 · 有的和没有的</b><span>→</span></a><a class="link" href="#combo"><small>连起来记</small><b>组合和弦：一串一串记</b><span>→</span></a>`],
         ['练', `${arp.white && T.Q[CX.q].ints.length === 3 && !CX.q.startsWith('sus') ? `<a class="link" href="#arp-${CX.root + CX.q}"><small>练这个和弦</small><b>${D(CX.root + CX.q)} 琶音 · 带指法和收音</b><span>→</span></a>` : ''}<a class="link" href="#combo"><small>连起来记</small><b>组合和弦：一串一串记</b><span>→</span></a>`],
       ])}`;
@@ -2135,6 +2135,7 @@
   function rollBuild(kind) {
     if (kind === 'song') { const s = allSongs().find(x => x.id === route[1]); RL.maxLv = hasFull(s.id) ? 3 : 2; RL.lvl3name = '两只手全部音符'; if (RL.lvl > RL.maxLv || (RL.lvl === 3 && rollPassed() < 2)) RL.lvl = 1; const bars = s.sections.flatMap(x => parseBars(x.bars)); return { title: s.title, bpm: s.bpm || 80, data: RL.lvl === 3 ? rollFromFull(s) : rollFromBars(bars, s.key, 4, sectionStarts(s)[0], RL.lvl === 1) }; }
     if (kind === 'sing') { const song = SING.find(x => x.id === route[1]) || SING[0], pat = singPat(song); RL.maxLv = 3; RL.lvl3name = '旋律 + ' + pat.name; if (RL.lvl === 3 && rollPassed() < 2) RL.lvl = 1; return { title: song.title, bpm: song.bpm, data: rollFromSing(song, pat, RL.lvl) }; }
+    if (kind === 'prog' && RL.prog) { const p = RL.prog; RL.maxLv = 2; if (RL.lvl > 2) RL.lvl = 1; return { title: p.title, bpm: 72, data: rollFromBars([].concat(p.chords, p.chords).map(x => [x]), p.key, 2, 1, RL.lvl === 1) }; }
     if (kind === 'combo') { const cb = COMBOS.find(x => x.id === route[1]), ch = cbChords(cb); RL.maxLv = 2; if (RL.lvl > 2) RL.lvl = 1; return { title: cb.name + ' · ' + cb.alias, bpm: 72, data: rollFromBars([].concat(ch, ch).map(x => [x]), cbKey(cb), 2, 1, RL.lvl === 1) }; }
   }
   function rollOpen(kind) {
@@ -2936,6 +2937,7 @@
       case 'rlmode': RL.mode = el.dataset.v; Roll.stop(); drillStop(); if (document.querySelector('.rollfs')) rollOpen(); else render(); break;
       case 'rllvl': if (el.dataset.locked) { toast('先在「中等」用「等你弹」一遍弹对，困难才解锁'); break; } RL.lvl = +el.dataset.v; Roll.stop(); drillStop(); if (document.querySelector('.rollfs')) rollOpen(); else render(); break;
       case 'rollopen': rollOpen(el.dataset.k); break;
+      case 'rollprog': RL.prog = { key: el.dataset.k, chords: el.dataset.c.split(','), title: el.dataset.t }; rollOpen('prog'); break;
       case 'rollclose': rollClose(); break;
       case 'rlgo': {
         // 横屏全屏里点开始：左边选项自动收起，整个屏幕给彩条和键盘（左上角「选项 ›」可以再打开）
