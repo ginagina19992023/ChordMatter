@@ -1152,7 +1152,7 @@
   }
   // ---------------- 和弦的「体块」：一小块大谱表，每个音换成一根横条（位置 = 五线谱上的高低，颜色 = 感觉色）----------------
   const LETTER = { C: 0, D: 1, E: 2, F: 3, G: 4, A: 5, B: 6 };
-  function chordShape(sym, key, w = 64, h = 58) {
+  function chordShape(sym, key, w = 64, h = 68) {
     const c = T.parseChord(sym); if (!c) return '';
     const b = c.bass || c.root; let bm = 36 + b.pc; if (bm < 40) bm += 12;
     const step = (name, midi) => { const L = LETTER[name[0]]; let oct = Math.floor(midi / 12) - 1; if (name.startsWith('B#')) oct -= 1; if (name.startsWith('Cb')) oct += 1; return L + 7 * oct; };
@@ -1162,7 +1162,10 @@
     const lines = [30, 32, 34, 36, 38, 18, 20, 22, 24, 26].map(st => `<line x1="0" x2="${w}" y1="${y(st).toFixed(1)}" y2="${y(st).toFixed(1)}"/>`).join('');
     const ledger = notes.some(n => n.st === 28) ? `<line class="ldg" x1="${w * 0.3}" x2="${w * 0.7}" y1="${y(28).toFixed(1)}" y2="${y(28).toFixed(1)}"/>` : '';
     const f = klCfg().feel ? chordFunc(sym, key) : 'N';
-    const bars = notes.map(n => `<rect class="${n.L ? 'lh' : 'rh'}" x="${w * 0.14}" y="${(y(n.st) - k * 0.55).toFixed(1)}" width="${w * 0.72}" height="${(k * 1.1).toFixed(1)}" rx="${(k * 0.55).toFixed(1)}"/>`).join('');
+    // 横条和音符头一样宽（约 1.4 个谱线间距），居中；相邻二度像五线谱一样错开半个身位
+    const nw = k * 2.8, cx = w / 2 - nw / 2, sorted = notes.slice().sort((p, q) => p.st - q.st);
+    sorted.forEach((n, i) => { n.dx = i && sorted[i - 1].st === n.st - 1 && !sorted[i - 1].dx ? nw * 0.95 : 0; });
+    const bars = notes.map(n => `<rect class="${n.L ? 'lh' : 'rh'}" x="${(cx + n.dx).toFixed(1)}" y="${(y(n.st) - k * 0.6).toFixed(1)}" width="${nw.toFixed(1)}" height="${(k * 1.2).toFixed(1)}" rx="${(k * 0.6).toFixed(1)}"/>`).join('');
     return `<svg class="cshape f${f}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><g class="sl">${lines}${ledger}</g>${bars}</svg>`;
   }
   // ---------------- 键盘图层：用键盘上的高低看和弦（和弦格子下面）----------------
