@@ -28,7 +28,7 @@ const OCR = (() => {
     }
     const url = URL.createObjectURL(file);
     const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
-    const k = Math.min(3, Math.max(1, 1800 / img.width));
+    const k = Math.min(3.5, Math.max(1, 2400 / img.width));
     const c = document.createElement('canvas'); c.width = img.width * k; c.height = img.height * k;
     const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
     URL.revokeObjectURL(url);
@@ -48,6 +48,7 @@ const OCR = (() => {
     words.forEach(w => {
       const t = norm(w.text.trim());
       if (!t || t.length > 9 || !/^[A-G]/.test(t) || w.confidence < 15) return;
+      if (/^[A-G][#b]?o/.test(t)) return; // 扫描件里 Gm⁷、G⁷ 常被误读成 Go，不当减和弦
       const p = T.parseChord(t);
       if (p) ok.push({ sym: p.sym, x: w.bbox.x0, y: (w.bbox.y0 + w.bbox.y1) / 2, h: Math.min(w.bbox.y1 - w.bbox.y0, 80), single: /^[A-G]$/.test(t), conf: w.confidence });
     });
@@ -60,7 +61,10 @@ const OCR = (() => {
     // 单个字母容易是噪点：只有当同一行还有别的和弦（像一行和弦记号）时才保留
     return lines.map(l => {
       const multi = l.items.filter(c => !c.single).length;
-      return l.items.filter(c => !c.single || multi >= 1 || l.items.length >= 3 || c.conf > 70).sort((a, b) => a.x - b.x).map(c => c.sym);
+      const keep = l.items.filter(c => !c.single || multi >= 1 || l.items.length >= 3 || c.conf > 70);
+      // 一行只有一个和弦、又没有性质后缀、把握不大：多半是标题或歌词里的字母
+      if (keep.length === 1 && keep[0].single && keep[0].conf < 85) return [];
+      return keep.sort((a, b) => a.x - b.x).map(c => c.sym);
     }).filter(l => l.length);
   }
 

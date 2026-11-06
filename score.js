@@ -53,7 +53,13 @@ const Score = (() => {
         try { const v = tk.getMIDIValuesForElement(id); if (v && v.pitch) notes.push({ t: e.tstamp / 1000, dur: Math.max(0.12, v.duration / 1000), pitch: v.pitch, id }); } catch (err) {}
       });
     });
-    cur = { el, notes, sc };
+    cur = { el, notes, sc, tk };
+    el.onclick = e => {
+      const g = e.target.closest('g.note, g.chord'); if (!g) return;
+      const ids = g.classList.contains('chord') ? [...g.querySelectorAll('g.note')].map(x => x.dataset.id || x.id) : [g.dataset.id || g.id];
+      const ms = ids.map(id => { try { return tk.getMIDIValuesForElement(id).pitch; } catch (err) { return null; } }).filter(Boolean);
+      if (ms.length) { g.classList.add('playing'); setTimeout(() => g.classList.remove('playing'), 500); el.dispatchEvent(new CustomEvent('staffplay', { detail: ms, bubbles: true })); }
+    };
     return { pages, notes: notes.length };
   }
   // 学习段落的时间范围（完整谱中）

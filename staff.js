@@ -18,7 +18,7 @@ const Staff = (() => {
     let bm = 36 + b.pc; if (bm < 41) bm += 12;
     return {
       rh: v.sort((x, y) => x.midi - y.midi).map(n => vexKey(n.name, n.midi)),
-      lh: [vexKey(b.name, bm), vexKey(b.name, bm + 12)].slice(0, bm + 12 <= 59 ? 2 : 1),
+      lh: [vexKey(b.name, bm)],
     };
   }
   const DUR = { 1: ['w'], 2: ['h', 'h'], 3: ['q', 'q', 'h'], 4: ['q', 'q', 'q', 'q'] };
@@ -29,11 +29,38 @@ const Staff = (() => {
     return k.tonic.name + (k.minor ? 'm' : '');
   }
 
+
+  const LPC = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 };
+  function vexMidi(k) { const m = /^([a-g])(#{1,2}|b{1,2})?\/(-?\d)$/.exec(k); if (!m) return null; const acc = !m[2] ? 0 : m[2][0] === '#' ? m[2].length : -m[2].length; return (+m[3] + 1) * 12 + LPC[m[1]] + acc; }
+  // 记录每个音符的位置；点音符头 = 播放那个音，点在小节里别处 = 播放整列和弦
+  function collect(cols, n) {
+    const ks = n && (n.getKeys ? n.getKeys() : n.keys);
+    if (!ks || !n.getYs || (n.isRest && n.isRest())) return;
+    let x; try { x = n.getAbsoluteX(); } catch (e) { return; }
+    const ys = n.getYs(), ms = ks.map(vexMidi);
+    let col = cols.find(c => Math.abs(c.x - x) < 6);
+    if (!col) { col = { x, heads: [] }; cols.push(col); }
+    ys.forEach((y, i) => ms[i] != null && col.heads.push({ y, m: ms[i] }));
+  }
+  function clickable(el, cols, W, H) {
+    const svg = el.querySelector('svg'); if (!svg || !cols.length) return;
+    svg.style.cursor = 'pointer';
+    el.onclick = e => {
+      const rc = svg.getBoundingClientRect(), sx = (e.clientX - rc.left) * W / rc.width, sy = (e.clientY - rc.top) * H / rc.height;
+      const col = cols.slice().sort((a, b) => Math.abs(a.x - sx) - Math.abs(b.x - sx))[0];
+      if (!col || Math.abs(col.x - sx) > 40) return;
+      const head = col.heads.slice().sort((a, b) => Math.abs(a.y - sy) - Math.abs(b.y - sy))[0];
+      const ms = head && Math.abs(head.y - sy) < 7 && Math.abs(col.x + 6 - sx) < 14 ? [head.m] : col.heads.map(h => h.m);
+      el.dispatchEvent(new CustomEvent('staffplay', { detail: ms, bubbles: true }));
+    };
+  }
+
   function draw(el) {
     if (!window.Vex) { el.innerHTML = ''; return; }
     const VF = Vex.Flow;
     const cfg = JSON.parse(el.dataset.staff);
     if (cfg.pattern) return drawPattern(el, cfg, VF);
+    if (cfg.calendar) return drawCalendar(el, cfg, VF);
     const W = Math.max(260, el.clientWidth || 340);
     const keySig = vexKeySig(cfg.key);
     const ksCount = Math.abs(VF.keySignature(keySig).length);
@@ -49,6 +76,7 @@ const Staff = (() => {
     const ink = css('--ink'), mute = css('--mute'), acc = css('--acc');
     ctx.setFillStyle(ink); ctx.setStrokeStyle(ink);
     let idx = 0;
+    const cols = [];
     rows.forEach((row, ri) => {
       const y = ri * ROW_H + TOP;
       const avail = W - 2 - head;
@@ -89,16 +117,25 @@ const Staff = (() => {
             tn.push(t); bn.push(b);
             return;
           }
-          const p = parts(sym);
-          const t = new VF.StaveNote({ keys: p.rh, duration: d, clef: 'treble', auto_stem: true });
-          const b = new VF.StaveNote({ keys: p.lh, duration: d, clef: 'bass', auto_stem: true });
+          let t, b;
+          if (cfg.exact) {
+            // 和键盘完全一致：同样的音，中央 C 以上写高音谱表，以下写低音谱表
+            const vs = (cfg.notes ? cfg.notes.slice() : T.voicing(T.parseChord(sym))).sort((x, y) => x.midi - y.midi);
+            const hi = vs.filter(n => n.midi >= 60).map(n => vexKey(n.name, n.midi)), lo = vs.filter(n => n.midi < 60).map(n => vexKey(n.name, n.midi));
+            t = hi.length ? new VF.StaveNote({ keys: hi, duration: d, clef: 'treble', auto_stem: true }) : new VF.GhostNote({ duration: d });
+            b = lo.length ? new VF.StaveNote({ keys: lo, duration: d, clef: 'bass', auto_stem: true }) : new VF.GhostNote({ duration: d });
+          } else {
+            const p = parts(sym);
+            t = new VF.StaveNote({ keys: p.rh, duration: d, clef: 'treble', auto_stem: true });
+            b = new VF.StaveNote({ keys: p.lh, duration: d, clef: 'bass', auto_stem: true });
+          }
           const top = new VF.Annotation(T.disp(sym)).setFont('sans-serif', 12, 'bold').setVerticalJustification(VF.Annotation.VerticalJustify.TOP);
-          if (!cfg.hideName) t.addModifier(top, 0);
+          if (!cfg.hideName) (t instanceof VF.StaveNote ? t : b).addModifier(top, 0);
           if (cfg.numerals !== false && cfg.key) {
             const lb = lab(sym, cfg.key);
             if (lb) b.addModifier(new VF.Annotation(lb).setFont('Times New Roman, serif', 13, 'normal').setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM), 0);
           }
-          if (hl) [t, b].forEach(n => n.setStyle({ fillStyle: acc, strokeStyle: acc }));
+          if (hl) [t, b].forEach(n => n.setStyle && n.setStyle({ fillStyle: acc, strokeStyle: acc }));
           tn.push(t); bn.push(b);
         });
         const tv = new VF.Voice({ num_beats: 4, beat_value: 4 }).setMode(VF.Voice.Mode.SOFT).addTickables(tn);
@@ -111,11 +148,13 @@ const Staff = (() => {
         tr.setNoteStartX(ns); bs.setNoteStartX(ns);
         fmt.format([tv, bv], Math.max(40, x + w - ns - 14));
         tv.draw(ctx, tr); bv.draw(ctx, bs);
+        tn.forEach(n => collect(cols, n)); bn.forEach(n => { try { const ks = n.getKeys ? n.getKeys() : n.keys; const x = n.getAbsoluteX(); const col = cols.find(c => Math.abs(c.x - x) < 14); if (col && ks && n.getYs && !(n.isRest && n.isRest())) n.getYs().forEach((y, i) => { const m = vexMidi(ks[i]); if (m != null) col.heads.push({ y, m }); }); else collect(cols, n); } catch (e) {} });
         x += w;
       });
     });
     const svg = el.querySelector('svg');
     if (svg) { svg.setAttribute('viewBox', `0 0 ${W} ${rows.length * ROW_H + 6}`); svg.style.width = '100%'; svg.style.height = 'auto'; }
+    clickable(el, cols, W, rows.length * ROW_H + 6);
   }
 
   // 伴奏型：一小节低音谱表，写出左手实际要弹的每个音
@@ -143,9 +182,69 @@ const Staff = (() => {
     const beams = VF.Beam.generateBeams(notes);
     new VF.Formatter().joinVoices([v]).format([v], W - st.getNoteStartX() - 16);
     v.draw(ctx, st); beams.forEach(b => b.setContext(ctx).draw());
+    const pcols = []; notes.forEach(n => collect(pcols, n));
     const top = new VF.Annotation(T.disp(cfg.sym));
     ctx.save(); ctx.setFont('sans-serif', 13, 'bold'); ctx.fillText(T.disp(cfg.sym) + ' 和弦 · ' + cfg.name, 6, 14); ctx.restore();
     const svg = el.querySelector('svg'); if (svg) { svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.style.width = '100%'; svg.style.height = 'auto'; }
+    clickable(el, pcols, W, H);
+  }
+
+
+  // 五线谱日历：一周一行，一天一小节；音高 = 练习时长，实心 = 4 步完成，空心 = 部分，休止符 = 休息日，橙色双竖线 = 背下一首
+  const CAL_KEYS = ['e/4', 'f/4', 'g/4', 'a/4', 'b/4', 'c/5', 'd/5', 'e/5', 'f/5'];
+  const CAL_MIN = [1, 3, 6, 10, 15, 20, 30, 45, 60];
+  function mix(c1, c2, t) {
+    const p = c => { const m = c.match(/^#([0-9a-f]{6})$/i); return m ? [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16)) : [128, 128, 128]; };
+    const a = p(c1), b = p(c2); return 'rgb(' + a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(',') + ')';
+  }
+  function drawCalendar(el, cfg, VF) {
+    const W = Math.max(280, el.clientWidth || 340), compact = cfg.compact;
+    const ROW = compact ? 92 : 104, TOP = 4, head = 42;
+    const H = cfg.weeks.length * ROW + 6;
+    el.innerHTML = '';
+    const r = new VF.Renderer(el, VF.Renderer.Backends.SVG); r.resize(W, H);
+    const ctx = r.getContext();
+    const ink = css('--ink'), mute = css('--mute'), acc = css('--acc'), line = css('--line');
+    ctx.setFillStyle(ink); ctx.setStrokeStyle(ink);
+    const mw = (W - 2 - head) / 7, hits = [];
+    cfg.weeks.forEach((week, wi) => {
+      const y = wi * ROW + TOP;
+      let x = 1;
+      week.forEach((dd, di) => {
+        const w = di === 0 ? mw + head : mw;
+        const st = new VF.Stave(x, y, w);
+        if (di === 0) st.addClef('treble');
+        st.setStyle({ strokeStyle: dd.other ? line : mute, fillStyle: ink });
+        st.setContext(ctx).draw();
+        let n;
+        if (dd.future) n = new VF.GhostNote({ duration: 'w' });
+        else if (!dd.active) n = new VF.StaveNote({ keys: ['b/4'], duration: 'wr', clef: 'treble' });
+        else {
+          let lv = 0; CAL_MIN.forEach((m, i) => { if (dd.min >= m) lv = i; });
+          n = new VF.StaveNote({ keys: [CAL_KEYS[lv]], duration: dd.full ? 'q' : 'h', clef: 'treble', stem_direction: lv >= 4 ? -1 : 1 });
+          const col = mix(mute.startsWith('#') ? mute : '#8a8880', acc.startsWith('#') ? acc : '#e8541e', 0.25 + 0.75 * lv / 8);
+          n.setStyle({ fillStyle: col, strokeStyle: col });
+        }
+        if (n.setStyle && (dd.other)) n.setStyle({ fillStyle: line, strokeStyle: line });
+        const v = new VF.Voice({ num_beats: 4, beat_value: 4 }).setMode(VF.Voice.Mode.SOFT).addTickables([n]);
+        const ns = st.getNoteStartX();
+        new VF.Formatter().joinVoices([v]).format([v], Math.max(10, x + w - ns - 10));
+        v.draw(ctx, st);
+        if (dd.piece) { ctx.save(); ctx.setFillStyle(acc); ctx.fillRect(x + w - 6, y + 40, 1.5, 40); ctx.fillRect(x + w - 2.5, y + 40, 2.5, 40); ctx.restore(); }
+        ctx.save(); ctx.setFont('sans-serif', 10, dd.today ? 'bold' : 'normal'); ctx.setFillStyle(dd.today ? acc : dd.other ? line : mute);
+        const cx = (di === 0 ? x + head : x) + (w - (di === 0 ? head : 0)) / 2;
+        ctx.fillText(String(dd.label), cx - 4, y + 94 - (compact ? 6 : 0)); ctx.restore();
+        if (dd.today) { ctx.save(); ctx.setFillStyle(acc); ctx.fillRect(cx - 7, y + 97 - (compact ? 6 : 0), 14, 1.5); ctx.restore(); }
+        hits.push({ x0: x + (di === 0 ? head : 0), x1: x + w, y0: y, y1: y + ROW, ds: dd.ds });
+        x += w;
+      });
+    });
+    const svg = el.querySelector('svg'); if (svg) { svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.style.width = '100%'; svg.style.height = 'auto'; svg.style.cursor = 'pointer'; }
+    el.onclick = e => {
+      const rc = svg.getBoundingClientRect(), sx = (e.clientX - rc.left) * W / rc.width, sy = (e.clientY - rc.top) * H / rc.height;
+      const h = hits.find(t => sx >= t.x0 && sx <= t.x1 && sy >= t.y0 && sy <= t.y1);
+      if (h) { e.preventDefault(); el.dispatchEvent(new CustomEvent('calpick', { detail: h.ds, bubbles: true })); }
+    };
   }
 
   function mount(root = document) {

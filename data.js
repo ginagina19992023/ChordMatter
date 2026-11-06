@@ -91,7 +91,7 @@ const UNITS = [
       { t: 'p', x: '流行音乐反复使用少数几个「模板」，学会一个就等于学会几十首歌。' },
       { t: 'table', rows: [['卡农进行', 'I–V–vi–iii–IV–I–IV–V'], ['1564', 'I–V–vi–IV'], ['6415', 'vi–IV–I–V'], ['1645', 'I–vi–IV–V'], ['4536（王道）', 'IV–V–iii–vi']] },
       { t: 'prog', k: 'C', c: ['C', 'G', 'Am', 'F'] },
-      { t: 'tip', x: '华语流行（包括林俊杰的很多歌）大量使用这些进行。学新歌时先找模板，剩下的只是变化。' },
+      { t: 'tip', x: '你的 Always Online 主歌和副歌都是 4536（F G Em Am）。学新歌时先找模板，剩下的只是变化。' },
     ],
   },
   {
@@ -153,6 +153,25 @@ const SONGS = [
     note: '流行音乐里「卡农进行」的源头。',
   },
   {
+    id: 'alwayson', title: 'Always Online', sub: '林俊杰 · 弹琴吧钢琴谱', key: 'C', tag: '流行', bpm: 120,
+    sections: [
+      { name: '前奏 1–8', bars: 'F | G | Em | Am | Dm | G | C | C' },
+      { name: '主歌 9–24', bars: 'F | G | Em | Am | F | G | Em | Am | F | G | Em | Am | F | D7 | G | G7' },
+      { name: '副歌 25–32', bars: 'F | G | Em | Am | F | G | C | E' },
+    ],
+    note: '和弦是根据你上传的谱（左手低音 + 右手和声）分析出来的，属于简化骨架：主歌和副歌都是 4536 王道进行（F G Em Am），D7 和 E 是副属和弦。请对照谱子核对。',
+    orig: { apple: 'https://music.apple.com/cn/search?term=Always%20Online%20%E6%9E%97%E4%BF%8A%E6%9D%B0' },
+  },
+  {
+    id: 'cityofstars', title: 'City of Stars', sub: '《爱乐之城》· 简易钢琴版（Anne Ku 编）', key: 'F', tag: '流行', bpm: 100,
+    sections: [
+      { name: '前奏 1–4', bars: 'Gm7 | Gm7 | Gm7 | Gm7' },
+      { name: '主歌 5–13', bars: 'Gm Gm7 | C C7 | Dm | Dm | Gm Gm7 | C C7 | F7 | F7 | Gm Gm7' },
+    ],
+    note: '和弦记号直接来自你上传的简易版谱面。C7 → Dm 是阻碍终止（属七没回到主和弦 F），F7 是副属和弦。',
+    orig: { apple: 'https://music.apple.com/cn/search?term=City%20of%20Stars%20La%20La%20Land' },
+  },
+  {
     id: 'letitbe', orig: { apple: 'https://music.apple.com/cn/search?term=Let%20It%20Be%20The%20Beatles' }, title: 'Let It Be', sub: 'The Beatles · 主歌', key: 'C', tag: '流行', bpm: 72,
     sections: [{ name: '主歌', bars: 'C G | Am F | C G | F C' }],
     note: '1564 进行的经典例子。',
@@ -160,9 +179,7 @@ const SONGS = [
 ];
 
 // 用户自己的曲目模板（例如 Always Online），在「编辑」中填写
-const SONG_DRAFTS = [
-  { title: 'Always Online', sub: '林俊杰 · 从你的谱上抄写和弦', key: '', sections: [] },
-];
+const SONG_DRAFTS = [];
 
 // ---------------- 即兴伴奏：跟唱曲目（均为公有领域旋律/歌词） ----------------
 // 简谱记法：数字=唱名；' 高八度，, 低八度；_ 八分（__ 十六分）；. 附点；每个 - 多一拍；0 休止
