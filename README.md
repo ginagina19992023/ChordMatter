@@ -21,6 +21,7 @@
 - **弹奏识别**：在琴边时用 iPhone 麦克风听你弹的和弦/琶音，弹对才往下走；不在琴边时点屏幕键盘；也可以自评。
 - **即兴伴奏**：三步配和弦课程、每日配和弦小考、跟弹跟唱（小星星、欢乐颂、送别、生日快乐，均为公有领域）。
 - **原曲**：K.545、BWV 846 完整原谱（Verovio 渲染），学习段落高亮，可听全部或只听段落；其他曲目链接 IMSLP / Apple Music。
+- **识谱**：上传截图或 PDF，在本机识别谱面上印的和弦记号（Tesseract.js + pdf.js），自动猜调并生成曲目；原谱图片保存在本机，可随时查看。
 - **横屏**：练习页横屏时键盘和谱面更大。
 
 ## 单元
@@ -31,12 +32,16 @@
 K.545、克列门蒂 Op.36 No.1、巴赫 BWV 846、天空之城、卡农、Let It Be。可添加自己的曲子（如 Always Online）：抄和弦 → 自动分析级数、功能、终止式、进行模板、低音线。
 曲目里的和弦是学习用的简化分析，请对照自己的谱核对。
 
+## 在线地址
+https://ginagina19992023.github.io/ChordMatter/
+
+iPhone：用 Safari 打开 → 分享 → 「添加到主屏幕」。
+
 ## 部署
-推到 GitHub 的 `main` 分支后，`.github/workflows/pages.yml` 会自动发布到 GitHub Pages。
-（仓库 Settings → Pages → Source 选 “GitHub Actions”。）
+GitHub Pages 从 `gh-pages` 分支发布。更新时：`git push origin main && git push origin main:gh-pages`。
 
 ## 文件
-`theory.js` 乐理引擎 · `data.js` 课程、曲库、知识点 · `app.js` 界面 · `staff.js` 五线谱 · `listen.js` 弹奏识别 · `score.js` 原曲乐谱 · `style.css` · `sw.js` 离线缓存
+`theory.js` 乐理引擎 · `data.js` 课程、曲库、知识点 · `app.js` 界面 · `staff.js` 五线谱 · `listen.js` 弹奏识别 · `score.js` 原曲乐谱 · `ocr.js` 识谱 · `style.css` · `sw.js` 离线缓存
 
 ## 第三方与版权
 - VexFlow（MIT），`vendor/vexflow.js`

@@ -350,8 +350,9 @@
     document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.dataset.r === r || (r === 'song' && a.dataset.r === 'songs') || (r === 'unit' && a.dataset.r === 'path')));
     drillStop();
     document.body.classList.toggle('focus', ['quiz', 'arp', 'mem', 'sing', 'acctest'].includes(r));
-    document.querySelectorAll('nav a').forEach(x => { if ((r === 'sing' || r === 'acctest') && x.dataset.r === 'acc') x.classList.add('on'); if (r === 'know' && x.dataset.r === 'path') x.classList.add('on'); if (r === 'score' && x.dataset.r === 'songs') x.classList.add('on'); });
-    ({ today: vToday, path: vPath, unit: vUnit, chords: vChords, songs: vSongs, song: vSong, edit: vEdit, quiz: vQuiz, arp: vArp, mem: vMem, me: vMe, acc: vAcc, sing: vSing, acctest: vAccTest, know: vKnow, score: vScore }[r] || vToday)();
+    document.querySelectorAll('nav a').forEach(x => { if ((r === 'sing' || r === 'acctest') && x.dataset.r === 'acc') x.classList.add('on'); if (r === 'know' && x.dataset.r === 'path') x.classList.add('on'); if ((r === 'score' || r === 'scan') && x.dataset.r === 'songs') x.classList.add('on'); });
+    ({ today: vToday, path: vPath, unit: vUnit, chords: vChords, songs: vSongs, song: vSong, edit: vEdit, quiz: vQuiz, arp: vArp, mem: vMem, me: vMe, acc: vAcc, sing: vSing, acctest: vAccTest, know: vKnow, score: vScore, scan: vScan }[r] || vToday)();
+    if (r === 'song') mountMyScore(route[1]);
     window.scrollTo(0, 0);
   }
 
@@ -614,7 +615,8 @@
   function vSongs() {
     const songs = allSongs();
     const drafts = SONG_DRAFTS.filter(d => !songs.some(s => s.title === d.title));
-    view.innerHTML = `<header class="top"><div><small>经典与流行 · 和声逻辑 · 背谱</small><h1>曲目</h1></div><a class="stat" href="#edit-new"><b>＋</b><small>添加</small></a></header>
+    view.innerHTML = `<header class="top"><div><small>经典与流行 · 和声逻辑 · 背谱</small><h1>曲目</h1></div><a class="stat" href="#scan"><b>⌗</b><small>识谱</small></a><a class="stat" href="#edit-new"><b>＋</b><small>手动</small></a></header>
+      <a class="unitbar" href="#scan"><small>新歌</small><b>上传谱子的截图或 PDF，自动认出和弦</b><small>认出后自动判断调、级数和功能，马上可以练</small></a>
       <ul class="list">${songs.map(s => { const lv = (S.songs[s.id] || { level: 0 }).level; return `<li><a href="#song-${s.id}"><span><b>${esc(s.title)}</b><small>${esc(s.sub || '')} · ${s.key ? kz(s.key) : '未设调'}</small></span><span class="lv">${[0, 1, 2, 3].map(i => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')}</span></a></li>`; }).join('')}
       ${drafts.map(d => `<li class="draft"><a href="#edit-new-${SONG_DRAFTS.indexOf(d)}"><span><b>${esc(d.title)}</b><small>${esc(d.sub)}</small></span><span class="arr">＋</span></a></li>`).join('')}</ul>
       <p class="fine">右边四格 = 背谱的四层：看全谱 → 遮 1/3 → 遮 2/3 → 只看功能。在「编辑」里改成你手上谱的和弦，系统会自动分析级数、功能和终止式。</p>`;
@@ -659,6 +661,7 @@
     if (!s.sections.length || !s.key) return go('#edit-' + s.id);
     const lv = (S.songs[s.id] || { level: 0 }).level;
     view.innerHTML = `<header class="top"><div><a class="back" href="#songs">←</a><small>${esc(s.sub || '')}</small><h1>${esc(s.title)}</h1></div><a class="stat" href="#edit-${s.id}"><b>✎</b><small>编辑</small></a></header>
+      ${s.scanned || String(s.id).startsWith('my') ? `<section class="orig" id="myscore"></section>` : ''}
       ${s.rec ? `<section class="orig"><h3>真人演奏录音</h3><p class="fine">学习段落 ${s.rec.clipName}</p><audio controls preload="none" src="${s.rec.clip}"></audio><p class="fine">完整版</p><audio controls preload="none" src="${s.rec.full}"></audio><p class="fine">${s.rec.credit} · <a href="${s.rec.url}" target="_blank" rel="noopener">来源 ↗</a></p></section>` : ''}
       ${s.orig ? `<section class="orig"><h3>原曲</h3><div class="row">${s.orig.score ? `<a class="btn" href="#score-${s.id}">看完整原谱 · 听原曲</a>` : ''}${s.orig.apple ? `<a class="ghost" href="${s.orig.apple}" target="_blank" rel="noopener">Apple Music 听录音 ↗</a>` : ''}${s.orig.imslp ? `<a class="ghost" href="${s.orig.imslp}" target="_blank" rel="noopener">IMSLP 原版乐谱 ↗</a>` : ''}</div>${s.orig.score ? '' : '<p class="fine">' + (s.orig.imslp ? '这首的完整原谱请在 IMSLP（公有领域乐谱库）查看。' : '这首仍受版权保护，不能内置原谱和录音，只能链接到正版平台。') + '</p>'}</section>` : ''}
       <section class="logic"><h3>谱面逻辑</h3>${songLogic(s).map(l => `<p>${l}</p>`).join('')}</section>
@@ -1160,6 +1163,58 @@
     });
     const end = Math.max(...c.notes.map(n => n.t + n.dur)) * r;
     later(() => { const b = $('#scbtn'); if (b) { b.textContent = '▶ 再听一遍'; b.dataset.act = 'scplay'; } }, end * 1000 + 300);
+  }
+
+  // ---------------- 识谱 ----------------
+  let SCAN = null;
+  function vScan() {
+    view.innerHTML = `<header class="top"><div><a class="back" href="#songs">←</a><small>截图 / 照片 / PDF</small><h1>识谱</h1></div></header>
+      <label class="drop" for="scanfile"><b>选择谱子</b><small>支持 PNG、JPG、PDF（最多 6 页）。文件只在这台手机上处理，不会上传</small></label>
+      <input type="file" id="scanfile" accept="image/*,application/pdf,.pdf" hidden>
+      <div id="scanprog"></div><div id="scanout"></div>
+      <p class="fine">能认出的是谱子上<b>印出来的和弦记号</b>（流行谱、弹唱谱上方的 C、Am、G7/B 这些）。纯五线谱的音符目前在手机上识别不准，这类谱子会保存成原谱图片，和弦可以自己补上。</p>`;
+    $('#scanfile').addEventListener('change', async e => {
+      const f = e.target.files[0]; if (!f) return;
+      const prog = $('#scanprog'); $('#scanout').innerHTML = '';
+      const show = (msg, p) => { prog.innerHTML = `<p class="fine">${msg}</p><span class="meter"><i style="width:${Math.round(p * 100)}%"></i></span>`; };
+      try {
+        const r = await OCR.recognize(f, show);
+        SCAN = Object.assign(r, { title: f.name.replace(/\.[^.]+$/, '') });
+        prog.innerHTML = '';
+        renderScan();
+      } catch (err) { prog.innerHTML = `<p class="no">没能读取这个文件（${esc(err.message || err)}）。识谱需要联网下载识别引擎，请检查网络后再试。</p>`; }
+    });
+  }
+  function renderScan() {
+    const r = SCAN, n = r.lines.flat().length;
+    const txt = r.lines.map((l, i) => `第${i + 1}行: ${l.join(' | ')}`).join('\n');
+    $('#scanout').innerHTML = `<div class="thumbs">${r.thumbs.map(t => `<img src="${t}" alt="谱子">`).join('')}</div>
+      <p class="${n ? 'ok' : 'no'}">${n ? `认出 ${n} 个和弦，猜测是 ${kz(r.key)}` : '没有找到印出来的和弦记号'}</p>
+      <form class="form" id="scanform">
+        <label for="sctitle">曲名<input id="sctitle" name="title" value="${esc(r.title)}" required></label>
+        <label for="sckey">调（自动猜的，可以改）<input id="sckey" name="key" value="${esc(r.key || 'C')}" autocapitalize="off"></label>
+        <label for="scsecs">识别出的和弦（每行一段，| 分小节，认错的直接改）<textarea id="scsecs" name="secs" rows="8" autocapitalize="off" autocorrect="off" spellcheck="false">${esc(txt)}</textarea></label>
+        <div class="row"><button class="btn" type="submit">${n ? '生成曲目，开始练' : '只保存原谱，和弦稍后补'}</button></div>
+      </form>`;
+    $('#scanform').addEventListener('submit', async e => {
+      e.preventDefault();
+      const f = e.target;
+      const key = T.parseKey(f.key.value.trim()) ? f.key.value.trim() : 'C';
+      const sections = f.secs.value.split('\n').map(l => l.trim()).filter(Boolean).map((l, i) => { const k = l.search(/[:：]/); return k > -1 ? { name: l.slice(0, k).trim(), bars: l.slice(k + 1).trim() } : { name: '第' + (i + 1) + '行', bars: l }; })
+        .map(s => ({ name: s.name, bars: parseBars(s.bars).map(b => b.filter(x => T.parseChord(x)).join(' ')).filter(Boolean).join(' | ') })).filter(s => s.bars);
+      const id = 'scan' + Date.now().toString(36);
+      const song = { id, title: f.title.value.trim() || '我的谱子', sub: '识谱导入', key, sections, tag: '我的', bpm: 76, note: '和弦由识谱自动读取，请对照原谱核对', scanned: 1 };
+      try { await OCR.savePages(id, SCAN.thumbs); } catch (err) {}
+      S.custom = S.custom.concat(song); save();
+      logEv('scan', { id, n: sections.reduce((s, x) => s + parseBars(x.bars).flat().length, 0) });
+      go(sections.length ? '#song-' + id : '#edit-' + id);
+    });
+  }
+  async function mountMyScore(id) {
+    const el = $('#myscore'); if (!el) return;
+    const pages = await OCR.loadPages(id);
+    if (!pages || !pages.length) { el.remove(); return; }
+    el.innerHTML = `<h3>我的原谱</h3><div class="myscore">${pages.map(p => `<img src="${p}" alt="原谱">`).join('')}</div><p class="fine">双指放大查看。和弦有认错的地方，点右上角「编辑」改。</p>`;
   }
 
   // ---------------- 知识点 ----------------
