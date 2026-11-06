@@ -492,3 +492,7 @@ a.term { border-bottom: 1px dashed var(--acc); color: inherit; }
 
 .vclip.tall video { aspect-ratio: 39 / 70; width: auto; max-width: 100%; height: min(460px, 70vh); margin: 0 auto; background: var(--soft); }
 .symcard .vclip { margin: 10px 0 4px; }
+
+.termref { border-bottom: 1px dashed var(--S); cursor: pointer; }
+.termref:active { background: color-mix(in srgb, var(--S) 15%, transparent); }
+.cpop-card .btn { width: 100%; margin-top: 4px; }

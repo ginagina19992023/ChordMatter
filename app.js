@@ -770,7 +770,7 @@
         <div class="row"><button class="ghost" data-act="splay" data-id="${s.id}">▶ 播放进行</button><a class="btn" href="#mem-${s.id}">弹下来 · 第 ${Math.min(4, lv + 1)} 层 →</a></div>
         <p class="fine">${esc(s.note || '')}</p>
       </section>
-      <section class="logic"><h3>谱面逻辑 <small>· 点下划线的词看解释</small></h3>${songLogic(s).map(l => `<p>${termLinks(l)}</p>`).join('')}</section>
+      <section class="logic"><h3>谱面逻辑 <small>· 点下划线的词看解释</small></h3>${songLogic(s).map(l => `<p>${l}</p>`).join('')}</section>
       <h3 class="h3">五线谱 · 和声骨架（左手低音 + 右手和弦）</h3>
       ${s.sections.map(sec => `<div class="stf"><small>${esc(sec.name)}</small>${Staff.html({ key: s.key, bars: parseBars(sec.bars), end: true, time: true })}</div>`).join('')}
       ${s.rec ? `<section class="orig"><h3>真人演奏录音</h3><p class="fine">学习段落 ${s.rec.clipName}</p><audio controls preload="none" src="${s.rec.clip}"></audio><p class="fine">完整版</p><audio controls preload="none" src="${s.rec.full}"></audio><p class="fine">${s.rec.credit} · <a href="${s.rec.url}" target="_blank" rel="noopener">来源 ↗</a></p></section>` : ''}
@@ -1650,7 +1650,7 @@
     });
   }
   let linkT = null;
-  new MutationObserver(() => { clearTimeout(linkT); linkT = setTimeout(() => linkChords(view), 60); }).observe(view, { childList: true, subtree: true });
+  new MutationObserver(() => { clearTimeout(linkT); linkT = setTimeout(() => { linkChords(view); linkTerms(view); }, 60); }).observe(view, { childList: true, subtree: true });
   function chordPop(sym) {
     document.querySelectorAll('.cpop').forEach(x => x.remove());
     const c = T.parseChord(sym); if (!c) return;
@@ -1664,6 +1664,62 @@
       <a class="fine" href="#know-k0">和弦名怎么读 →</a></div>`;
     (document.getElementById('phone') || document.body).appendChild(el);
     A.init(); A.chord(v.map(n => n.midi), 0, 0.02, 1.2);
+    requestAnimationFrame(() => el.classList.add('open'));
+  }
+
+
+  // ---------------- 术语：全应用自动加下划线，点开一句话解释 + 去学这一课 ----------------
+  // [词, 对应的课 id]（长词在前，避免被短词截断）
+  const GLOSS = [
+    ['正格终止', 'l7'], ['变格终止', 'l6'], ['半终止', 'l8'], ['阻碍终止', 'l9'], ['终止式', 'l6'],
+    ['王道进行', 'l11'], ['卡农进行', 'l11'], ['4536 进行', 'l11'], ['1564 进行', 'l11'], ['6415 进行', 'l11'], ['1645 进行', 'l11'], ['2–5–1', 'l10'],
+    ['低音线', 'l12'], ['和声功能', 'l1'], ['功能', 'l1'],
+    ['副属和弦', 'k7'], ['借用和弦', 'k7'], ['和声小调', 'k1'], ['导音', 'k1'], ['属音', 'k1'], ['下属音', 'k1'],
+    ['大三和弦', 's5'], ['小三和弦', 's6'], ['属七和弦', 's7'], ['大七和弦', 's8'], ['减三和弦', 's9'], ['罗马数字', 's14'],
+    ['第一转位', 'i4'], ['第二转位', 'i5'], ['一转', 'i4'], ['二转', 'i5'], ['原位', 'i3'], ['转位', 'i4'],
+    ['根音', 'i2'], ['三音', 'i2'], ['五音', 'i2'], ['级数', 's11'], ['伴奏型', 's20'],
+    ['稳', 'l2'], ['走', 'l3'], ['紧', 'l4'],
+  ];
+  const ONECHAR = new Set(['稳', '走', '紧']);
+  const glossCard = id => ALLCARDS.find(x => x.id === id) || KNOW.find(x => x.id === id);
+  window.__glossOf = id => GLOSS.filter(g => g[1] === id).map(g => g[0]); // 审计用
+  function linkTerms(root) {
+    const own = route[0] === 'sym' ? route[1] : null; // 当前这一课自己的词不再链接
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => (!n.nodeValue.trim() || (n.parentElement && n.parentElement.closest(SKIP + ', .termref, h2, .tag, .fx'))) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
+    const nodes = []; while (w.nextNode()) nodes.push(w.currentNode);
+    nodes.forEach(n => {
+      const txt = n.nodeValue; let i = 0, last = 0, frag = null;
+      while (i < txt.length) {
+        let hit = null;
+        for (const [term, id] of GLOSS) {
+          if (!txt.startsWith(term, i) || id === own) continue;
+          if (ONECHAR.has(term)) { // 单字只在「稳 走 紧」这种独立出现时算术语（不碰「稳定」「走路」）
+            const pv = txt[i - 1] || ' ', nx = txt[i + 1] || ' ';
+            if (/[一-龥]/.test(pv) || /[一-龥]/.test(nx)) continue;
+          }
+          hit = [term, id]; break;
+        }
+        if (!hit) { i++; continue; }
+        frag = frag || document.createDocumentFragment();
+        frag.appendChild(document.createTextNode(txt.slice(last, i)));
+        const sp = document.createElement('span'); sp.className = 'termref'; sp.dataset.act = 'termpop'; sp.dataset.id = hit[1]; sp.textContent = hit[0];
+        frag.appendChild(sp); i += hit[0].length; last = i;
+      }
+      if (frag) { frag.appendChild(document.createTextNode(txt.slice(last))); n.parentNode.replaceChild(frag, n); }
+    });
+  }
+  function termPop(id, word) {
+    document.querySelectorAll('.cpop').forEach(x => x.remove());
+    const c = glossCard(id); if (!c) return;
+    const isKnow = id.startsWith('k');
+    const say = isKnow ? (c.blocks.find(b => b.t === 'p') || {}).x || '' : c.say;
+    const done = !isKnow && symDone(id);
+    const el = document.createElement('div'); el.className = 'cpop';
+    el.innerHTML = `<div class="cpop-card" role="dialog" aria-label="${esc(word)}">
+      <div class="cpop-h"><b>${esc(word)}</b><button class="x" data-act="cpopclose" aria-label="关闭">×</button></div>
+      <p>${say}</p>
+      <a class="btn" href="${isKnow ? '#know-' + id : '#sym-' + id}">${isKnow ? '看完整的知识点' : done ? '再看一遍这一课（含演示）' : '去学这一课（看演示 + 试 3 次）'} →</a></div>`;
+    (document.getElementById('phone') || document.body).appendChild(el);
     requestAnimationFrame(() => el.classList.add('open'));
   }
 
@@ -1721,6 +1777,7 @@
       case 'prog': playProg(el, el.dataset.k, el.dataset.c.split(','), 84, 2); break;
       case 'flow': nextStep(); break;
       case 'chordpop': e.preventDefault(); chordPop(el.dataset.s); break;
+      case 'termpop': e.preventDefault(); termPop(el.dataset.id, el.textContent); break;
       case 'cpopclose': { const p = el.closest('.cpop'); if (p) p.remove(); break; }
       case 'calmonth': { CAL.m += +el.dataset.v; if (CAL.m < 0) { CAL.m = 11; CAL.y--; } if (CAL.m > 11) { CAL.m = 0; CAL.y++; } vMe(); break; }
       case 'giftclose': { const ov = el.closest('.giftov'); if (ov) ov.remove(); break; }
