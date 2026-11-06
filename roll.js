@@ -133,9 +133,11 @@ const Roll = (() => {
   function play(A, opt2) {
     if (!cur) return; cancelAnimationFrame(cur.raf);
     const spb = 60 / (cur.opt.bpm || 80) / (opt2.rate || 1), mode = opt2.mode || 'play';
-    cur.beat = -(cur.opt.lead || 2); cur.waitIdx = 0; cur.released = 0; cur.waiting = null; cur.mode = mode;
+    // from：从暂停的地方接着来（不重置进度）
+    if (opt2.from == null) { cur.beat = -(cur.opt.lead || 2); cur.waitIdx = 0; cur.released = 0; } else cur.beat = opt2.from;
+    cur.waiting = null; cur.mode = mode; cur.last2 = opt2; cur.running = true; cur.paused = false;
     let last = performance.now();
-    if (mode === 'play') { const t0 = (cur.opt.lead || 2) * spb + 0.1; cur.opt.events.forEach(e => A.note(e.midi, t0 + e.t * spb, Math.min(3, e.d * spb + 0.15), e.hand === 'L' ? 0.5 : 0.62)); }
+    if (mode === 'play') { const b0 = cur.beat; cur.opt.events.forEach(e => { if (e.t >= b0 - 1e-6) A.note(e.midi, 0.1 + (e.t - b0) * spb, Math.min(3, e.d * spb + 0.15), e.hand === 'L' ? 0.5 : 0.62); }); }
     const step = now => {
       if (!cur) return;
       const dt = (now - last) / 1000; last = now;
@@ -148,13 +150,15 @@ const Roll = (() => {
       } else cur.beat += dt / spb;
       draw();
       if (cur.opt.onBeat) cur.opt.onBeat(cur.beat);
-      if (cur.beat < cur.total + 1) cur.raf = requestAnimationFrame(step); else { cur.waiting = null; draw(); if (opt2.onEnd) opt2.onEnd(); }
+      if (cur.beat < cur.total + 1) cur.raf = requestAnimationFrame(step); else { cur.waiting = null; cur.running = false; draw(); if (opt2.onEnd) opt2.onEnd(); }
     };
     cur.raf = requestAnimationFrame(step);
   }
+  function pause() { if (cur && cur.running) { cancelAnimationFrame(cur.raf); cur.running = false; cur.paused = true; } }
+  function resume(A) { if (cur && cur.paused) play(A, Object.assign({}, cur.last2, { from: cur.beat })); }
   function release() { if (cur) cur.released = cur.waitIdx + 1; }
-  function stop() { if (cur) { cancelAnimationFrame(cur.raf); cur.waiting = null; } }
+  function stop() { if (cur) { cancelAnimationFrame(cur.raf); cur.waiting = null; cur.running = false; cur.paused = false; } }
   function reset() { if (cur) { stop(); cur.beat = -(cur.opt.lead || 2); draw(); } }
-  return { mount, play, stop, reset, release, get: () => cur, COL };
+  return { mount, play, stop, reset, release, pause, resume, get: () => cur, COL };
 })();
 if (typeof module !== 'undefined') module.exports = Roll;

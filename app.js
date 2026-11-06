@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 56; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 57; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -2148,7 +2148,7 @@
     ov.classList.toggle('rot', rot);
     const wide = isLand() || rot; ov.classList.toggle('nopanel', wide && RL.nopanel);
     if (rot) { ov.style.width = innerHeight + 'px'; ov.style.height = innerWidth + 'px'; } else { ov.style.width = ov.style.height = ''; }
-    ov.innerHTML = `<div class="fshead"><button class="fsx" data-act="rollclose" aria-label="关闭">×</button><b>${esc(b.title)}</b><small>${isLand() ? '' : rot ? '把手机横过来拿' : '横过来更宽'}</small>${wide ? `<span class="fsmini"><button class="fsb" data-act="rlgo" aria-label="开始">▶</button><button class="fsb" data-act="rlstop" aria-label="停">■</button></span><button class="fsb fspanel" data-act="rlpanel">${RL.nopanel ? '选项 ›' : '‹ 收起'}</button>` : ''}</div>${rollPanel('fsroll')}`;
+    ov.innerHTML = `<div class="fshead"><button class="fsx" data-act="rollclose" aria-label="关闭">×</button><b>${esc(b.title)}</b><small>${isLand() ? '' : rot ? '把手机横过来拿' : '横过来更宽'}</small>${wide ? `<span class="fsmini"><button class="fsb fspp" data-act="rlpp" aria-label="暂停 / 继续">⏸</button></span>${RL.nopanel ? '' : '<button class="fsb fspanel" data-act="rlpanel">‹ 收起</button>'}` : ''}</div>${rollPanel('fsroll')}`;
     const H = ov.clientHeight, used = [...ov.children].reduce((a, e) => a + (e.querySelector && e.querySelector('#fsroll') ? 0 : e.offsetHeight), 0);
     const other = [...ov.querySelectorAll('.rollbox > :not(#fsroll)')].reduce((a, e) => a + e.offsetHeight + 8, 0);
     RL.fsH = isLand() || rot ? Math.max(200, H - 22) : Math.max(200, H - ov.querySelector('.fshead').offsetHeight - other - 24);
@@ -2156,7 +2156,7 @@
   }
   function rollClose() {
     stopAll(); Roll.stop(); drillStop();
-    const ov = document.querySelector('.rollfs'); if (ov) ov.remove();
+    const ov = document.querySelector('.rollfs'); if (ov) ov.remove(); RL.nopanel = false;
     try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {}
     document.body.classList.remove('immersive');
   }
@@ -2186,7 +2186,7 @@
       DR.mode = place() === 'away' ? 'tap' : DR.mode; DR.cands = uniq(d.chords.map(c => T.parseChord(c.sym).notes.map(n => n.pc).sort((a, b) => a - b).join())).map(x => x.split(',').map(Number));
       if (place() === 'piano' && S.micOK) drillListen();
     }
-    Roll.play(A, { mode: RL.mode, rate: RL.rate });
+    Roll.play(A, { mode: RL.mode, rate: RL.rate, onEnd: () => { if (RL.nopanel && document.querySelector('.rollfs')) { RL.nopanel = false; setTimeout(rollOpen, 900); } } });
   }
   // ---- 点小节播放 / 长按多选小节 / 小节线上的 ▶ 从这里播到结尾 ----
   const SELB = { on: false, a: 0, b: 0 };
@@ -2926,6 +2926,11 @@
         // 能锁横屏的（安卓 Chrome 全屏时）就锁；iPhone 不支持，就把画面转 90° 显示
         if (RL.kb && !isLand()) { try { const d = document.documentElement; (d.requestFullscreen ? d.requestFullscreen() : Promise.reject()).then(() => screen.orientation.lock('landscape')).then(() => setTimeout(rollOpen, 300)).catch(() => {}); } catch (e) {} }
         rollOpen(); break;
+      case 'rlpp': { const r = Roll.get(); if (!r) break;
+        if (r.running) { Roll.pause(); A.cut(); el.textContent = '▶'; }
+        else if (r.paused) { A.init(); Roll.resume(A); el.textContent = '⏸'; }
+        else { rollGo(); el.textContent = '⏸'; }
+        break; }
       case 'rlpanel': RL.nopanel = !RL.nopanel; Roll.stop(); drillStop(); rollOpen(); break;
       case 'rlkbsize': RL.kbReal = el.dataset.v === '1'; S.rlkbReal = RL.kbReal; save(); Roll.stop(); drillStop(); rollOpen(); break;
       case 'rlmode': RL.mode = el.dataset.v; Roll.stop(); drillStop(); if (document.querySelector('.rollfs')) rollOpen(); else render(); break;
