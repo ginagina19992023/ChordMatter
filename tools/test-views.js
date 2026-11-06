@@ -27,6 +27,12 @@ server.listen(8781, async () => {
     const ok = min === 0 ? n === 0 : n >= min; if (!ok) bad++;
     console.log(`${ok ? '✓' : '✗'} ${name}：${n}${min ? `（至少 ${min}）` : ''}`);
   }
+  // 播放时和弦格子和键盘图层要同步
+  await p.goto('http://localhost:8781/index.html#song-alwayson'); await p.waitForTimeout(600);
+  await p.$eval('.dock .play', e => e.click()); await p.waitForTimeout(1300);
+  const sync = await p.evaluate(() => { const c = document.querySelector('#grid .cell.on-play'), k = document.querySelector('#klpanel .klhead b'); return c && k ? c.dataset.s.replace(/#/g, '♯').replace(/b(?=\d|$|\/)/g, '♭') === k.textContent || T.disp(c.dataset.s) === k.textContent : false; });
+  await p.$eval('.dock .play', e => e.click());
+  if (!sync) bad++; console.log(`${sync ? '✓' : '✗'} 播放时和弦格子和键盘图层同步`);
   // 色带要在「结构」分页
   await p.goto('http://localhost:8781/index.html#song-alwayson'); await p.waitForTimeout(500);
   await p.$eval('[data-act="songtab"][data-v="shape"]', e => e.click()); await p.waitForTimeout(400);

@@ -2172,35 +2172,45 @@
     if (sc) {
       const staffs = route[0] === 'cmp' && CMP.mode === 'compare' ? [0, 1] : null;
       scorePlay(staffs);
-    } else if (route[0] === 'song') playSkeleton(allSongs().find(x => x.id === route[1]));
+    } else if (route[0] === 'song') { const sg = allSongs().find(x => x.id === route[1]); playChords(sg, songRange(sg)); }
     else return toast('谱面还没加载好');
     const b = document.querySelector('.dock .play'); if (b) { b.textContent = '■ 停止'; b.dataset.act = 'dockstop'; }
   }
-  // 和弦骨架谱（没有原谱的曲子）：一个和弦一个和弦弹，谱上对应的和弦变色
-  function playSkeleton(s, range) {
+  // 统一的和弦播放器：一个和弦一个和弦弹（左手低音 + 右手和弦），每到一个和弦就同步页面上所有看得见的东西：
+  // 和弦格子（亮当前格）、键盘图层（换成这个和弦）、和声色带（亮当前小节）、和弦骨架谱（标当前和弦），看不见就自动滚过来
+  function playChords(s, range) {
     if (!s) return; stopAll(); A.init();
-    const st0 = sectionStarts(s);
-    const staffs = [...document.querySelectorAll('.sheet div.staff')];
-    const spb = 60 / (s.bpm || 80) / SC.rate; let t = 0;
-    let k = 0;
-    s.sections.forEach((sec, si) => {
-      let local = 0;
-      parseBars(sec.bars).forEach((bar, bk) => bar.forEach(sym => {
-        const bn = st0[si] + bk;
-        if (range && (bn < range[0] || bn > range[1])) { local++; return; }
-        const d = 4 / bar.length * spb, li = local++, el = staffs[si], at = t;
-        const ms = chordMidis(sym); A.chord(ms, at + 0.05, 0.01, d * 0.95);
-        later(() => {
-          staffs.forEach((x, xi) => { if (xi !== si && x.__marked) { const cfg = JSON.parse(x.dataset.staff); delete cfg.mark; x.dataset.staff = JSON.stringify(cfg); try { Staff.draw(x); } catch (e) {} x.__marked = false; } });
-          if (!el) return; const cfg = JSON.parse(el.dataset.staff); cfg.mark = li; el.dataset.staff = JSON.stringify(cfg); try { Staff.draw(el); } catch (e) {} el.__marked = true;
-          const r = el.getBoundingClientRect(), box = document.getElementById('phone') && getComputedStyle(document.getElementById('phone')).overflowY === 'auto' ? document.getElementById('phone').getBoundingClientRect() : { top: 0, bottom: innerHeight };
-          if (r.top < box.top + 40 || r.bottom > box.bottom - 120) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        }, at * 1000);
-        t += d; k++;
-      }));
+    const st0 = sectionStarts(s), spb = 60 / (s.bpm || 80) / SC.rate, items = [];
+    let gi = 0;
+    s.sections.forEach((sec, si) => { let li = 0; parseBars(sec.bars).forEach((bar, bk) => bar.forEach(sym => { const n = st0[si] + bk; items.push({ sym, i: gi++, n, si, li: li++, d: 4 / bar.length }); })); });
+    const play = items.filter(x => !range || (x.n >= range[0] && x.n <= range[1]));
+    if (!play.length) return;
+    const box = () => { const ph = document.getElementById('phone'); return ph && getComputedStyle(ph).overflowY === 'auto' ? ph.getBoundingClientRect() : { top: 0, bottom: innerHeight }; };
+    const keepVisible = el => { if (!el) return; const r = el.getBoundingClientRect(), bx = box(); if (r.top < bx.top + 60 || r.bottom > bx.bottom - 140) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); };
+    const unmark = () => document.querySelectorAll('.sheet div.staff').forEach(x => { if (x.__marked) { const cfg = JSON.parse(x.dataset.staff); delete cfg.mark; x.dataset.staff = JSON.stringify(cfg); try { Staff.draw(x); } catch (e) {} x.__marked = false; } });
+    let t = 0;
+    play.forEach(it => {
+      const at = t, dur = it.d * spb, c = T.parseChord(it.sym);
+      if (c) { const b = c.bass || c.root; let bm = 36 + b.pc; if (bm < 40) bm += 12; A.note(bm, at + 0.05, dur * 0.95, 0.55); A.chord(chordMidis(it.sym), at + 0.05, 0.01, dur * 0.95); }
+      later(() => {
+        // 和弦格子
+        let cell = null; document.querySelectorAll('#grid .cell').forEach(x => { const on = +x.dataset.i === it.i; x.classList.toggle('on-play', on); if (on) cell = x; });
+        // 键盘图层
+        if ($('#klpanel')) klShow(it.i);
+        // 和声色带
+        let hb = null; document.querySelectorAll('.hstrip .hbar').forEach(x => { const on = +x.dataset.n === it.n; x.classList.toggle('on-play', on); if (on) hb = x; });
+        // 和弦骨架谱
+        const staffs = [...document.querySelectorAll('.sheet div.staff')]; let stEl = null;
+        if (staffs.length) { const el = staffs.length === s.sections.length ? staffs[it.si] : staffs[0]; if (el) { document.querySelectorAll('.sheet div.staff').forEach(x => { if (x !== el && x.__marked) { const cfg = JSON.parse(x.dataset.staff); delete cfg.mark; x.dataset.staff = JSON.stringify(cfg); try { Staff.draw(x); } catch (e) {} x.__marked = false; } }); const cfg = JSON.parse(el.dataset.staff); cfg.mark = it.li; el.dataset.staff = JSON.stringify(cfg); try { Staff.draw(el); } catch (e) {} el.__marked = true; stEl = el; } }
+        keepVisible(cell || stEl || hb);
+      }, at * 1000);
+      t += dur;
     });
-    later(() => { staffs.forEach(x => { if (x.__marked) { const cfg = JSON.parse(x.dataset.staff); delete cfg.mark; x.dataset.staff = JSON.stringify(cfg); try { Staff.draw(x); } catch (e) {} x.__marked = false; } }); dockReset(); }, t * 1000 + 300);
+    later(() => { document.querySelectorAll('#grid .cell.on-play, .hstrip .hbar.on-play').forEach(x => x.classList.remove('on-play')); unmark(); dockReset(); }, t * 1000 + 300);
   }
+  const playSkeleton = playChords; // 旧名字：和弦骨架谱也走同一个播放器
+  // 当前看的是哪一段：曲目页选了段落就放那一段
+  function songRange(s) { if (route[0] !== 'song' || (S.songTab || 'sheet') !== 'sheet') return null; const si = (S.songSec || {})[s.id]; return si != null && si >= 0 ? secRange(s, si) : null; }
 
   // ---------------- 识谱 ----------------
   let SCAN = null;
@@ -2741,7 +2751,7 @@
       case 'hgo': { const s = allSongs().find(x => x.id === route[1]); const n = +el.dataset.n, st = sectionStarts(s); const k = st.findIndex((x, i) => n >= x && n < x + parseBars(s.sections[i].bars).length); S.songSec = S.songSec || {}; S.songSec[s.id] = k; S.songTab = 'sheet'; save(); render(); break; }
       case 'sgview': SG.view = el.dataset.v; render(); break;
       case 'sgtab': SG.tab = el.dataset.v; stopAll(); render(); break;
-      case 'dockstop': stopAll(); dockReset(); document.querySelectorAll('text.chordlab.now').forEach(t => t.classList.remove('now')); break;
+      case 'dockstop': stopAll(); dockReset(); document.querySelectorAll('text.chordlab.now').forEach(t => t.classList.remove('now')); document.querySelectorAll('#grid .cell.on-play, .hstrip .hbar.on-play').forEach(x => x.classList.remove('on-play')); break;
       case 'labtog': S.lab = !labOn(); save(); document.body.classList.toggle('nolab', !labOn()); el.classList.toggle('on', labOn()); document.querySelectorAll('.sheet div.staff').forEach(x => { const cfg = JSON.parse(x.dataset.staff); cfg.hideName = !labOn(); cfg.numerals = labOn(); x.dataset.staff = JSON.stringify(cfg); try { Staff.draw(x); } catch (e) {} }); /* 原地重画，不跳回页面顶部 */ toast(labOn() ? '和声标注：开' : '和声标注：关（纯谱面）'); break;
       case 'scrange': SC.range = el.dataset.v; render(); break;
       case 'scplay': scorePlay(); el.dataset.lab = el.textContent; el.textContent = '■ 停止'; el.dataset.act = 'scstop'; break;
@@ -2808,9 +2818,7 @@
       case 'bpm': { const sym = route[1]; const st = S.arp[sym]; st.bpm = Math.max(40, Math.min(160, st.bpm + +el.dataset.v)); save(); $('#bpm').textContent = st.bpm; if (metro) startMetro(st.bpm); break; }
       case 'ademo': arpDemo(el.dataset.s); break;
       case 'ametro': { if (metro) { stopMetro(); el.classList.remove('on'); } else { startMetro(S.arp[route[1]].bpm); el.classList.add('on'); } break; }
-      case 'splay': { const s = allSongs().find(x => x.id === el.dataset.id); const flat = songFlat(s); stopAll(); A.init(); const spc = 60 / (s.bpm || 76) * 2;
-        flat.forEach((sym, i) => { const p = T.parseChord(sym); A.note((p.bass ? p.bass.pc : p.root.pc) + 36, i * spc, spc, 0.6); A.chord(chordMidis(sym), i * spc, 0.01, spc); later(() => { document.querySelectorAll('#grid .cell').forEach(c => c.classList.toggle('on-play', +c.dataset.i === i)); if ($('#klpanel')) klShow(i); }, i * spc * 1000); });
-        later(() => document.querySelectorAll('#grid .cell').forEach(c => c.classList.remove('on-play')), flat.length * spc * 1000); break; }
+      case 'splay': { const sg = allSongs().find(x => x.id === el.dataset.id); playChords(sg, songRange(sg)); const bt = document.querySelector('.dock .play'); if (bt) { bt.textContent = '■ 停止'; bt.dataset.act = 'dockstop'; } break; }
       case 'sdel': S.custom = S.custom.filter(c => c.id !== el.dataset.id); save(); try { indexedDB.open('hexian-scores', 1).onsuccess = e => { const d = e.target.result; if (d.objectStoreNames.contains('pages')) d.transaction('pages', 'readwrite').objectStore('pages').delete(el.dataset.id); }; } catch (err) {} go('#songs'); break;
       case 'export': exportBackup(); break;
       case 'import': { const i = document.createElement('input'); i.type = 'file'; i.accept = 'application/json,.json'; i.onchange = () => { const r = new FileReader(); r.onload = () => { try { const o = JSON.parse(r.result); if (!o || typeof o !== 'object' || !('xp' in o)) throw 0; S = migrate(o); save(); toast('已导入备份'); render(); } catch (err) { toast('这不是 ChordMatter 的备份文件'); } }; r.readAsText(i.files[0]); }; i.click(); break; }

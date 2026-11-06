@@ -835,3 +835,6 @@ body.land .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .cbtop .prog { margin-bottom: 6px; }
 .shaperow { display: flex; gap: 6px; padding-right: 28px; }
 .shaperow span { flex: 1; display: flex; justify-content: center; }
+
+.hbar.on-play { outline: 2px solid var(--ink); outline-offset: 1px; border-radius: 5px; }
+.hbar.on-play i { filter: brightness(1.15); }
