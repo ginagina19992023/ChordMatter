@@ -650,3 +650,6 @@ p.chain, div.chain { display: flex; flex-wrap: wrap; align-items: center; gap: 4
 .dk.lab.on i::after { left: 13px; }
 body.nolab text.chordlab { display: none; }
 text.chordlab.now { fill: var(--S); font-weight: 800; }
+
+details.patdetail { margin: 10px 0 14px; }
+details.patdetail summary { font-size: 14px; color: var(--mute); cursor: pointer; padding: 6px 0; }

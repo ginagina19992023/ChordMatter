@@ -1373,22 +1373,21 @@
       <section class="sing">
         <div class="now"><div><small>现在</small><b id="nowc">${D(first.sym)}</b></div><div><small>下一个</small><span id="nextc">${tl.slots[1] ? D(tl.slots[1].sym) : ''}</span></div><div><small>级数</small><span id="nowr">${degLabel(first.sym, song.key)}</span></div></div>
         <div class="chips">${pats.map(p => `<button class="chip${p === pat ? ' on' : ''}" data-act="sgpat" data-v="${p.id}">${p.name}</button>`).join('')}</div>
-        <section class="patbox">
+        <section class="twohand"><h3>${esc(song.title)} · 右手旋律 + 左手「${pat.name}」</h3>
+          <p class="fine">上面换伴奏型，这张谱的左手整首跟着换：每一拍弹什么都按这个伴奏型，用的是这一小节的和弦（两个和弦的小节在换和弦的地方接着换）。每小节上方是和弦和级数，点音符听它。</p>
+          <div class="score" id="twoscore"><p class="fine">正在生成双手谱…（第一次需要下载乐谱引擎）</p></div>
+          <div class="row"><button class="ghost sm" data-act="scplay" id="scbtn">▶ 旋律 + 伴奏一起听</button><button class="ghost sm" data-act="screte" data-v="-0.1">慢</button><button class="ghost sm" data-act="screte" data-v="0.1">快</button></div>
+          ${melWhyHtml(song)}
+        </section>
+        <details class="patdetail"><summary>这个伴奏型怎么弹（单个和弦图解 + 键盘）</summary><section class="patbox">
           <p class="pwhen"><b>${pat.name}</b>：${pat.tip}。适合${PAT_WHEN[pat.id] || ''}。</p>
           <div id="pstaff">${patStaff(first.sym, pat, song.beats)}</div>
           ${patGrid(pat, song.beats)}
           <div id="skb">${kb(uniq(patEvents(first.sym, pat).flatMap(e => e.keys.map(k => k.midi))).map(m => ({ midi: m })), { lo: 36, hi: 72 })}</div>
           <div class="row"><button class="ghost sm" data-act="patplay" data-id="${song.id}">▶ 只听这个伴奏型（两小节）</button></div>
           <p class="fine">格子里是每半拍弹什么：根 = 和弦根音，五 = 五音，高根 / 高三 = 高八度的根音 / 三音，和弦 = 三个音一起按。换和弦时形状不变，只是整体平移。</p>
-        </section>
+        </section></details>
         ${jianpuBars(song)}
-        <section class="twohand"><h3>原曲旋律 + 伴奏 · 双手谱</h3>
-          <p class="fine">右手是这首歌原本的旋律，左手是给它配的和弦。▶ 听的时候两只手一起响：先听懂旋律，再看左手为什么这样配。练法：先右手唱/弹旋律，再左手单独按和弦，最后合手。</p>
-          <div class="chips"><button class="chip${SG.lh === 'root' ? '' : ' on'}" data-act="sglh" data-v="block">左手柱式和弦</button><button class="chip${SG.lh === 'root' ? ' on' : ''}" data-act="sglh" data-v="root">左手只弹根音（更简单）</button></div>
-          <div class="score" id="twoscore"><p class="fine">正在生成双手谱…（第一次需要下载乐谱引擎）</p></div>
-          <div class="row"><button class="ghost sm" data-act="scplay" id="scbtn">▶ 旋律 + 伴奏一起听</button><button class="ghost sm" data-act="screte" data-v="-0.1">慢</button><button class="ghost sm" data-act="screte" data-v="0.1">快</button></div>
-          ${melWhyHtml(song)}
-        </section>
         <div class="row"><button class="btn" data-act="sgplay" data-id="${song.id}" id="sgbtn">▶ 开始（先数一小节）</button></div>
         <div class="row"><button class="ghost sm${SG.acc ? ' on' : ''}" data-act="sgtog" data-k="acc">伴奏示范 ${SG.acc ? '开' : '关'}</button><button class="ghost sm${SG.mel ? ' on' : ''}" data-act="sgtog" data-k="mel">旋律 ${SG.mel ? '开' : '关'}</button><button class="ghost sm" data-act="sgrate" data-v="-0.1">慢</button><button class="ghost sm" data-act="sgrate" data-v="0.1">快</button></div>
         <p class="fine">速度 ${Math.round(song.bpm * SG.rate)} BPM。关掉「伴奏示范」就是你自己弹伴奏；关掉「旋律」就是你自己唱。</p>
@@ -1427,7 +1426,26 @@
   const KDUR = { 4: '1', 3: '2.', 2: '2', 1.5: '4.', 1: '4', 0.75: '8.', 0.5: '8', 0.25: '16' };
   function kp(name, midi) { const L = name[0], acc = name.slice(1).replace('#', '#').replace('b', '-'); let o = Math.floor(midi / 12) - 1; if (name === 'Cb') o++; if (name === 'B#') o--; return (o >= 4 ? L.toLowerCase().repeat(o - 3) : L.repeat(4 - o)) + acc; }
   function kd(b) { if (KDUR[b]) return [KDUR[b]]; const out = []; let r = b; [4, 2, 1, 0.5, 0.25].forEach(x => { while (r >= x - 1e-6) { out.push(KDUR[x]); r -= x; } }); return out; }
-  function singKern(song, lhMode) {
+  // 伴奏型套到一小节上：事件落在哪个和弦的时间里就用哪个和弦；换和弦时如果没有新事件，把正在响的那一下换成新和弦接着弹
+  function lhKeys(sym, code) {
+    const c = T.parseChord(sym); if (!c) return [];
+    const nameOf = m => { const pc = ((m % 12) + 12) % 12; const n = c.notes.find(x => x.pc === pc) || (c.bass && c.bass.pc === pc ? c.bass : null); return n ? n.name : T.noteAt(0, pc).name; };
+    return accMidis(sym, code).map(m => [nameOf(m), m]);
+  }
+  function lhPattern(slots, pat, beats) {
+    const out = [];
+    slots.forEach(sl => {
+      const a = sl.t, b = sl.t + sl.d, inside = pat.ev.filter(([t]) => t >= a - 1e-6 && t < b - 1e-6);
+      if (!inside.length || inside[0][0] > a + 1e-6) { const prev = pat.ev.filter(([t]) => t <= a + 1e-6).pop() || pat.ev[0]; const first = inside.length ? inside[0][0] : b; out.push([a, Math.min(prev[0] + prev[2], first) - a > 0 ? Math.min(prev[0] + prev[2], first) - a : first - a, lhKeys(sl.sym, prev[1])]); }
+      inside.forEach(([t, code, d]) => out.push([t, Math.min(d, b - t), lhKeys(sl.sym, code)]));
+    });
+    // 空隙补休止，保证每小节拍数完整
+    const full = []; let cur = 0;
+    out.sort((x, y) => x[0] - y[0]).forEach(e => { if (e[0] > cur + 1e-6) full.push([cur, e[0] - cur, []]); full.push(e); cur = e[0] + e[1]; });
+    if (cur < beats - 1e-6) full.push([cur, beats - cur, []]);
+    return full.map(([t, d, k]) => [t, d, k.length ? k : [['r', 0]]]);
+  }
+  function singKern(song, pat) {
     const K = T.parseKey(song.key), sc = T.scale(K, true).map(x => x.name), tl = songTimeline(song);
     // 第三个声部 **text = 歌词，贴在它左边的右手（旋律）声部下面
     const L = ['!!!OTL: ' + song.title + '（双手谱）', '**kern\t**kern\t**text', '*staff2\t*staff1\t*staff1', '*clefF4\t*clefG2\t*', (KSIG[song.key] || '*k[]') + '\t' + (KSIG[song.key] || '*k[]') + '\t*', `*M${song.beats}/4\t*M${song.beats}/4\t*`];
@@ -1439,16 +1457,9 @@
       const ev = [];
       let t = 0;
       ns.forEach(n => { const ds = kd(n.beats); ds.forEach((d, j) => { const tok = n.midi == null ? d + 'r' : d + kp(sc[n.deg - 1], n.midi) + (ds.length > 1 ? (j === 0 ? '[' : j === ds.length - 1 ? ']' : '_') : ''); ev.push([t, 1, tok]); if (j === 0 && n.midi != null && n.lyric && n.lyric !== '~') ev.push([t, 2, n.lyric.replace(/\s/g, '')]); t += 4 / parseFloat(d) * (d.endsWith('.') ? 1.5 : 1); }); });
-      // 左手：每个和弦一个
+      // 左手：按选中的伴奏型，每一拍用当时那个和弦
       if (bi === 0 && len < song.beats) { ev.push([0, 0, kd(len).map(d => d + 'r')[0]]); }
-      else sl.forEach(x => {
-        const c = T.parseChord(x.sym); if (!c) return;
-        const tones = lhMode === 'root' ? [c.root] : c.notes;
-        // 左手密集排列：根音放在 G2–F♯3 之间，其他音紧贴着往上叠
-        let prev = 0; const ms = tones.map((nn, i) => { let m; if (i === 0) { m = 48 + nn.pc; if (m > 54) m -= 12; } else { m = 36 + nn.pc; while (m <= prev) m += 12; } prev = m; return [nn.name, m]; });
-        const ds = kd(x.d); let tt = x.t;
-        ds.forEach((d, j) => { const tie = ds.length > 1 ? (j === 0 ? '[' : j === ds.length - 1 ? ']' : '_') : ''; ev.push([tt, 0, ms.map(([nm, m]) => d + kp(nm, m) + tie).join(' ')]); tt += 4 / parseFloat(d) * (d.endsWith('.') ? 1.5 : 1); });
-      });
+      else lhPattern(sl, pat, song.beats).forEach(([t0, d, keys]) => { const ds = kd(d); let tt = t0; ds.forEach((dd, j) => { const tie = ds.length > 1 ? (j === 0 ? '[' : j === ds.length - 1 ? ']' : '_') : ''; ev.push([tt, 0, keys[0][0] === 'r' ? dd + 'r' : keys.map(([nm, m]) => dd + kp(nm, m) + tie).join(' ')]); tt += 4 / parseFloat(dd) * (dd.endsWith('.') ? 1.5 : 1); }); });
       const times = [...new Set(ev.map(e => +e[0].toFixed(3)))].sort((a, b) => a - b);
       times.forEach(tt => { const g = k => ev.find(e => +e[0].toFixed(3) === tt && e[1] === k); const a = g(0), b2 = g(1), ly = g(2); L.push(`${a ? a[2] : '.'}\t${b2 ? b2[2] : '.'}\t${ly && b2 ? ly[2] : '.'}`); });
       barStart += len;
@@ -1456,11 +1467,12 @@
     L.push('==\t==\t==', '*-\t*-\t*-');
     return L.join('\n');
   }
-  window.__singKern = s => singKern(s, SG.lh); // 自查用
+  const singPat = song => { const pats = PATTERNS[song.beats]; return pats.find(p => p.id === SG.pat[song.id]) || pats[1]; };
+  window.__singKern = s => singKern(s, singPat(s)); // 自查用
   function singScore(song) {
     const el = $('#twoscore'); if (!el) return;
     const lab = {}; song.bars.forEach((b, i) => { lab[i + 1] = String(b[2] || '').split(/\s+/).filter(Boolean).map(x => { const sy = x.split(':')[0]; return D(sy) + ' ' + degLabel(sy, song.key); }).join('  '); });
-    Score.render(el, { kern: singKern(song, SG.lh) }, { section: false, labels: lab }).catch(() => (el.innerHTML = '<p class="no">双手谱加载失败：需要联网下载乐谱引擎。</p>'));
+    Score.render(el, { kern: singKern(song, singPat(song)) }, { section: false, labels: lab }).catch(() => (el.innerHTML = '<p class="no">双手谱加载失败：需要联网下载乐谱引擎。</p>'));
   }
   function singPlay(song) {
     stopAll(); A.init();
