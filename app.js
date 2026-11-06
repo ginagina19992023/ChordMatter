@@ -54,6 +54,7 @@
   const save = () => { S.v = SCHEMA; S.savedAt = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} mirror(); cloudQueue(); };
   // 云端同步：存到你自己 GitHub 账号里的一个私密 Gist（不需要服务器）
   // 令牌只存在这台手机（hexian.cloud），不进备份、不进分享
+  if ('HX_PRESEED' in window) document.documentElement.classList.add('inart'); // 在 Claude 里打开：顶部有 Claude 的工具条盖住
   const CK = 'hexian.cloud', GFILE = 'chordmatter-state.json';
   const cloudCfg = () => { try { return JSON.parse(localStorage.getItem(CK) || 'null'); } catch (e) { return null; } };
   const cloudSet = o => { try { if (o) localStorage.setItem(CK, JSON.stringify(o)); else localStorage.removeItem(CK); } catch (e) {} };
