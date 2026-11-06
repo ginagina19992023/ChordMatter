@@ -43,7 +43,8 @@ const Roll = (() => {
     const keyAt = e => {
       const r = cv.getBoundingClientRect();
       const x = (opt.rot ? e.clientY - r.top : e.clientX - r.left) + cur.sx, y = opt.rot ? r.right - e.clientX : e.clientY - r.top;
-      if (y < cur.hitY) return null;
+      // 用手机弹：键盘上方整条键道也算这个键（手指往前伸一点照样按得到）；彩条落在哪条道，按那条道就行
+      if (y < cur.hitY && !opt.real) return null;
       const blackHit = y < cur.hitY + cur.keyH * 0.63;
       let m = null;
       if (blackHit) for (const [k, p] of Object.entries(cur.geo.pos)) if (p.black && x >= p.x && x < p.x + p.w) m = +k;

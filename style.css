@@ -876,7 +876,7 @@ body.land .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .cxrow .chips.grid6, .cxrow .chips.grid5 { max-width: 760px; }
 }
 /* 在 Claude 预览里：顶部约 70px 被 Claude 的关闭 / 分享条盖住，全屏跟练整体往下让 */
-html.inart .rollfs { padding-top: calc(env(safe-area-inset-top) + 76px); }
+html.inart body:not(.land) .rollfs:not(.rot) { padding-top: calc(env(safe-area-inset-top) + 76px); }
 
 /* 用手机弹 · 竖着拿时：整个跟练画面转 90° 当横屏用（iPhone 网页锁不了方向） */
 .rollfs.rot { inset: auto; top: 0; left: 100%; transform: rotate(90deg); transform-origin: 0 0; padding: max(8px, env(safe-area-inset-right)) calc(env(safe-area-inset-top) + 10px) max(8px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 10px); }

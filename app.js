@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 57; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 58; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -2149,9 +2149,9 @@
     const wide = isLand() || rot; ov.classList.toggle('nopanel', wide && RL.nopanel);
     if (rot) { ov.style.width = innerHeight + 'px'; ov.style.height = innerWidth + 'px'; } else { ov.style.width = ov.style.height = ''; }
     ov.innerHTML = `<div class="fshead"><button class="fsx" data-act="rollclose" aria-label="关闭">×</button><b>${esc(b.title)}</b><small>${isLand() ? '' : rot ? '把手机横过来拿' : '横过来更宽'}</small>${wide ? `<span class="fsmini"><button class="fsb fspp" data-act="rlpp" aria-label="暂停 / 继续">⏸</button></span>${RL.nopanel ? '' : '<button class="fsb fspanel" data-act="rlpanel">‹ 收起</button>'}` : ''}</div>${rollPanel('fsroll')}`;
-    const H = ov.clientHeight, used = [...ov.children].reduce((a, e) => a + (e.querySelector && e.querySelector('#fsroll') ? 0 : e.offsetHeight), 0);
+    const cs = getComputedStyle(ov), H = ov.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom), used = [...ov.children].reduce((a, e) => a + (e.querySelector && e.querySelector('#fsroll') ? 0 : e.offsetHeight), 0);
     const other = [...ov.querySelectorAll('.rollbox > :not(#fsroll)')].reduce((a, e) => a + e.offsetHeight + 8, 0);
-    RL.fsH = isLand() || rot ? Math.max(200, H - 22) : Math.max(200, H - ov.querySelector('.fshead').offsetHeight - other - 24);
+    RL.fsH = isLand() || rot ? Math.max(200, H - 4) : Math.max(200, H - ov.querySelector('.fshead').offsetHeight - other - 24);
     rollMount('fsroll', b.data, b.bpm);
   }
   function rollClose() {
@@ -2166,7 +2166,7 @@
     const fs = id === 'fsroll', kb = fs && RL.kb, rot = kb && !!document.querySelector('.rollfs.rot');
     let evs = data.events;
     if (kb) { const seen = new Set(); evs = data.events.map(e => { let m = e.midi; while (m < KB_LO) m += 12; while (m > KB_HI) m -= 12; return Object.assign({}, e, { midi: m }); }).filter(e => { const k = e.t.toFixed(3) + ':' + e.midi; if (seen.has(k)) return false; seen.add(k); return true; }); }
-    Roll.mount(el, { events: evs, real: kb, rot, lo: kb ? KB_LO : undefined, hi: kb ? KB_HI : undefined, keyFrac: kb ? 0.42 : 0, keyW: kb && RL.kbReal ? KEY_REAL : 0, chords: data.chords, beats: data.beats, bpm, barNo: data.barNo, lead: 2, height: id === 'fsroll' && RL.fsH ? RL.fsH : isLand() ? Math.max(220, (document.getElementById('phone') && getComputedStyle(document.getElementById('phone')).overflowY === 'auto' ? document.getElementById('phone').clientHeight : innerHeight) - 80) : Math.min(420, Math.round(innerHeight * 0.5)), onKey: m => { A.init(); if (RL.mode === 'wait' && DR) drillTapKey(m); else A.note(m, 0, 0.8, 0.6); } });
+    Roll.mount(el, { events: evs, real: kb, rot, lo: kb ? KB_LO : undefined, hi: kb ? KB_HI : undefined, keyFrac: kb ? 0.55 : 0, keyW: kb && RL.kbReal ? KEY_REAL : 0, chords: data.chords, beats: data.beats, bpm, barNo: data.barNo, lead: 2, height: id === 'fsroll' && RL.fsH ? RL.fsH : isLand() ? Math.max(220, (document.getElementById('phone') && getComputedStyle(document.getElementById('phone')).overflowY === 'auto' ? document.getElementById('phone').clientHeight : innerHeight) - 80) : Math.min(420, Math.round(innerHeight * 0.5)), onKey: m => { A.init(); if (RL.mode === 'wait' && DR) drillTapKey(m); else A.note(m, 0, 0.8, 0.6); } });
     $('#rlctl').innerHTML = kb ? `<p class="fine">${RL.mode === 'wait' ? '彩条停住时，在下面的键盘上把这个和弦按出来（几根手指一起按，或一个一个点都行）。' : '跟着彩条在下面的键盘上按。'}</p>` : RL.mode === 'wait' ? (place() === 'away' ? '<p class="fine">没钢琴模式：点画面里的键盘。</p>' : '<div class="row"><button class="ghost sm" data-act="dlisten">开始收音 · 弹给它听</button></div>') : '';
   }
   function rollGo() {
