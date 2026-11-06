@@ -50,10 +50,18 @@ const Score = (() => {
       el.querySelectorAll('g.measure').forEach((g, i) => {
         let n = NaN; try { n = parseInt(tk.getElementAttr(g.dataset.id || g.id).n, 10); } catch (e) {}
         if (isNaN(n)) n = i + 1;
+        g.dataset.n = lastOf[n] === g ? n : n - 1; // 弱起小节记为第 0 小节
         if (lastOf[n] !== g) return;
-        const txt = opt.labels[n]; if (!txt) return;
         const bb = g.getBBox(), svg = g.ownerSVGElement;
         const fs = Math.max(bb.height * 0.1, 1);
+        // 小节线上方的小 ▶：点它从这一小节一直播放到结尾
+        if (opt.barAct) {
+          const mk = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          mk.setAttribute('x', bb.x - fs * 0.35); mk.setAttribute('y', bb.y - fs * 1.35); mk.setAttribute('font-size', fs * 0.95);
+          mk.setAttribute('class', 'playfrom'); mk.dataset.act = 'playfrom'; mk.dataset.n = n; mk.textContent = '▶';
+          (g.parentNode || svg).appendChild(mk);
+        }
+        const txt = opt.labels[n]; if (!txt) return;
         const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         t.setAttribute('x', bb.x + fs * 0.3); t.setAttribute('y', bb.y - fs * 0.15);
         t.setAttribute('font-size', fs); t.setAttribute('class', 'chordlab'); t.dataset.n = n;
@@ -84,8 +92,11 @@ const Score = (() => {
     el.onclick = e => {
       const g = e.target.closest('g.note, g.chord');
       if (!g) { // 点到小节的空白处：告诉外面是第几小节
-        const m = e.target.closest('g.measure'); if (!m || e.target.closest('[data-act]')) return;
-        let n = NaN; try { n = parseInt(tk.getElementAttr(m.dataset.id || m.id).n, 10); } catch (err) {}
+        if (e.target.closest('[data-act]')) return;
+        // 点在空白处时 SVG 里没有元素被点到：按坐标找是哪一小节
+        const m = e.target.closest('g.measure') || [...el.querySelectorAll('g.measure')].find(g => { const r = g.getBoundingClientRect(); return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top - 12 && e.clientY <= r.bottom + 12; });
+        if (!m) return;
+        let n = m.dataset.n != null ? +m.dataset.n : NaN; if (isNaN(n)) try { n = parseInt(tk.getElementAttr(m.dataset.id || m.id).n, 10); } catch (err) {}
         if (!isNaN(n)) el.dispatchEvent(new CustomEvent('staffbar', { detail: n, bubbles: true }));
         return;
       }

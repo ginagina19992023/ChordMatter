@@ -48,12 +48,17 @@ const Staff = (() => {
     el.onclick = e => {
       const rc = svg.getBoundingClientRect(), sx = (e.clientX - rc.left) * W / rc.width, sy = (e.clientY - rc.top) * H / rc.height;
       // 点到哪一小节：告诉外面（曲目页用来显示这一小节的依据）
-      const bx = (boxes || []).find(b => sx >= b.x && sx <= b.x + b.w && sy >= b.y && sy <= b.y + b.h);
-      if (bx) el.dispatchEvent(new CustomEvent('staffbar', { detail: bx.n, bubbles: true }));
+      const mk = (boxes || []).find(b => b.mx != null && Math.abs(sx - b.mx - 4) < 12 && Math.abs(sy - b.my) < 12);
+      if (mk) { el.dispatchEvent(new CustomEvent('staffplayfrom', { detail: mk.n, bubbles: true })); return; }
       // 只在点到的那一行里找（不同行同一横坐标的音不混在一起）
       const inRow = cols.filter(c => sy >= c.y0 && sy <= c.y1);
       const col = (inRow.length ? inRow : cols).slice().sort((a, b) => Math.abs(a.x - sx) - Math.abs(b.x - sx))[0];
-      if (!col || Math.abs(col.x - sx) > 40) return;
+      // 点在音符（那一列和弦）附近 = 听音；点在小节的空白处 = 告诉外面播放这一小节
+      if (!col || Math.abs(col.x + 6 - sx) > 22) {
+        const bx = (boxes || []).find(b => sx >= b.x && sx <= b.x + b.w && sy >= b.y && sy <= b.y + b.h);
+        if (bx) el.dispatchEvent(new CustomEvent('staffbar', { detail: bx.n, bubbles: true }));
+        return;
+      }
       const head = col.heads.slice().sort((a, b) => Math.abs(a.y - sy) - Math.abs(b.y - sy))[0];
       const ms = head && Math.abs(head.y - sy) < 9 && Math.abs(col.x + 8 - sx) < 24 ? [head.m] : col.heads.map(h => h.m);
       el.dispatchEvent(new CustomEvent('staffplay', { detail: ms, bubbles: true }));
@@ -98,7 +103,13 @@ const Staff = (() => {
         [tr, bs].forEach(s => s.setStyle({ strokeStyle: mute, fillStyle: ink }));
         tr.setContext(ctx).draw(); bs.setContext(ctx).draw();
         // 小节号：和原谱对齐（cfg.start = 这一段第一小节的号）
-        if (cfg.start != null) { const n = cfg.start + barNo; const bx = bi === 0 ? x + head - 8 : x + 3; ctx.save(); ctx.setFont('sans-serif', 10, 'normal'); ctx.setFillStyle(mute); ctx.fillText(String(n), bx, y + 8); ctx.restore(); boxes.push({ n, x: bi === 0 ? x + head - 10 : x, y: y - 20, w: bi === 0 ? w - head + 10 : w, h: 170 }); }
+        if (cfg.start != null) {
+          const n = cfg.start + barNo; const bx = bi === 0 ? x + head - 8 : x + 3;
+          ctx.save(); ctx.setFont('sans-serif', 10, 'normal'); ctx.setFillStyle(mute); ctx.fillText(String(n), bx, y + 8);
+          // 小 ▶：从这一小节播放到结尾
+          const mx = bx - 13; ctx.setFont('sans-serif', 10, 'normal'); ctx.setFillStyle(css('--S') || '#2f6fdb'); ctx.fillText('▶', mx, y + 8); ctx.restore();
+          boxes.push({ n, x: bi === 0 ? x + head - 10 : x, y: y - 20, w: bi === 0 ? w - head + 10 : w, h: 170, mx, my: y + 4 });
+        }
         barNo++;
         if (bi === 0) {
           new VF.StaveConnector(tr, bs).setType('brace').setContext(ctx).draw();
@@ -165,6 +176,7 @@ const Staff = (() => {
     });
     const svg = el.querySelector('svg');
     if (svg) { svg.setAttribute('viewBox', `0 0 ${W} ${rows.length * ROW_H + 6}`); svg.style.width = '100%'; svg.style.height = 'auto'; }
+    el.__boxes = boxes; el.__W = W;
     clickable(el, cols, W, rows.length * ROW_H + 6, boxes);
   }
 
