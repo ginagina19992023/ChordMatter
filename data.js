@@ -117,12 +117,12 @@ const UNITS = [
 // 注意：均为学习用的简化和声分析，请对照你手上的乐谱核对
 const SONGS = [
   {
-    id: 'k545', title: '莫扎特 C 大调奏鸣曲 K.545', sub: '第一乐章 · 开头', key: 'C', tag: '古典', bpm: 100,
+    id: 'k545', orig: { score: { src: 'https://raw.githubusercontent.com/craigsapp/mozart-piano-sonatas/master/kern/sonata15-1.krn', measures: '1-4', credit: 'Craig Stuart Sapp 数字版，依据 1878 年《旧莫扎特全集》，CC BY-NC-SA 4.0' }, imslp: 'https://imslp.org/index.php?search=Mozart+K.545', apple: 'https://music.apple.com/cn/search?term=Mozart%20K.545%20Allegro' }, title: '莫扎特 C 大调奏鸣曲 K.545', sub: '第一乐章 · 开头', key: 'C', tag: '古典', bpm: 100,
     sections: [{ name: '主题 1–4 小节', bars: 'C | G7/D C | F/C C | G7/B C' }],
     note: '左手 Alberti 低音的和声骨架（简化）。请对照乐谱核对。',
   },
   {
-    id: 'clementi', title: '克列门蒂 小奏鸣曲 Op.36 No.1', sub: '第一乐章 · 开头（简化）', key: 'C', tag: '古典', bpm: 96,
+    id: 'clementi', orig: { imslp: 'https://imslp.org/index.php?search=Clementi+Op.36', apple: 'https://music.apple.com/cn/search?term=Clementi%20Sonatina%20Op.36%20No.1' }, title: '克列门蒂 小奏鸣曲 Op.36 No.1', sub: '第一乐章 · 开头（简化）', key: 'C', tag: '古典', bpm: 96,
     sections: [
       { name: '前句', bars: 'C | C | G | G' },
       { name: '后句', bars: 'C | F | G7 | C' },
@@ -130,7 +130,7 @@ const SONGS = [
     note: '开头右手是 C 大三和弦的分解（琶音！）。这里是简化的骨架，请对照乐谱核对。',
   },
   {
-    id: 'bach', title: '巴赫 C 大调前奏曲 BWV 846', sub: '《平均律》第一首 · 1–11 小节', key: 'C', tag: '古典', bpm: 66,
+    id: 'bach', orig: { score: { src: 'https://raw.githubusercontent.com/humdrum-tools/bach-wtc/master/kern/wtc1p01.krn', measures: '1-11', credit: 'CCARH（Walter Hewlett）数字版，依据巴赫协会版；从原站实时加载，仅供学习' }, imslp: 'https://imslp.org/index.php?search=BWV+846', apple: 'https://music.apple.com/cn/search?term=Bach%20Prelude%20C%20major%20BWV%20846' }, title: '巴赫 C 大调前奏曲 BWV 846', sub: '《平均律》第一首 · 1–11 小节', key: 'C', tag: '古典', bpm: 66,
     sections: [
       { name: '1–4', bars: 'C | Dm7/C | G7/B | C' },
       { name: '5–8', bars: 'Am/C | D7/C | G/B | Cmaj7/B' },
@@ -139,7 +139,7 @@ const SONGS = [
     note: '整首都是分解和弦，最适合同时练琶音、七和弦和背谱。',
   },
   {
-    id: 'castle', title: '天空之城', sub: '久石让 · 常见钢琴改编（A 小调）', key: 'Am', tag: '流行', bpm: 76,
+    id: 'castle', orig: { apple: 'https://music.apple.com/cn/search?term=%E5%A4%A9%E7%A9%BA%E4%B9%8B%E5%9F%8E%20%E4%B9%85%E7%9F%B3%E8%AE%A9' }, title: '天空之城', sub: '久石让 · 常见钢琴改编（A 小调）', key: 'Am', tag: '流行', bpm: 76,
     sections: [
       { name: 'A 段', bars: 'Am Em | F C | Dm G | C E7 | Am Em | F C | Dm E7 | Am' },
       { name: 'B 段', bars: 'F G | Em Am | Dm G | C | F G | E7 Am | Dm E7 | Am' },
@@ -147,12 +147,12 @@ const SONGS = [
     note: '改编版本很多，这是最常见的一种，请以你的谱为准（在「编辑」里改）。',
   },
   {
-    id: 'canon', title: '卡农', sub: '帕赫贝尔 · D 大调', key: 'D', tag: '古典', bpm: 60,
+    id: 'canon', orig: { imslp: 'https://imslp.org/index.php?search=Pachelbel+Canon', apple: 'https://music.apple.com/cn/search?term=Pachelbel%20Canon%20in%20D' }, title: '卡农', sub: '帕赫贝尔 · D 大调', key: 'D', tag: '古典', bpm: 60,
     sections: [{ name: '低音主题', bars: 'D A | Bm F#m | G D | G A' }],
     note: '流行音乐里「卡农进行」的源头。',
   },
   {
-    id: 'letitbe', title: 'Let It Be', sub: 'The Beatles · 主歌', key: 'C', tag: '流行', bpm: 72,
+    id: 'letitbe', orig: { apple: 'https://music.apple.com/cn/search?term=Let%20It%20Be%20The%20Beatles' }, title: 'Let It Be', sub: 'The Beatles · 主歌', key: 'C', tag: '流行', bpm: 72,
     sections: [{ name: '主歌', bars: 'C G | Am F | C G | F C' }],
     note: '1564 进行的经典例子。',
   },
@@ -162,3 +162,157 @@ const SONGS = [
 const SONG_DRAFTS = [
   { title: 'Always Online', sub: '林俊杰 · 从你的谱上抄写和弦', key: '', sections: [] },
 ];
+
+// ---------------- 即兴伴奏：跟唱曲目（均为公有领域旋律/歌词） ----------------
+// 简谱记法：数字=唱名；' 高八度，, 低八度；_ 八分（__ 十六分）；. 附点；每个 - 多一拍；0 休止
+// 歌词：每个音对应一个字，~ 表示同一个字的拖腔
+// 和弦：按小节，空格分半小节；也可写 C:2 G:1 指定拍数；空 = 弱起小节不配
+const SING = [
+  {
+    id: 'twinkle', title: '小星星', sub: '儿歌 · 莫扎特 K.265 变奏曲的主题', key: 'C', beats: 4, bpm: 96, test: true,
+    bars: [
+      ['1 1 5 5', '一 闪 一 闪', 'C'], ['6 6 5-', '亮 晶 晶', 'F C'], ['4 4 3 3', '满 天 都 是', 'F C'], ['2 2 1-', '小 星 星', 'G C'],
+      ['5 5 4 4', '挂 在 天 上', 'C F'], ['3 3 2-', '放 光 明', 'C G'], ['5 5 4 4', '好 像 许 多', 'C F'], ['3 3 2-', '小 眼 睛', 'C G'],
+      ['1 1 5 5', '一 闪 一 闪', 'C'], ['6 6 5-', '亮 晶 晶', 'F C'], ['4 4 3 3', '满 天 都 是', 'F C'], ['2 2 1-', '小 星 星', 'G C'],
+    ],
+  },
+  {
+    id: 'joy', title: '欢乐颂', sub: '贝多芬第九交响曲 · 用唱名唱', key: 'C', beats: 4, bpm: 104, test: true,
+    bars: [
+      ['3 3 4 5', 'mi mi fa sol', 'C'], ['5 4 3 2', 'sol fa mi re', 'G'], ['1 1 2 3', 'do do re mi', 'C'], ['3. 2_ 2-', 'mi re re', 'C G'],
+      ['3 3 4 5', 'mi mi fa sol', 'C'], ['5 4 3 2', 'sol fa mi re', 'G'], ['1 1 2 3', 'do do re mi', 'C'], ['2. 1_ 1-', 're do do', 'G C'],
+    ],
+  },
+  {
+    id: 'songbie', title: '送别', sub: '李叔同 词 · 奥德威 曲', key: 'C', beats: 4, bpm: 72, test: true,
+    bars: [
+      ["5 3_ 5_ 1'-", '长 亭 ~ 外', 'C'], ["6 1' 5-", '古 道 边', 'F C'], ['5 1_ 2_ 3 2_ 1_', '芳 草 ~ 碧 连 ~', 'C'], ['2---', '天', 'G'],
+      ["5 3_ 5_ 1'. 7_", '晚 风 ~ 拂 柳', 'C'], ["6 1' 5-", '笛 声 残', 'F C'], ['5 2_ 3_ 4. 7,_', '夕 阳 ~ 山 外', 'G'], ['1---', '山', 'C'],
+    ],
+  },
+  {
+    id: 'bday', title: '生日快乐', sub: '3/4 拍 · 练圆舞曲伴奏', key: 'C', beats: 3, bpm: 100,
+    bars: [
+      ['5,_. 5,__', '祝 你', ''], ['6, 5, 1', '生 日 快', 'C'], ['7,- 5,_. 5,__', '乐 祝 你', 'G'], ['6, 5, 2', '生 日 快', 'G'],
+      ['1- 5,_. 5,__', '乐 祝 你', 'C'], ['5 3 1', '生 日 快', 'C'], ['7, 6, 4_. 4__', '乐 ~ 祝 你', 'F'], ['3 1 2', '生 日 快', 'C:2 G:1'], ['1--', '乐', 'C'],
+    ],
+  },
+];
+
+// 伴奏型：t 拍位置，n 音（R 根音 3 三音 5 五音 8 高八度根音 10 高八度三音 C 柱式和弦），d 时值（拍）
+const PATTERNS = {
+  4: [
+    { id: 'block', name: '柱式', tip: '每小节弹一次和弦，最稳，先从这个开始', ev: [[0, 'RC', 4]] },
+    { id: 'oom', name: '低音 + 和弦', tip: '根音 – 和弦 – 五音 – 和弦，进行曲感', ev: [[0, 'R', 1], [1, 'C', 1], [2, '5', 1], [3, 'C', 1]] },
+    { id: 'broken', name: '分解 1-5-8-10', tip: '流行抒情最常用，手张开', ev: [[0, 'R', .5], [.5, '5', .5], [1, '8', .5], [1.5, '10', .5], [2, '8', .5], [2.5, '5', .5], [3, '8', .5], [3.5, '5', .5]] },
+    { id: 'alberti', name: 'Alberti 低音', tip: '1-5-3-5，就是 K.545 的左手', ev: [[0, 'R', .5], [.5, '5', .5], [1, '3', .5], [1.5, '5', .5], [2, 'R', .5], [2.5, '5', .5], [3, '3', .5], [3.5, '5', .5]] },
+  ],
+  3: [
+    { id: 'block', name: '柱式', tip: '每小节弹一次和弦', ev: [[0, 'RC', 3]] },
+    { id: 'waltz', name: '圆舞曲 嘭-嚓-嚓', tip: '根音 – 和弦 – 和弦', ev: [[0, 'R', 1], [1, 'C', 1], [2, 'C', 1]] },
+    { id: 'broken', name: '分解 1-5-8-10', tip: '流动感', ev: [[0, 'R', .5], [.5, '5', .5], [1, '8', .5], [1.5, '10', .5], [2, '8', .5], [2.5, '5', .5]] },
+  ],
+};
+
+UNITS.splice(7, 0, {
+  id: 'u13', title: '即兴伴奏入门', en: 'Improvised Accompaniment', song: 'k545', acc: true,
+  blocks: [
+    { t: 'p', x: '即兴伴奏 = 看着旋律（通常是简谱），现场配上和弦，再选一种伴奏型弹出来。只用 <b>I、IV、V</b> 三个和弦，就能配大多数儿歌和民歌。' },
+    { t: 'p', x: '<b>第 1 步 定调</b>：看最后一个音，通常是 1（do），这就是主音。<br><b>第 2 步 配和弦</b>：每小节（或半小节）<b>强拍上的旋律音，应该是和弦里的音</b>。<br><b>第 3 步 结尾</b>：用 V → I（正格终止）收住。' },
+    { t: 'table', rows: [['旋律强拍音', '可以配', 'C 大调'], ['1 do', 'I 或 IV', 'C / F'], ['2 re', 'V', 'G'], ['3 mi', 'I', 'C'], ['4 fa', 'IV（或 V7）', 'F / G7'], ['5 sol', 'I 或 V', 'C / G'], ['6 la', 'IV', 'F'], ['7 si', 'V', 'G']] },
+    { t: 'prog', k: 'C', c: ['C', 'F', 'C', 'G'] },
+    { t: 'table', rows: [['柱式', '每小节一个和弦'], ['低音 + 和弦', '根 – 和弦 – 五 – 和弦'], ['分解 1-5-8-10', '流行抒情'], ['Alberti', '1-5-3-5，古典'], ['圆舞曲', '3/4 拍：根 – 和弦 – 和弦']] },
+    { t: 'tip', x: '先左手只弹根音、右手弹旋律并跟着唱；稳了再换伴奏型。每天练完可以去「伴奏」考一段或跟弹一首。' },
+  ],
+});
+UNITS.forEach((u, i) => (u.n = i + 1));
+
+// ---------------- 知识点（核对来源后整理） ----------------
+const OMT = 'https://human.libretexts.org/Bookshelves/Music/Music_Theory/Open_Music_Theory_2e_(Gotham_et_al.)';
+const KNOW = [
+  {
+    id: 'k0', t: '先看懂：C、Am、G7 这些是什么', blocks: [
+      { t: 'p', x: '钢琴白键从左到右，按 <b>C D E F G A B</b> 循环命名，这叫<b>音名</b>。C 就在「两个黑键一组」左边的那个白键。在 C 大调里，C D E F G A B 就是 do re mi fa sol la si（简谱 1–7）。' },
+      { t: 'p', x: '<b>和弦名的第一个字母 = 根音</b>（和弦最下面、起名字的那个音），后面的小字说明是什么样的和弦：' },
+      { t: 'table', rows: [['写法', '意思', '音'], ['C', 'C 大三和弦（明亮）', 'C E G'], ['Am', 'A 小三和弦（m = minor，暗淡）', 'A C E'], ['G7', 'G 大三和弦 + 一个七度音（紧张）', 'G B D F'], ['Cmaj7', 'C 大三和弦 + 大七度（柔和）', 'C E G B'], ['Bdim', '减三和弦', 'B D F'], ['F♯ / B♭', '♯ 升半音 = 右边紧挨的键，♭ 降半音 = 左边紧挨的键', ''], ['C/E', '弹 C 和弦，但最低音弹 E', 'E G C']] },
+      { t: 'chord', s: 'C' }, { t: 'chord', s: 'Am' }, { t: 'chord', s: 'G7' },
+      { t: 'p', x: '所以看到 <b>G7/B</b> 就读作：G 七和弦，低音弹 B。在曲目页点任何一个和弦，都会用这种大白话告诉你它是什么。' },
+    ], src: [['Open Music Theory · 三和弦与七和弦', OMT + '/01%3A_Fundamentals/1.16%3A_Triads'], ['Open Music Theory · 罗马数字', OMT + '/01%3A_Fundamentals/1.19%3A_Roman_Numerals_and_SATB_Chord_Construction']],
+  },
+  {
+    id: 'k1', t: '音级：一级、二级、三级是什么', blocks: [
+      { t: 'p', x: '把一个调的音阶从主音开始数：第 1 个音叫<b>一级</b>，第 2 个叫<b>二级</b>……一直到七级。你熟悉的简谱数字 1 2 3 4 5 6 7，就是在说级数。' },
+      { t: 'table', rows: [['级', '简谱', 'C 大调', '名称'], ['一级', '1 do', 'C', '主音 Tonic'], ['二级', '2 re', 'D', '上主音 Supertonic'], ['三级', '3 mi', 'E', '中音 Mediant'], ['四级', '4 fa', 'F', '下属音 Subdominant'], ['五级', '5 sol', 'G', '属音 Dominant'], ['六级', '6 la', 'A', '下中音 Submediant'], ['七级', '7 si', 'B', '导音 Leading tone']] },
+      { t: 'p', x: '换到 G 大调，一级就变成 G，五级变成 D。<b>级数不跟着具体的音走，跟着调走</b>，所以一套逻辑可以用在所有调上。' },
+      { t: 'p', x: '小调的第七级比主音低一个全音（A 小调的 G），叫<b>下主音</b>。把它升高半音（G♯），离主音只差半音，就重新变成<b>导音</b>。' },
+    ], src: [['Open Music Theory · 大调音阶与音级', OMT + '/01%3A_Fundamentals/1.12%3A_Major_Scales_Scale_Degrees_and_Key_Signatures'], ['Open Music Theory · 小调音阶', OMT + '/01%3A_Fundamentals/1.13%3A_Minor_Scales_Scale_Degrees_and_Key_Signatures'], ['维基百科 · 音级', 'https://zh.wikipedia.org/wiki/音級']],
+  },
+  {
+    id: 'k2', t: '级数和弦：「一级和弦」「五级和弦」', blocks: [
+      { t: 'p', x: '以第几级音为<b>根音</b>，在它上面隔一个音叠三个音，就是几级和弦。C 大调：一级和弦 = C–E–G（1 3 5），四级和弦 = F–A–C（4 6 1），五级和弦 = G–B–D（5 7 2）。' },
+      { t: 'prog', k: 'C', c: ['C', 'Dm', 'Em', 'F', 'G', 'Am', 'Bdim'] },
+      { t: 'p', x: '一、四、五级是大三和弦，叫<b>正三和弦</b>，撑起整个调；二、三、六级是小三和弦，七级是减三和弦。顺序永远是：<b>大 小 小 大 大 小 减</b>。' },
+      { t: 'p', x: '流行音乐说的「1645」「4536」，就是一级、六级、四级、五级和弦连起来弹。' },
+    ], src: [['Open Music Theory · 罗马数字', OMT + '/01%3A_Fundamentals/1.19%3A_Roman_Numerals_and_SATB_Chord_Construction']],
+  },
+  {
+    id: 'k3', t: '符号怎么读：I ii V⁷ ° ⁶', blocks: [
+      { t: 'table', rows: [['写法', '意思', '例子（C 大调）'], ['I IV V', '大写 = 大三和弦', 'C F G'], ['ii iii vi', '小写 = 小三和弦', 'Dm Em Am'], ['vii°', '° = 减三和弦', 'B–D–F'], ['V⁷', '加 7 = 七和弦', 'G7'], ['iiø⁷', 'ø = 半减七', 'Bm7♭5（在 A 小调里）'], ['V/V', '「五的五」：属和弦的属和弦', 'D7'], ['♭VII', '♭ = 根音降半音，借来的', 'B♭']] },
+      { t: 'p', x: '本应用的「简单模式」把这些换成你熟悉的简谱数字：<b>6m</b> = 六级小和弦（Am），<b>5⁷</b> = 五级七和弦（G7），<b>5⁷/2</b> = 低音弹 2（re）。在曲目页可以随时切换。' },
+    ], src: [['Open Music Theory · 罗马数字', OMT + '/01%3A_Fundamentals/1.19%3A_Roman_Numerals_and_SATB_Chord_Construction']],
+  },
+  {
+    id: 'k4', t: '转位数字：⁶ ⁶₄ ⁶₅ ⁴₃ ⁴₂', blocks: [
+      { t: 'p', x: '这些小数字来自巴洛克时期的数字低音，意思是「低音上方有哪些音程」，不是从根音算。' },
+      { t: 'table', rows: [['', '三和弦', '七和弦'], ['原位（根音在下）', '不标', '⁷'], ['第一转位（三音在下）', '⁶ 六和弦', '⁶₅ 五六和弦'], ['第二转位（五音在下）', '⁶₄ 四六和弦', '⁴₃ 三四和弦'], ['第三转位（七音在下）', '—', '⁴₂ 二和弦']] },
+      { t: 'chord', s: 'G7/B' },
+      { t: 'p', x: 'K.545 第 2 小节左手的 V⁴₃，就是低音为 D 的 G7。简单模式里写成 5⁷/2。' },
+    ], src: [['Open Music Theory · 转位与数字低音', OMT + '/01%3A_Fundamentals/1.18%3A_Inversion_and_Figured_Bass']],
+  },
+  {
+    id: 'k5', t: '功能：稳 · 走 · 紧（T S D）', blocks: [
+      { t: 'table', rows: [['简单模式', '术语', '和弦（C 大调）', '感觉'], ['稳', '主功能 T', 'I（vi、iii）', '在家'], ['走', '下属功能 S', 'IV、ii', '出门'], ['紧', '属功能 D', 'V、vii°', '想回家']] },
+      { t: 'p', x: '最常见的路线是 稳 → 走 → 紧 → 稳。背谱时问自己：现在在家、出门，还是在回家的路上？' },
+      { t: 'p', x: '中文教材用里曼的 T/S/D 三分法，美国教材把 S 叫「前属」（predominant），并把 vi、iii 看作较弱的前属。两种说法描述的是同一件事。' },
+    ], src: [['Open Music Theory · 和声与终止', OMT + '/04%3A_Diatonic_Harmony_Tonicization_and_Modulation/4.01%3A_Introduction_to_Harmony_Cadences_and_Phrase_Endings'], ['维基百科 · 功能和声', 'https://zh.wikipedia.org/wiki/功能和声']],
+  },
+  {
+    id: 'k6', t: '终止式：乐句的标点', blocks: [
+      { t: 'table', rows: [['名称', '和弦', '例子'], ['完满正格终止 PAC', 'V → I，原位，旋律落主音', 'G → C，高音 C'], ['不完满正格终止 IAC', 'V → I，但上面条件缺一个', 'G → C，高音 E'], ['变格终止', 'IV → I', 'F → C（阿门）'], ['半终止', '停在 V', 'Dm → G'], ['阻碍终止', 'V → vi', 'G7 → Am']] },
+    ], src: [['Open Music Theory · 终止式', OMT + '/04%3A_Diatonic_Harmony_Tonicization_and_Modulation/4.01%3A_Introduction_to_Harmony_Cadences_and_Phrase_Endings'], ['Music Theory for the 21st-Century Classroom · 终止式', 'https://musictheory.pugetsound.edu/mt21c/cadences.html']],
+  },
+  {
+    id: 'k7', t: '副属和弦与借用和弦', blocks: [
+      { t: 'p', x: '<b>副属和弦</b>：临时把某个和弦当成「主」，在它前面放它自己的属和弦，这个过程叫<b>离调</b>。C 大调里 D7 → G 写作 V⁷/V（重属和弦）。' },
+      { t: 'p', x: '<b>借用和弦（调式交替）</b>：向同主音小调借和弦，功能不变、颜色变暗。C 大调里 Fm（iv）、A♭（♭VI）、B♭（♭VII）。' },
+    ], src: [['Open Music Theory · 离调', OMT + '/04%3A_Diatonic_Harmony_Tonicization_and_Modulation/4.14%3A_Tonicization'], ['Open Music Theory · 调式交替', OMT + '/05%3A_Chromaticism/5.01%3A_Modal_Mixture']],
+  },
+  {
+    id: 'k8', t: '流行进行：1564 · 6415 · 1645 · 卡农 · 4536', blocks: [
+      { t: 'table', rows: [['1564', 'C G Am F', '歌手创作型套路'], ['6415', 'Am F C G', '同一套路换起点'], ['1645', 'C Am F G', 'doo-wop / 50 年代'], ['卡农', 'C G Am Em F C F G', '帕赫贝尔'], ['4536 王道', 'F G Em Am', '日本流行乐常用（来源为大众资料）']] },
+    ], src: [['Open Music Theory · 四和弦套路', OMT + '/07%3A_Popular_Music/7.09%3A_Four-Chord_Schemas'], ['Wikipedia · Royal road progression', 'https://en.wikipedia.org/wiki/Royal_road_progression']],
+  },
+  {
+    id: 'k9', t: '调号与五度圈', blocks: [
+      { t: 'p', x: '升号的顺序永远是 F C G D A E B，降号相反 B E A D G C F。C 大调没有升降号；每往上五度（C→G→D）多一个升号，每往下五度（C→F→B♭）多一个降号。' },
+    ], src: [['Open Music Theory · 调号', OMT + '/01%3A_Fundamentals/1.12%3A_Major_Scales_Scale_Degrees_and_Key_Signatures']],
+  },
+  {
+    id: 'k10', t: '为什么用分析来背谱', blocks: [
+      { t: 'p', x: '心理学家 Chaffin 与钢琴家 Imreh 跟踪研究一位职业钢琴家背巴赫《意大利协奏曲》，发现她用<b>曲式结构当作「检索框架」</b>，在关键位置设「提示点」。只靠手指动作的记忆很脆弱，一卡就断；知道结构的人能从下一个结构点接着弹。' },
+      { t: 'p', x: '这项研究证明的是「结构和概念的记忆让背谱更稳」，没有单独检验和声分析。所以最好的做法是<b>两种记忆一起练</b>：分析帮你知道「这里应该是什么」，在琴上真的弹下来，手才记得住。' },
+    ], src: [['Chaffin & Imreh (2002), Psychological Science 13:342–349', 'https://doi.org/10.1111/1467-9280.00462']],
+  },
+];
+
+UNITS.unshift({
+  id: 'u0', title: '级数：一级二级三级', en: 'Scale Degrees', song: 'twinkle',
+  blocks: [
+    { t: 'p', x: '你熟悉的简谱 1 2 3 4 5 6 7，就是<b>级数</b>。在 C 大调里 1 = C，在 G 大调里 1 = G。' },
+    { t: 'table', rows: [['一级 1', '主音', '最稳，「家」'], ['四级 4', '下属音', ''], ['五级 5', '属音', '最想回到 1'], ['七级 7', '导音', '离 1 只差半音']] },
+    { t: 'p', x: '以某一级音为根音搭的三和弦，就叫几级和弦。C 大调：<b>一级和弦</b> C（1 3 5），<b>四级和弦</b> F（4 6 1），<b>五级和弦</b> G（5 7 2）。' },
+    { t: 'prog', k: 'C', c: ['C', 'F', 'G', 'C'] },
+    { t: 'tip', x: '看不懂的符号，随时去「路径 → 知识点」查。' },
+  ],
+});
+UNITS.forEach((u, i) => (u.n = i));

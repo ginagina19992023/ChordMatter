@@ -214,3 +214,84 @@ dd { margin: 0; }
 
 #toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 84px); transform: translate(-50%, 20px); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: 14px; opacity: 0; pointer-events: none; transition: all .25s; white-space: nowrap; z-index: 9; }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* staff */
+div.staff { color: var(--ink); min-height: 10px; }
+div.staff svg { display: block; overflow: visible; }
+.stf { border-top: 1px solid var(--line); padding: 8px 0 4px; margin-bottom: 6px; }
+.stf > small { display: block; }
+.cbig div.staff, .qst div.staff { max-width: 240px; margin: 0 auto 6px; }
+.duo { display: grid; grid-template-columns: 150px 1fr; gap: 10px; align-items: center; }
+.duo > * { min-width: 0; }
+@media (max-width: 380px) { .duo { grid-template-columns: 1fr; } .duo .staff { max-width: 200px; } }
+
+/* 简单模式 / 解释 */
+.explain { font-size: 14px; line-height: 1.65; border-left: 2px solid var(--acc); padding: 2px 0 2px 12px; margin: 12px 0; min-height: 1.6em; }
+.cell.sel { border-color: var(--acc); }
+.legend { margin: 0 0 10px; }
+.src { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 12px; margin-top: 20px; font-size: 13px; }
+.src a { color: var(--S); }
+.bonus { margin-top: 14px; padding: 14px; border: 1px dashed var(--line); border-radius: var(--r); }
+.bonus.ready { border: 1px solid var(--acc); }
+.bonus .row { margin: 8px 0 0; }
+.hidden { display: none !important; }
+details { margin: 14px 0; } summary { cursor: pointer; color: var(--ink); }
+
+/* 练习引擎 */
+.kb .k[data-act] { cursor: pointer; }
+.kb .w.sel { fill: var(--acc-soft); stroke: var(--acc); }
+.kb .b.sel { fill: var(--acc); }
+.kb .w.next { fill: var(--acc); }
+.kb .b.next { fill: var(--acc); stroke: var(--acc); }
+.micbar { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
+.micbar .meter { flex: 1; margin: 0; height: 4px; }
+.micbar .meter i { transition: width .05s; }
+.place { margin: 4px 0 10px; }
+
+/* 即兴伴奏 */
+.now { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 10px; align-items: end; margin-bottom: 8px; }
+.now small { display: block; }
+.now b { font-size: 46px; font-weight: 500; line-height: 1; letter-spacing: -0.03em; }
+.now span { font-size: 20px; }
+.jp { display: grid; grid-template-columns: repeat(2, 1fr); border-left: 1px solid var(--ink); margin: 14px 0; }
+.jb { border-right: 1px solid var(--ink); border-bottom: 1px solid var(--line); padding: 6px 6px 8px; min-width: 0; }
+.jb.pick { opacity: .85; }
+.jc { display: flex; justify-content: space-around; gap: 4px; font-weight: 600; font-size: 14px; min-height: 22px; flex-wrap: wrap; }
+.jm { display: flex; justify-content: space-around; align-items: center; font: 20px/1 "SF Mono", ui-monospace, Menlo, monospace; padding: 10px 0 6px; }
+.jn { position: relative; display: inline-block; padding: 4px 1px; border-radius: 4px; }
+.jn em { font-style: normal; color: var(--ink); }
+.jn.u1 em { border-bottom: 1.5px solid var(--ink); }
+.jn.u2 em { border-bottom: 4px double var(--ink); }
+.jn .dt { position: absolute; left: 50%; transform: translateX(-50%); font-size: 7px; font-style: normal; line-height: 1; }
+.jn .up { top: -3px; } .jn .dn { bottom: -6px; }
+.dot2 { font-weight: 400; }
+.jd { color: var(--mute); }
+.jl { display: flex; justify-content: space-around; font-size: 15px; min-height: 22px; }
+.jp .cur em, .jl .cur { color: var(--acc); font-weight: 700; }
+.jl .past { color: var(--mute); }
+.jpq { font-family: "SF Mono", ui-monospace, Menlo, monospace; letter-spacing: .15em; color: var(--acc); }
+.slot { display: inline-flex; gap: 3px; padding: 2px; border-radius: 6px; border: 1px solid transparent; }
+.slot.ok { border-color: var(--good); } .slot.no { border-color: var(--bad); }
+.mini { border: 1px solid var(--line); border-radius: 5px; padding: 2px 6px; font-size: 13px; min-width: 26px; }
+.mini.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn:disabled { opacity: .35; }
+
+/* 横屏：练习页加宽，键盘更大 */
+@media (orientation: landscape) and (max-height: 520px) {
+  main { max-width: 980px; }
+  body.focus main { padding-top: 10px; }
+  .mem, .arp, .sing { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; align-items: start; }
+  .mem > *, .arp > *, .sing > * { grid-column: 1 / -1; min-width: 0; }
+  .mem #memstaff { grid-column: 1; } .mem #dctl, .mem .explain { grid-column: 2; }
+  .jp { grid-template-columns: repeat(4, 1fr); }
+  .ring-wrap { width: 110px; height: 110px; }
+}
+
+/* 原曲乐谱 */
+.orig { border: 1px solid var(--line); border-radius: var(--r); padding: 14px; margin: 0 0 18px; }
+.orig .row { margin: 4px 0 0; }
+.score { background: #fbfaf6; color: #111; border-radius: var(--r); padding: 6px 0; margin: 12px 0; overflow-x: auto; }
+.score svg { display: block; width: 100%; height: auto; }
+.score g.learn g.note *, .score g.learn g.stem *, .score g.learn g.beam *, .score g.learn g.accid *, .score g.learn g.dots * { fill: #e8541e; stroke: #e8541e; }
+.score g.note.playing, .score g.note.playing * { fill: #2f6fdb !important; stroke: #2f6fdb !important; }
+.score .fine, .score .no { padding: 12px 16px; }
