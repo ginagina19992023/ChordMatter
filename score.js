@@ -53,7 +53,8 @@ const Score = (() => {
         const fs = Math.max(bb.height * 0.075, 1);
         const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         t.setAttribute('x', bb.x + fs * 0.3); t.setAttribute('y', bb.y - fs * 0.15);
-        t.setAttribute('font-size', fs); t.setAttribute('class', 'chordlab');
+        t.setAttribute('font-size', fs); t.setAttribute('class', 'chordlab'); t.dataset.n = n;
+        if (opt.barAct) { t.dataset.act = 'barev'; t.style.cursor = 'pointer'; }
         t.textContent = txt;
         (g.parentNode || svg).appendChild(t);
       });
@@ -70,7 +71,13 @@ const Score = (() => {
     });
     cur = { el, notes, sc, tk };
     el.onclick = e => {
-      const g = e.target.closest('g.note, g.chord'); if (!g) return;
+      const g = e.target.closest('g.note, g.chord');
+      if (!g) { // 点到小节的空白处：告诉外面是第几小节
+        const m = e.target.closest('g.measure'); if (!m || e.target.closest('[data-act]')) return;
+        let n = NaN; try { n = parseInt(tk.getElementAttr(m.dataset.id || m.id).n, 10); } catch (err) {}
+        if (!isNaN(n)) el.dispatchEvent(new CustomEvent('staffbar', { detail: n, bubbles: true }));
+        return;
+      }
       const ids = g.classList.contains('chord') ? [...g.querySelectorAll('g.note')].map(x => x.dataset.id || x.id) : [g.dataset.id || g.id];
       const ms = ids.map(id => { try { return tk.getMIDIValuesForElement(id).pitch; } catch (err) { return null; } }).filter(Boolean);
       if (ms.length) { g.classList.add('playing'); setTimeout(() => g.classList.remove('playing'), 500); el.dispatchEvent(new CustomEvent('staffplay', { detail: ms, bubbles: true })); }

@@ -419,6 +419,7 @@
     document.body.classList.toggle('focus', ['quiz', 'arp', 'mem', 'sing', 'acctest'].includes(r) || (['sym', 'inv', 'logic'].includes(r) && route[1]));
     document.querySelectorAll('nav a').forEach(x => { if ((r === 'sing' || r === 'acctest') && x.dataset.r === 'acc') x.classList.add('on'); if (['know', 'sym', 'inv', 'logic'].includes(r) && x.dataset.r === 'path') x.classList.add('on'); if ((r === 'score' || r === 'scan') && x.dataset.r === 'songs') x.classList.add('on'); });
     ({ today: vToday, path: vPath, unit: vUnit, chords: vChords, songs: vSongs, song: vSong, edit: vEdit, quiz: vQuiz, arp: vArp, mem: vMem, me: vMe, acc: vAcc, sing: vSing, acctest: vAccTest, know: vKnow, score: vScore, scan: vScan, pk: vPk, browse: vBrowse, along: vAlong, sym: vSym, inv: vInv, cards: vCards, logic: vLogic }[r] || vToday)();
+    try { linkChords(view); linkTerms(view); } catch (e) {} // 立即给文字加下划线，不等谱面画完
     if (r === 'song') mountMyScore(route[1]);
     if (S.pendingGift && !document.body.classList.contains('focus')) setTimeout(flushGift, 400);
     window.scrollTo(0, 0); const ph = document.getElementById('phone'); if (ph) ph.scrollTop = 0;
@@ -920,6 +921,48 @@
       return `<div class="cell${s.ev && s.ev[starts[si] + bi] && s.ev[starts[si] + bi].conf === 'low' ? ' lowconf' : ''}" data-i="${i}" data-n="${starts[si] + bi}" data-act="explain" data-s="${esc(sym)}"><b>${D(sym)}</b><i>${a ? degLabel(sym, key) : '?'}</i>${funcTag(a && a.func)}</div>`;
     }).join('')}</div>`).join('')}</div></div>`).join('');
   }
+  // 曲目页主体：谱和和弦在一起，一小节对一小节
+  const FUNC_ZH = { T: '稳', S: '走', D: '紧' };
+  function barLabel(s, n) {
+    const bm = songBarMap(s)[n]; if (!bm) return '';
+    return n + '  ' + bm.map(x => { const a = T.analyze(x, s.key); return D(x) + ' ' + degLabel(x, s.key) + (a && FUNC_ZH[a.func] ? ' ' + FUNC_ZH[a.func] : ''); }).join('  ·  ');
+  }
+  function songSheet(s) {
+    const sc = s.orig && s.orig.score;
+    if (sc) return `<div class="sheet"><p class="fine">${sc.made ? '新造谱：左手是原谱左手，右手是这一小节的和弦（不含旋律）。' : '这是公有领域的原谱（只显示分析过的小节）。'}</p><div class="score" id="songscore"><p class="fine">正在加载谱面…（第一次需要下载乐谱引擎）</p></div></div>`;
+    const st = sectionStarts(s);
+    return `<div class="sheet">${s.sections.map((sec, i) => `<div class="stf"><small>${esc(sec.name)}</small>${Staff.html({ key: s.key, bars: parseBars(sec.bars), end: i === s.sections.length - 1, time: i === 0, start: st[i] })}</div>`).join('')}<p class="fine">这是和声骨架：左手弹低音，右手弹和弦，不是原曲的音。${s.copy ? '原曲旋律请听录音或看你自己的谱。' : ''}</p></div>`;
+  }
+  function songSheetRender(s) {
+    const el = $('#songscore'); if (!el) return;
+    const sc = s.orig.score, lab = {};
+    Object.keys(songBarMap(s)).forEach(n => (lab[n] = barLabel(s, +n)));
+    Score.render(el, Object.assign({}, sc), { section: !sc.made && !!sc.measures, labels: lab, barAct: true }).then(() => {
+      const want = route[2] ? route[2].split('.').map(Number) : [];
+      el.querySelectorAll('text.chordlab').forEach(t => { if (want.includes(+t.dataset.n)) t.classList.add('hit'); });
+      const first = el.querySelector('text.chordlab.hit'); if (first) first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }).catch(() => (el.innerHTML = '<p class="no">谱面加载失败：需要联网。可以先用「只看和弦格子」。</p>'));
+  }
+  // 点一小节：就在点的位置旁边弹出这一小节的依据 + 和弦解释
+  function barPop(s, n, x, y) {
+    const bm = songBarMap(s)[n]; if (!bm) return;
+    document.querySelectorAll('.cpop, .tpop').forEach(e => e.remove());
+    const host = document.getElementById('phone') || document.body;
+    const el = document.createElement('div'); el.className = 'tpop'; el.dataset.act = 'tpopclose';
+    el.innerHTML = `<div class="tpop-card barpop" data-act="tpopstay"><i class="tpop-arrow"></i>
+      <div class="tpop-h"><b>第 ${n} 小节 · ${bm.map(D).join(' ')}</b><button class="tpop-play" data-act="play" data-s="${esc(bm[0])}">▶ 听</button></div>
+      ${barEvidence(s, n, bm[0]).replace(/<b>第 \d+ 小节 · /, '<b>').replace(/<b>第 \d+ 小节<\/b> · /, '')}<p class="tpop-ex">${bm.map(x => chordExplain(x, s.key)).join('<br>')}</p></div>`;
+    host.appendChild(el);
+    const card = el.querySelector('.tpop-card'), arrow = el.querySelector('.tpop-arrow');
+    const hr = el.getBoundingClientRect(); // 浮层自己的范围 = 屏幕（手机）或手机外框（电脑预览）
+    const W = Math.min(340, hr.width - 24); card.style.width = W + 'px';
+    const cx = x - hr.left, left = Math.max(12, Math.min(hr.width - W - 12, cx - W / 2));
+    const H = card.offsetHeight, below = y - hr.top + 14, above = y - hr.top - 14 - H, up = below + H > hr.height - 70 && above > 10;
+    card.style.left = left + 'px'; card.style.top = Math.max(8, up ? above : below) + 'px';
+    arrow.style.left = Math.max(14, Math.min(W - 14, cx - left)) + 'px'; card.classList.add(up ? 'up' : 'down');
+    tpopAt = Date.now(); requestAnimationFrame(() => el.classList.add('open'));
+    playChord(bm[0]);
+  }
   function songFlat(s) { return s.sections.flatMap(sec => parseBars(sec.bars).flat()); }
   function vSong() {
     const s = allSongs().find(x => x.id === route[1]);
@@ -936,24 +979,23 @@
       </section>
       ${srcBox(s)}
       <section class="songmain">
-        <div class="chips"><button class="chip${S.pro ? '' : ' on'}" data-act="pro" data-v="0">简单写法</button><button class="chip${S.pro ? ' on' : ''}" data-act="pro" data-v="1">专业写法</button><a class="chip" href="#logic">这些字是什么意思？</a></div>
-        <p class="fine legend">每格左上角的小数字 = 原谱的小节号，对着原谱看。${S.pro ? 'I IV V = 大三和弦，ii vi = 小三和弦，T 主 · S 下属 · D 属' : '6m = 六级小和弦 · 5⁷/2 = 五级七和弦、低音弹 2 · 稳 = 在家 · 走 = 出门 · 紧 = 想回家'}</p>
-        ${route[2] ? `<p class="hitnote">从 <b>${D(route[3] || '')}</b> 和弦页过来：橙色框的是第 ${route[2].split('.').join('、')} 小节。点格子可以听。</p>` : ''}
-        <div class="grid" id="grid">${songGrid(s)}</div>
+        <div class="chips"><button class="chip${S.songView === 'grid' ? '' : ' on'}" data-act="songview" data-v="sheet">谱 + 和弦</button><button class="chip${S.songView === 'grid' ? ' on' : ''}" data-act="songview" data-v="grid">只看和弦格子</button><span class="sp"></span><button class="chip${S.pro ? '' : ' on'}" data-act="pro" data-v="0">简单写法</button><button class="chip${S.pro ? ' on' : ''}" data-act="pro" data-v="1">专业写法</button></div>
+        <p class="fine legend">${S.songView === 'grid' ? '每格左上角的小数字 = 原谱的小节号。' : '每一小节的正上方就是它的和弦：小节号 · 和弦 · 级数 · 稳/走/紧。<b>点任何一小节</b>，就在旁边看到它在原谱里是什么音、为什么是这个和弦；点音符听它。'}${S.pro ? ' I IV V = 大三和弦，ii vi = 小三和弦' : ' 6m = 六级小和弦 · 5⁷/2 = 五级七和弦、低音弹 2'} · <a href="#logic">这些字是什么意思？</a></p>
+        ${route[2] ? `<p class="hitnote">从 <b>${D(route[3] || '')}</b> 和弦页过来：要找的是第 ${route[2].split('.').join('、')} 小节${S.songView === 'grid' ? '（橙色框）' : '（谱上橙色）'}。</p>` : ''}
+        ${S.songView === 'grid' ? `<div class="grid" id="grid">${songGrid(s)}</div>` : songSheet(s)}
         <p class="explain" id="explain">点任意和弦：听声音，并看它是什么意思。</p>
         <div class="row"><button class="ghost" data-act="splay" data-id="${s.id}">▶ 播放进行</button><a class="btn" href="#mem-${s.id}">${place() === 'away' ? '屏幕上点出来' : '在琴上弹下来'} · 第 ${Math.min(4, lv + 1)} 层 →</a></div>
         <p class="fine">${esc(s.note || '')}</p>
       </section>
       <section class="logic"><h3>谱面逻辑 <small>· 点下划线的词看解释</small></h3>${songLogic(s).map(l => `<p>${l}</p>`).join('')}</section>
-      <h3 class="h3">五线谱 · 和声骨架（左手低音 + 右手和弦）</h3>
-      ${s.sections.map(sec => `<div class="stf"><small>${esc(sec.name)}</small>${Staff.html({ key: s.key, bars: parseBars(sec.bars), end: true, time: true })}</div>`).join('')}
       ${s.rec ? `<section class="orig"><h3>真人演奏录音</h3><p class="fine">学习段落 ${s.rec.clipName}</p><audio controls preload="none" src="${s.rec.clip}"></audio><p class="fine">完整版</p><audio controls preload="none" src="${s.rec.full}"></audio><p class="fine">${s.rec.credit} · <a href="${s.rec.url}" target="_blank" rel="noopener">来源 ↗</a></p></section>` : ''}
       <section class="logic"><h3>背谱方法</h3>
         <p>1. <b>先分析后记忆</b>：每一段先说出「调、功能、怎么结束」。</p>
         <p>2. <b>分块</b>：按乐句（通常 2 或 4 小节）记，不按单个音记。</p>
         <p>3. <b>找相同与不同</b>：重复的地方只记一次，只把注意力放在不同处。</p>
         <p>4. <b>离开琴背</b>：能在脑中把级数说出来，手上才稳。</p></section>`;
-      if (route[2]) {
+      if (S.songView !== 'grid' && s.orig && s.orig.score) songSheetRender(s);
+    if (route[2]) {
       const want = route[2].split('.').map(Number); let first = null;
       view.querySelectorAll('#grid .bar').forEach(el => { const n = +el.querySelector('.bn').textContent; if (want.includes(n)) { el.classList.add('hit'); first = first || el; } });
       if (first) setTimeout(() => first.closest('.sec').scrollIntoView({ block: 'center', behavior: 'smooth' }), 80);
@@ -1644,10 +1686,11 @@
   async function mountMyScore(id) {
     const el = $('#myscore'); if (!el) return;
     let pages = await OCR.loadPages(id);
+    if (!el.isConnected) return; // 读取期间已经离开这一页
     if ((!pages || !pages.length) && window.HX_PRESEED && HX_PRESEED[id]) pages = HX_PRESEED[id];
     if (!pages || !pages.length) {
       el.innerHTML = `<label class="drop small" for="addscore"><b>添加你手上的原谱</b><small>截图、照片或 PDF · 只存在这台手机上 · 下面每格的小节号对着它看</small></label><input type="file" id="addscore" accept="image/*,application/pdf,.pdf" hidden>`;
-      $('#addscore').addEventListener('change', async e => {
+      el.querySelector('#addscore').addEventListener('change', async e => {
         const f = e.target.files[0]; if (!f) return;
         el.innerHTML = '<p class="fine">正在读取…</p>';
         try { const cs = await OCR.toCanvases(f); await OCR.savePages(id, cs.map(c => c.toDataURL('image/jpeg', 0.8))); mountMyScore(id); } catch (err) { el.innerHTML = '<p class="no">没能读取这个文件</p>'; }
@@ -1955,7 +1998,8 @@
     });
   }
   let linkT = null;
-  new MutationObserver(() => { clearTimeout(linkT); linkT = setTimeout(() => { linkChords(view); linkTerms(view); }, 60); }).observe(view, { childList: true, subtree: true });
+  // 谱面（Verovio / VexFlow 画谱）里的变化不算：画一张长谱会连续改很多次，不能因此一直推迟给文字加下划线
+  new MutationObserver(ms => { if (ms.every(m => m.target.closest && m.target.closest('.score, .staff, svg'))) return; clearTimeout(linkT); linkT = setTimeout(() => { linkChords(view); linkTerms(view); }, 60); }).observe(view, { childList: true, subtree: true });
   function chordPop(sym) {
     document.querySelectorAll('.cpop').forEach(x => x.remove());
     const c = T.parseChord(sym); if (!c) return;
@@ -2040,7 +2084,7 @@
       <a class="tpop-link" href="${isKnow ? '#know-' + id : '#sym-' + id}">${isKnow ? '看完整的知识点' : done ? '再看一遍这一课' : '去学这一课'} →</a></div>`;
     host.appendChild(el);
     const card = el.querySelector('.tpop-card'), arrow = el.querySelector('.tpop-arrow');
-    const hr = host === document.body ? { left: 0, top: 0, width: innerWidth, height: innerHeight } : host.getBoundingClientRect();
+    const hr = el.getBoundingClientRect(); // 浮层自己的范围 = 屏幕（手机）或手机外框（电脑预览）
     const r = (anchor || document.body).getBoundingClientRect();
     const W = Math.min(320, hr.width - 24); card.style.width = W + 'px';
     const cx = r.left - hr.left + r.width / 2;
@@ -2084,6 +2128,8 @@
       case 'explain': { playChord(el.dataset.s); const s = allSongs().find(x => x.id === route[1]); const ex = $('#explain'); if (ex) ex.innerHTML = barEvidence(s, +el.dataset.n, el.dataset.s) + chordExplain(el.dataset.s, s && s.key); document.querySelectorAll('.cell').forEach(c => c.classList.toggle('sel', c === el)); break; }
       case 'scmode': SC.section = el.dataset.v === '1'; render(); break;
       case 'sglh': SG.lh = el.dataset.v; render(); break;
+      case 'songview': S.songView = el.dataset.v; save(); render(); break;
+      case 'barev': { const s = allSongs().find(x => x.id === route[1]); const r = el.getBoundingClientRect(); if (s) barPop(s, +el.dataset.n, r.left + r.width / 2, r.bottom); break; }
       case 'scrange': SC.range = el.dataset.v; render(); break;
       case 'scplay': scorePlay(); el.textContent = '■ 停止'; el.dataset.act = 'scstop'; break;
       case 'scstop': stopAll(); el.textContent = '▶ 播放'; el.dataset.act = 'scplay'; break;
@@ -2150,6 +2196,8 @@
   });
 
   window.addEventListener('hashchange', render);
+  document.addEventListener('staffbar', e => { if (route[0] !== 'song') return; const s = allSongs().find(x => x.id === route[1]); const ev = e.detail; if (s && window.__lastClick) barPop(s, ev, window.__lastClick[0], window.__lastClick[1]); });
+  document.addEventListener('pointerdown', e => { window.__lastClick = [e.clientX, e.clientY]; }, true);
   document.addEventListener('staffplay', e => { A.init(); const ms = e.detail || []; if (ms.length === 1) A.note(ms[0], 0, 1.4, 0.7); else A.chord(ms, 0, 0.02, 1.4); });
   document.addEventListener('calpick', e => { calDetail(e.detail); });
   render();

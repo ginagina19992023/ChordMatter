@@ -607,3 +607,10 @@ details.melwhy summary { font-weight: 600; font-size: 15px; cursor: pointer; pad
 .beats i.on { background: var(--acc); }
 .tapbtn { width: 100%; height: 84px; border-radius: 16px; border: 1.5px solid var(--ink); background: none; font: inherit; font-size: 22px; letter-spacing: .3em; cursor: pointer; color: var(--ink); }
 .tapbtn:active { background: var(--soft); }
+
+/* 谱 + 和弦 一体 */
+.sheet { margin: 6px 0 4px; }
+.sheet .stf small { display: block; font-weight: 600; color: var(--ink); font-size: 13px; margin: 8px 0 2px; }
+text.chordlab.hit { fill: var(--acc); font-weight: 700; }
+.barpop .evd { border-bottom: 1px solid var(--line); }
+.barpop { max-height: 60vh; overflow-y: auto; }
