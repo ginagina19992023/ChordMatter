@@ -860,3 +860,18 @@ body.land .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .kbd { display: inline-block; border: 1px solid var(--line); border-radius: 5px; padding: 0 4px; font-size: 12px; }
 .cloudbox .row .btn { flex: 0 0 auto; width: auto; padding: 8px 18px; }
 .cloudbox input { font-size: 16px; } /* iOS 小于 16px 会自动放大页面 */
+/* 和弦页选择区：紧凑一点；屏幕宽时根音一行 12 个、性质一行 10 个 */
+.cxrow { container-type: inline-size; margin-bottom: 6px; }
+.cxrow > p { margin-bottom: 4px; }
+.cxrow .chips { gap: 5px; margin-bottom: 4px; }
+.cxrow .chip { padding: 4px 8px; font-size: 13px; min-height: 30px; }
+.cxrow .chip.q { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; padding: 3px 0; border-radius: 10px; }
+.cxrow .chip.q b { font-weight: 500; font-size: 13px; }
+.cxrow .chip.q small { font-size: 10px; }
+@container (min-width: 520px) {
+  .cxrow .chips.grid6 { grid-template-columns: repeat(12, 1fr); }
+  .cxrow .chips.grid5 { grid-template-columns: repeat(10, 1fr); }
+}
+@container (min-width: 760px) {
+  .cxrow .chips.grid6, .cxrow .chips.grid5 { max-width: 760px; }
+}
