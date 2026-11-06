@@ -43,4 +43,6 @@ K.545、克列门蒂 Op.36 No.1、巴赫 BWV 846、天空之城、卡农、Let I
 - Verovio（LGPL），运行时从 jsDelivr 加载
 - K.545 乐谱数据：Craig Stuart Sapp, mozart-piano-sonatas，CC BY-NC-SA 4.0，运行时加载
 - BWV 846 乐谱数据：CCARH / humdrum-tools，运行时从原站加载，仅供学习
+- `media/u2-minor-triads.mp4`：Mario Ajero《Back to Basics: Minor Triads》片段（3:16–4:52），CC BY 2.5，https://archive.org/details/MarioAjeroMinorTriadsandLastChristmas ；中文字幕为本项目所加
+- `media/bach-prelude-*.mp3`：Sam Tennison 演奏，公有领域，https://archive.org/details/BachWellTemperedKlavierBookI-PreludeInCMajor
 - 曲目和弦为学习用简化分析，请对照乐谱核对

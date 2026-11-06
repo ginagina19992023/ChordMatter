@@ -310,3 +310,32 @@ details { margin: 14px 0; } summary { cursor: pointer; color: var(--ink); }
 .tbl { overflow-x: auto; }
 .tbl table { font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .tbl tr:first-child td { color: var(--mute); font-weight: 400; }
+
+/* 伴奏型说明 */
+.patbox { border: 1px solid var(--line); border-radius: var(--r); padding: 12px; margin: 4px 0 14px; }
+.pwhen { margin: 0 0 6px; font-size: 14px; }
+.pgrid { display: grid; gap: 3px; margin: 8px 0 2px; }
+.pgrid i { font-style: normal; font-size: 10.5px; text-align: center; height: 34px; line-height: 1.15; display: flex; align-items: center; justify-content: center; overflow: hidden; word-break: keep-all; border: 1px solid var(--line); border-radius: 4px; color: var(--mute); }
+.pgrid i.beat { border-color: var(--mute); }
+.pgrid i.hit { color: var(--ink); font-weight: 600; background: var(--soft); }
+.pgrid i.hold { background: repeating-linear-gradient(90deg, var(--soft) 0 3px, transparent 3px 6px); }
+.pgrid i.now { background: var(--acc); color: #fff; border-color: var(--acc); }
+.pbeats { display: grid; font-size: 11px; color: var(--mute); margin-bottom: 8px; }
+.pbeats span { padding-left: 4px; }
+
+/* 和弦页说明 */
+.cxrow { margin-bottom: 8px; }
+.cxrow > p { margin: 0 0 6px; font-size: 13px; color: var(--mute); }
+.cxrow > p b { color: var(--ink); font-weight: 600; }
+.chip small { font-size: 11px; opacity: .7; }
+.chip.q { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.25; padding: 5px 10px; border-radius: 12px; }
+.chip.q b { font-weight: 500; }
+.chip.q small { font-size: 10.5px; }
+
+/* 真人视频 / 录音 */
+.vclip { margin: 6px 0 18px; }
+.vclip video { width: 100%; border-radius: var(--r); background: #000; display: block; aspect-ratio: 4 / 3; }
+.vclip figcaption { margin-top: 6px; font-size: 13px; }
+.vclip figcaption b { display: block; font-weight: 500; }
+.vclip figcaption small a, .orig a { color: var(--S); }
+audio { width: 100%; margin: 4px 0; }

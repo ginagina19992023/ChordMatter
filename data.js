@@ -16,6 +16,7 @@ const UNITS = [
       { t: 'p', x: '三和弦 = 根音 + 三音 + 五音。<b>大三和弦</b>：大三度 + 小三度（4+3 个半音）。<b>小三和弦</b>：小三度 + 大三度（3+4）。' },
       { t: 'chord', s: 'C' }, { t: 'chord', s: 'Cm' },
       { t: 'p', x: '两者只有三音差半音，五音完全一样。大和弦明亮，小和弦暗淡，这个「颜色」要靠耳朵记住。' },
+      { t: 'video', src: 'media/u2-minor-triads.mp4', poster: 'media/u2-minor-triads.jpg', vtt: 'media/u2-minor-triads.zh.vtt', title: '真人示范：大三和弦 → 小三和弦（1 分 36 秒，中文字幕）', credit: 'Mario Ajero《Back to Basics: Minor Triads》片段（原片 3:16–4:52），CC BY 2.5', url: 'https://archive.org/details/MarioAjeroMinorTriadsandLastChristmas' },
       { t: 'tip', x: '天空之城一开头就是 Am（小）→ Em（小）→ F（大）→ C（大）。边弹边听：先暗后亮。' },
     ],
   },
@@ -130,7 +131,7 @@ const SONGS = [
     note: '开头右手是 C 大三和弦的分解（琶音！）。这里是简化的骨架，请对照乐谱核对。',
   },
   {
-    id: 'bach', orig: { score: { src: 'https://raw.githubusercontent.com/humdrum-tools/bach-wtc/master/kern/wtc1p01.krn', measures: '1-11', credit: 'CCARH（Walter Hewlett）数字版，依据巴赫协会版；从原站实时加载，仅供学习' }, imslp: 'https://imslp.org/index.php?search=BWV+846', apple: 'https://music.apple.com/cn/search?term=Bach%20Prelude%20C%20major%20BWV%20846' }, title: '巴赫 C 大调前奏曲 BWV 846', sub: '《平均律》第一首 · 1–11 小节', key: 'C', tag: '古典', bpm: 66,
+    id: 'bach', rec: { clip: 'media/bach-prelude-m1-11.mp3', full: 'media/bach-prelude-full.mp3', clipName: '1–11 小节（约 45 秒）', credit: 'Sam Tennison 演奏，公有领域，来源 Internet Archive', url: 'https://archive.org/details/BachWellTemperedKlavierBookI-PreludeInCMajor' }, orig: { score: { src: 'https://raw.githubusercontent.com/humdrum-tools/bach-wtc/master/kern/wtc1p01.krn', measures: '1-11', credit: 'CCARH（Walter Hewlett）数字版，依据巴赫协会版；从原站实时加载，仅供学习' }, imslp: 'https://imslp.org/index.php?search=BWV+846', apple: 'https://music.apple.com/cn/search?term=Bach%20Prelude%20C%20major%20BWV%20846' }, title: '巴赫 C 大调前奏曲 BWV 846', sub: '《平均律》第一首 · 1–11 小节', key: 'C', tag: '古典', bpm: 66,
     sections: [
       { name: '1–4', bars: 'C | Dm7/C | G7/B | C' },
       { name: '5–8', bars: 'Am/C | D7/C | G/B | Cmaj7/B' },

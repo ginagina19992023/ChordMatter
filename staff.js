@@ -33,6 +33,7 @@ const Staff = (() => {
     if (!window.Vex) { el.innerHTML = ''; return; }
     const VF = Vex.Flow;
     const cfg = JSON.parse(el.dataset.staff);
+    if (cfg.pattern) return drawPattern(el, cfg, VF);
     const W = Math.max(260, el.clientWidth || 340);
     const keySig = vexKeySig(cfg.key);
     const ksCount = Math.abs(VF.keySignature(keySig).length);
@@ -115,6 +116,36 @@ const Staff = (() => {
     });
     const svg = el.querySelector('svg');
     if (svg) { svg.setAttribute('viewBox', `0 0 ${W} ${rows.length * ROW_H + 6}`); svg.style.width = '100%'; svg.style.height = 'auto'; }
+  }
+
+  // 伴奏型：一小节低音谱表，写出左手实际要弹的每个音
+  function drawPattern(el, cfg, VF) {
+    const W = Math.max(260, el.clientWidth || 340), H = 150;
+    el.innerHTML = '';
+    const r = new VF.Renderer(el, VF.Renderer.Backends.SVG); r.resize(W, H);
+    const ctx = r.getContext();
+    const ink = css('--ink'), mute = css('--mute'), acc = css('--acc');
+    ctx.setFillStyle(ink); ctx.setStrokeStyle(ink);
+    const st = new VF.Stave(1, 22, W - 3).addClef('bass').addTimeSignature(cfg.beats + '/4');
+    st.setStyle({ strokeStyle: mute, fillStyle: ink }); st.setContext(ctx).draw();
+    const DUR = { 0.5: '8', 1: 'q', 2: 'h', 3: 'hd', 4: 'w' };
+    const notes = cfg.events.map((e, i) => {
+      const keys = e.keys.slice().sort((a, b) => a.midi - b.midi).map(k => vexKey(k.name, k.midi));
+      const d = DUR[e.d] || 'q';
+      const n = new VF.StaveNote({ keys, duration: d, clef: 'bass', auto_stem: true });
+      if (d === 'hd') n.addModifier(new VF.Dot(), 0), keys.forEach((_, ki) => ki && n.addModifier(new VF.Dot(), ki));
+      n.addModifier(new VF.Annotation(e.label).setFont('sans-serif', 11, 'bold').setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM), 0);
+      if (cfg.mark === i) n.setStyle({ fillStyle: acc, strokeStyle: acc });
+      return n;
+    });
+    const v = new VF.Voice({ num_beats: cfg.beats, beat_value: 4 }).setMode(VF.Voice.Mode.SOFT).addTickables(notes);
+    VF.Accidental.applyAccidentals([v], 'C');
+    const beams = VF.Beam.generateBeams(notes);
+    new VF.Formatter().joinVoices([v]).format([v], W - st.getNoteStartX() - 16);
+    v.draw(ctx, st); beams.forEach(b => b.setContext(ctx).draw());
+    const top = new VF.Annotation(T.disp(cfg.sym));
+    ctx.save(); ctx.setFont('sans-serif', 13, 'bold'); ctx.fillText(T.disp(cfg.sym) + ' 和弦 · ' + cfg.name, 6, 14); ctx.restore();
+    const svg = el.querySelector('svg'); if (svg) { svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.style.width = '100%'; svg.style.height = 'auto'; }
   }
 
   function mount(root = document) {

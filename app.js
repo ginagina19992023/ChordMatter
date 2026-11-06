@@ -411,6 +411,7 @@
       if (b.t === 'tip') return `<p class="tip">${b.x}</p>`;
       if (b.t === 'chord') return chordCard(b.s);
       if (b.t === 'prog') return progRow(b.k, b.c);
+      if (b.t === 'video') return `<figure class="vclip"><video controls playsinline preload="metadata" poster="${b.poster}" src="${b.src}">${b.vtt ? `<track kind="subtitles" srclang="zh" label="中文" src="${b.vtt}" default>` : ''}</video><figcaption><b>${b.title}</b><small>${b.credit} · <a href="${b.url}" target="_blank" rel="noopener">原视频 ↗</a></small></figcaption></figure>`;
       if (b.t === 'table') return `<table>${b.rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</table>`;
       return '';
     }).join('');
@@ -516,11 +517,23 @@
     const inSongs = allSongs().filter(s => s.sections.some(sec => parseBars(sec.bars).flat().some(x => { const p = T.parseChord(x); return p && p.root.pc === c.root.pc && p.q === c.q; })));
     const arp = T.arpeggio(T.parseChord(CX.root + CX.q), 'R');
     const qlist = ['', 'm', 'dim', 'aug', '7', 'maj7', 'm7', 'm7b5', 'dim7', 'sus4'];
-    view.innerHTML = `<header class="top"><div><small>选根音、性质和转位</small><h1>和弦</h1></div></header>
-      <div class="chips">${ROOT_MAJ.map(r => `<button class="chip${r === CX.root ? ' on' : ''}" data-act="cx" data-k="root" data-v="${r}">${D(r)}</button>`).join('')}</div>
-      <div class="chips">${qlist.map(q => `<button class="chip${q === CX.q ? ' on' : ''}" data-act="cx" data-k="q" data-v="${q}">${q === '' ? '大' : q === 'm' ? '小' : D(q)}</button>`).join('')}</div>
-      <div class="chips">${c.notes.map((_, i) => `<button class="chip${i === Math.max(0, c.inv) ? ' on' : ''}" data-act="cx" data-k="inv" data-v="${i}">${['原位', '一转', '二转', '三转'][i]}</button>`).join('')}
-        <span class="sp"></span><button class="chip${CX.hand === 'R' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="R">右手</button><button class="chip${CX.hand === 'L' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="L">左手</button></div>
+    const QINFO = {
+      '': ['大三', '明亮、稳定', '大三度 + 小三度，最常见'], m: ['小三', '暗淡、柔和', '只把大三的中间音降半音'], dim: ['减三', '紧张、不安', '两个小三度叠起来'], aug: ['增三', '飘、像梦', '两个大三度叠起来'],
+      '7': ['属七', '紧张，想回家', '大三 + 小七度，五级常用'], maj7: ['大七', '柔和、高级感', '大三 + 大七度'], m7: ['小七', '温柔、爵士感', '小三 + 小七度'],
+      m7b5: ['半减七', '忧郁、悬着', '减三 + 小七度'], dim7: ['减七', '悬疑、戏剧化', '每两个音都隔小三度'], sus4: ['挂四', '悬而未决', '三音换成四音，等着落回大三'],
+    };
+    const INV = [['原位', '根音在最下面'], ['一转', '三音在最下面'], ['二转', '五音在最下面'], ['三转', '七音在最下面']];
+    const qi = QINFO[CX.q], invi = Math.max(0, c.inv);
+    const bottom = v[0];
+    view.innerHTML = `<header class="top"><div><small>三步选一个和弦，马上看到、听到</small><h1>和弦</h1></div><a class="stat" href="#know-k0"><b>?</b><small>看不懂</small></a></header>
+      <div class="cxrow"><p><b>① 根音</b>：和弦名的字母，从哪个音开始叠（♭ = 左边紧挨的黑键，♯ = 右边紧挨的黑键）</p>
+      <div class="chips">${ROOT_MAJ.map(r => `<button class="chip${r === CX.root ? ' on' : ''}" data-act="cx" data-k="root" data-v="${r}">${D(r)}</button>`).join('')}</div></div>
+      <div class="cxrow"><p><b>② 性质</b>：听起来是什么颜色。小字是和弦名后面的写法</p>
+      <div class="chips qchips">${qlist.map(q => `<button class="chip q${q === CX.q ? ' on' : ''}" data-act="cx" data-k="q" data-v="${q}"><b>${QINFO[q][0]}</b><small>${q === '' ? '不写' : D(q)} · ${QINFO[q][1]}</small></button>`).join('')}</div></div>
+      <div class="cxrow"><p><b>③ 转位</b>：同样的音，换一个放在最下面。左右手的指法也不同</p>
+      <div class="chips">${c.notes.map((_, i) => `<button class="chip${i === invi ? ' on' : ''}" data-act="cx" data-k="inv" data-v="${i}">${INV[i][0]}<small> · ${INV[i][1]}</small></button>`).join('')}
+        <span class="sp"></span><button class="chip${CX.hand === 'R' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="R">右手</button><button class="chip${CX.hand === 'L' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="L">左手</button></div></div>
+      <p class="explain">现在选的是 <b>${D(c.sym)}</b>：以 ${D(c.root.name)} 为根音的${c.quality.zh}，${qi[2]}，听起来${qi[1]}。${invi ? `这是${INV[invi][0]}：最下面弹 ${D(bottom.name)}（${INV[invi][1]}），写成 ${D(c.sym)}，斜线后面就是最低音。` : '原位：根音 ' + D(c.root.name) + ' 在最下面。'}键盘上的数字是${CX.hand === 'R' ? '右' : '左'}手手指（1 = 拇指，5 = 小指）。</p>
       <section class="cbig">
         <div class="cbig-h"><b>${D(c.sym)}</b><span>${c.quality.zh} · ${c.quality.en}</span></div>
         ${Staff.html({ bars: [[c.sym]], numerals: false, perRow: 1 })}
@@ -646,6 +659,7 @@
     if (!s.sections.length || !s.key) return go('#edit-' + s.id);
     const lv = (S.songs[s.id] || { level: 0 }).level;
     view.innerHTML = `<header class="top"><div><a class="back" href="#songs">←</a><small>${esc(s.sub || '')}</small><h1>${esc(s.title)}</h1></div><a class="stat" href="#edit-${s.id}"><b>✎</b><small>编辑</small></a></header>
+      ${s.rec ? `<section class="orig"><h3>真人演奏录音</h3><p class="fine">学习段落 ${s.rec.clipName}</p><audio controls preload="none" src="${s.rec.clip}"></audio><p class="fine">完整版</p><audio controls preload="none" src="${s.rec.full}"></audio><p class="fine">${s.rec.credit} · <a href="${s.rec.url}" target="_blank" rel="noopener">来源 ↗</a></p></section>` : ''}
       ${s.orig ? `<section class="orig"><h3>原曲</h3><div class="row">${s.orig.score ? `<a class="btn" href="#score-${s.id}">看完整原谱 · 听原曲</a>` : ''}${s.orig.apple ? `<a class="ghost" href="${s.orig.apple}" target="_blank" rel="noopener">Apple Music 听录音 ↗</a>` : ''}${s.orig.imslp ? `<a class="ghost" href="${s.orig.imslp}" target="_blank" rel="noopener">IMSLP 原版乐谱 ↗</a>` : ''}</div>${s.orig.score ? '' : '<p class="fine">' + (s.orig.imslp ? '这首的完整原谱请在 IMSLP（公有领域乐谱库）查看。' : '这首仍受版权保护，不能内置原谱和录音，只能链接到正版平台。') + '</p>'}</section>` : ''}
       <section class="logic"><h3>谱面逻辑</h3>${songLogic(s).map(l => `<p>${l}</p>`).join('')}</section>
       <h3 class="h3">五线谱 · 和声骨架</h3>
@@ -784,6 +798,35 @@
     }).join('')}</div>`;
   }
   const SG = { pat: {}, acc: true, mel: true, rate: 1 };
+  const CODE_ZH = { R: '根', 3: '三', 5: '五', 8: '高根', 10: '高三', C: '和弦', RC: '根+和弦' };
+  // 伴奏型的每一个事件 → 具体音（带音名，供五线谱和键盘使用）
+  function patEvents(sym, pat) {
+    const c = T.parseChord(sym);
+    const nameOf = m => { const pc = m % 12; const n = c.notes.find(x => x.pc === pc) || (c.bass && c.bass.pc === pc ? c.bass : null); return n ? n.name : T.noteAt(0, pc).name; };
+    return pat.ev.map(([t, code, d]) => ({ t, d, code, label: CODE_ZH[code] || code, keys: accMidis(sym, code).map(m => ({ midi: m, name: nameOf(m) })) }));
+  }
+  function patStaff(sym, pat, beats, mark) {
+    return Staff.html({ pattern: true, sym, name: pat.name, beats, mark, events: patEvents(sym, pat).map(e => ({ d: e.d, label: e.label, keys: e.keys })) });
+  }
+  function patGrid(pat, beats) {
+    const cells = [];
+    for (let b = 0; b < beats * 2; b++) { const t = b / 2; const e = pat.ev.find(x => Math.abs(x[0] - t) < 1e-6); const hold = !e && pat.ev.some(x => x[0] < t && x[0] + x[2] > t); cells.push(`<i class="${e ? 'hit' : hold ? 'hold' : ''}${b % 2 ? '' : ' beat'}">${e ? CODE_ZH[e[1]] : ''}</i>`); }
+    return `<div class="pgrid" style="grid-template-columns:repeat(${beats * 2},1fr)">${cells.join('')}</div><div class="pbeats" style="grid-template-columns:repeat(${beats},1fr)">${Array.from({ length: beats }, (_, i) => `<span>${i + 1}</span>`).join('')}</div>`;
+  }
+  const PAT_WHEN = { block: '慢歌、刚开始学、右手旋律难的时候', oom: '儿歌、进行曲、节奏明快的歌', broken: '抒情歌、想要流动感的时候', alberti: '古典风格，像 K.545', waltz: '3 拍子的歌（生日快乐）' };
+  function playPattern(sym, pat, beats, bpm) {
+    stopAll(); A.init();
+    const spb = 60 / bpm, evs = patEvents(sym, pat);
+    for (let bar = 0; bar < 2; bar++) evs.forEach((e, i) => {
+      const t = (bar * beats + e.t) * spb + 0.05;
+      A.chord(e.keys.map(k => k.midi), t, 0.005, e.d * spb * 1.05);
+      later(() => {
+        document.querySelectorAll('#skb .k').forEach(k => k.classList.toggle('on-play', e.keys.some(x => x.midi === +k.dataset.m)));
+        document.querySelectorAll('.pgrid i').forEach((c, ci) => c.classList.toggle('now', ci === Math.round(e.t * 2)));
+      }, t * 1000);
+    });
+    later(() => { document.querySelectorAll('#skb .k.on-play, .pgrid i.now').forEach(k => k.classList.remove('on-play', 'now')); }, (2 * beats * spb + 0.3) * 1000);
+  }
   function vAcc() {
     const d = day();
     view.innerHTML = `<header class="top"><div><small>看简谱 · 配和弦 · 边弹边唱</small><h1>伴奏</h1></div></header>
@@ -801,9 +844,15 @@
     view.innerHTML = `<div class="qbar"><a href="#acc" class="x">×</a><span class="meter"><i id="sgbar" style="width:0%"></i></span><small>${song.title}</small></div>
       <section class="sing">
         <div class="now"><div><small>现在</small><b id="nowc">${D(first.sym)}</b></div><div><small>下一个</small><span id="nextc">${tl.slots[1] ? D(tl.slots[1].sym) : ''}</span></div><div><small>级数</small><span id="nowr">${degLabel(first.sym, song.key)}</span></div></div>
-        <div id="skb">${kb(accMidis(first.sym, 'RC').map(m => ({ midi: m })), { lo: 36, hi: 72 })}</div>
         <div class="chips">${pats.map(p => `<button class="chip${p === pat ? ' on' : ''}" data-act="sgpat" data-v="${p.id}">${p.name}</button>`).join('')}</div>
-        <p class="fine">${pat.tip} · 左手弹伴奏，右手弹旋律或直接唱</p>
+        <section class="patbox">
+          <p class="pwhen"><b>${pat.name}</b>：${pat.tip}。适合${PAT_WHEN[pat.id] || ''}。</p>
+          <div id="pstaff">${patStaff(first.sym, pat, song.beats)}</div>
+          ${patGrid(pat, song.beats)}
+          <div id="skb">${kb(uniq(patEvents(first.sym, pat).flatMap(e => e.keys.map(k => k.midi))).map(m => ({ midi: m })), { lo: 36, hi: 72 })}</div>
+          <div class="row"><button class="ghost sm" data-act="patplay" data-id="${song.id}">▶ 只听这个伴奏型（两小节）</button></div>
+          <p class="fine">格子里是每半拍弹什么：根 = 和弦根音，五 = 五音，高根 / 高三 = 高八度的根音 / 三音，和弦 = 三个音一起按。换和弦时形状不变，只是整体平移。</p>
+        </section>
         ${jianpuBars(song)}
         <div class="row"><button class="btn" data-act="sgplay" data-id="${song.id}" id="sgbtn">▶ 开始（先数一小节）</button></div>
         <div class="row"><button class="ghost sm${SG.acc ? ' on' : ''}" data-act="sgtog" data-k="acc">伴奏示范 ${SG.acc ? '开' : '关'}</button><button class="ghost sm${SG.mel ? ' on' : ''}" data-act="sgtog" data-k="mel">旋律 ${SG.mel ? '开' : '关'}</button><button class="ghost sm" data-act="sgrate" data-v="-0.1">慢</button><button class="ghost sm" data-act="sgrate" data-v="0.1">快</button></div>
@@ -825,11 +874,13 @@
     if (SG.mel) tl.notes.forEach(n => { if (n.midi) A.tone(n.midi + 12 * 0, t0 + n.start * spb, n.beats * spb * 0.95); });
     tl.slots.forEach((s, si) => {
       if (SG.acc) pat.ev.forEach(([t, code, d]) => { if (t < s.d - 1e-6) A.chord(accMidis(s.sym, code), t0 + (s.start + t) * spb, 0.005, Math.min(d, s.d - t) * spb * 1.05); });
+      pat.ev.forEach(([t, code]) => { if (t < s.d - 1e-6) later(() => { const ms = accMidis(s.sym, code); document.querySelectorAll('#skb .k').forEach(k => k.classList.toggle('on-play', ms.includes(+k.dataset.m))); document.querySelectorAll('.pgrid i').forEach((c, ci) => c.classList.toggle('now', ci === Math.round(((s.t + t) % song.beats) * 2))); }, (t0 + (s.start + t) * spb) * 1000); });
       later(() => {
         $('#nowc') && ($('#nowc').textContent = D(s.sym));
         $('#nextc') && ($('#nextc').textContent = tl.slots[si + 1] ? D(tl.slots[si + 1].sym) : '结束');
         $('#nowr') && ($('#nowr').innerHTML = degLabel(s.sym, song.key));
-        const k = $('#skb'); if (k) k.innerHTML = kb(accMidis(s.sym, 'RC').map(m => ({ midi: m })), { lo: 36, hi: 72 });
+        const k = $('#skb'); if (k) k.innerHTML = kb(uniq(patEvents(s.sym, pat).flatMap(e => e.keys.map(x => x.midi))).map(m => ({ midi: m })), { lo: 36, hi: 72 });
+        const ps = document.querySelector('#pstaff div.staff'); if (ps) { ps.outerHTML = patStaff(s.sym, pat, song.beats); }
       }, Math.max(0, (t0 + s.start * spb) * 1000 - 150));
     });
     tl.notes.forEach(n => later(() => {
@@ -1147,9 +1198,10 @@
       case 'dstop': drillStop(); DR && (DR.mode = 'self'); $('#dctl') && ($('#dctl').innerHTML = drillControls()); break;
       case 'mhint': { if (!DR) break; DR.hinted = true; const t = DR.targets[DR.i]; if (t) { const ex = $('#explain'); if (ex) ex.innerHTML = '提示：' + chordExplain(t.label, (allSongs().find(x => x.id === route[1]) || {}).key); playChord(t.label); } break; }
       case 'mredo': render(); break;
-      case 'sgpat': SG.pat[route[1]] = el.dataset.v; vSing(); break;
+      case 'sgpat': { SG.pat[route[1]] = el.dataset.v; vSing(); const song = SING.find(x => x.id === route[1]); const pat = PATTERNS[song.beats].find(p => p.id === el.dataset.v); playPattern(songTimeline(song).slots[0].sym, pat, song.beats, song.bpm * SG.rate); break; }
       case 'sgplay': singPlay(SING.find(s => s.id === el.dataset.id)); el.textContent = '■ 停止'; el.dataset.act = 'sgstop'; break;
       case 'sgstop': stopAll(); vSing(); break;
+      case 'patplay': { const song = SING.find(x => x.id === el.dataset.id); const pats = PATTERNS[song.beats]; const pat = pats.find(p => p.id === SG.pat[song.id]) || pats[1]; playPattern(songTimeline(song).slots[0].sym, pat, song.beats, song.bpm * SG.rate); break; }
       case 'sgtog': SG[el.dataset.k] = !SG[el.dataset.k]; vSing(); break;
       case 'sgrate': SG.rate = Math.max(0.5, Math.min(1.5, Math.round((SG.rate + +el.dataset.v) * 10) / 10)); vSing(); break;
       case 'atpick': AT.pick[+el.dataset.i] = el.dataset.v; renderAccTest(); A.init(); playChord(el.dataset.v); break;
