@@ -8,6 +8,7 @@ const CARDS = [
   { id: 'canon', rare: 2, composer: '帕赫贝尔', year: 1680, level: 2, note: '流行音乐「卡农进行」的源头', own: 1 },
   { id: 'alwayson', rare: 3, composer: '林俊杰', year: 2013, level: 2, note: '你的目标曲：4536 王道进行 + 副属和弦', own: 1 },
   { id: 'cityofstars', rare: 2, composer: 'Justin Hurwitz', year: 2016, level: 2, note: '属七没回家：C7 → Dm 的阻碍终止', own: 1 },
+  { id: 'cosrowan', rare: 3, composer: 'Justin Hurwitz', year: 2016, level: 3, note: '七和弦一整首：2–5–6、半减七、桥段转 D 小调', own: 1 },
   { id: 'letitbe', rare: 1, composer: 'The Beatles', year: 1970, level: 1, note: '1564 进行', own: 1 },
   { id: 'elise', rare: 3, composer: '贝多芬', year: 1810, level: 3, note: 'A 小调里 E 和 Am 来回摆动' },
   { id: 'greensleeves', rare: 2, composer: '英格兰民歌', year: 1580, level: 2, note: '小调里借来的大调色彩' },

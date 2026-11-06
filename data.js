@@ -156,22 +156,39 @@ const SONGS = [
     note: '流行音乐里「卡农进行」的源头。',
   },
   {
-    id: 'alwayson', title: 'Always Online', sub: '林俊杰 · 弹琴吧钢琴谱', key: 'C', tag: '流行', bpm: 120,
+    id: 'alwayson', title: 'Always Online', sub: '林俊杰 · 弹琴吧钢琴谱（全曲 77 小节）', key: 'C', tag: '流行', bpm: 120,
     sections: [
       { name: '前奏 1–8', bars: 'F | G | Em | Am | Dm | G | C | C' },
       { name: '主歌 9–24', bars: 'F | G | Em | Am | F | G | Em | Am | F | G | Em | Am | F | D7 | G | G7' },
-      { name: '副歌 25–32', bars: 'F | G | Em | Am | F | G | C | E' },
+      { name: '副歌 25–40', bars: 'F | G | Em | Am | F | G | C | E | F | G | Em | Am | Dm | G | C | C' },
+      { name: '桥段 41–49', bars: 'Eb | F | Dm | G7 | Eb | F | D/C# | G | G7/D' },
+      { name: '副歌 50–65', bars: 'F | G | Em | Am | F | G | C | G/B | F | G | Em | Am | F | G | C | G7' },
+      { name: '尾声 66–77', bars: 'Dm | G | C | C | F | G | Em | Am | Dm | G | C | C' },
     ],
-    note: '和弦是根据你上传的谱（左手低音 + 右手和声）分析出来的，属于简化骨架：主歌和副歌都是 4536 王道进行（F G Em Am），D7 和 E 是副属和弦。请对照谱子核对。',
+    note: '和弦是逐小节看你上传的谱（左手低音 + 右手和声）分析出来的。主歌、副歌都是 4536 王道进行（F G Em Am）；D7、E 是副属和弦；桥段的 E♭ 是从 C 小调借来的和弦，D/C♯ 是低音半音下行的过渡。第 66 小节起速度放慢到 ♩=90，第 69 小节回到 ♩=120。',
     orig: { apple: 'https://music.apple.com/cn/search?term=Always%20Online%20%E6%9E%97%E4%BF%8A%E6%9D%B0' },
   },
   {
-    id: 'cityofstars', title: 'City of Stars', sub: '《爱乐之城》· 简易钢琴版（Anne Ku 编）', key: 'F', tag: '流行', bpm: 100,
+    id: 'cityofstars', title: 'City of Stars（简易版）', sub: '《爱乐之城》· Anne Ku 简易钢琴版（13 小节）', key: 'F', tag: '流行', bpm: 100,
     sections: [
       { name: '前奏 1–4', bars: 'Gm7 | Gm7 | Gm7 | Gm7' },
       { name: '主歌 5–13', bars: 'Gm Gm7 | C C7 | Dm | Dm | Gm Gm7 | C C7 | F7 | F7 | Gm Gm7' },
     ],
     note: '和弦记号直接来自你上传的简易版谱面。C7 → Dm 是阻碍终止（属七没回到主和弦 F），F7 是副属和弦。',
+    orig: { apple: 'https://music.apple.com/cn/search?term=City%20of%20Stars%20La%20La%20Land' },
+  },
+  {
+    id: 'cosrowan', title: 'City of Stars（改编版）', sub: '《爱乐之城》· RowanMusic 钢琴改编（全曲 60 小节）', key: 'F', tag: '流行', bpm: 105,
+    sections: [
+      { name: '前奏 1–4', bars: 'Gm7 | Gm7 | Gm7 | Gm7' },
+      { name: '主歌 5–12', bars: 'Gm7 | C7 | Dm7 | Dm7 | Gm7 | C7 | Fmaj7 | Fmaj7' },
+      { name: '13–18', bars: 'Gm7b5 | C | F | F7/Eb | Gm7 | A7' },
+      { name: '主歌 19–26', bars: 'Dm7 | F/C | Gm7 | C7 | Dm7 | Dm7 | Gm7 | C7' },
+      { name: '27–34', bars: 'F | Am/E | Gm7 | C7 | F | F7/Eb | Gm7 | A7' },
+      { name: '桥段 35–48', bars: 'Bb | A7 | A7 | Dm | Bb | C | Dm | Dm | Bb | C | A7 | Dm | Bb | A7' },
+      { name: '尾声 49–60', bars: 'Dm7 | F/C | Gm7 | C7 | Fmaj7 | Fmaj7 | Gm7 | A7 | A7 | Dm7 | Dm | Dm' },
+    ],
+    note: '这份谱没写调号，但 B♭ 一直在用，其实是 F 大调。和弦是逐小节看你上传的谱分析的：Gm7 → C7 → Dm7 就是简易版里的 2–5–6（阻碍终止）；F7/E♭ 是低音一路往下走；桥段反复出现 A7 → Dm，是暂时转到 D 小调。第 13 小节右手写了 D♭，所以标成 Gm7♭5（半减七）。',
     orig: { apple: 'https://music.apple.com/cn/search?term=City%20of%20Stars%20La%20La%20Land' },
   },
   {
