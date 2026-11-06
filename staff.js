@@ -178,7 +178,7 @@ const Staff = (() => {
       });
     });
     const svg = el.querySelector('svg');
-    if (svg) { svg.setAttribute('viewBox', `0 0 ${W} ${rows.length * ROW_H + 6}`); svg.style.width = '100%'; svg.style.height = 'auto'; }
+    if (svg) { svg.setAttribute('viewBox', `0 0 ${W} ${rows.length * ROW_H + 6}`); svg.style.width = '100%'; svg.style.height = 'auto'; el.style.width = el.style.height = ''; }
     el.__boxes = boxes; el.__W = W;
     clickable(el, cols, W, rows.length * ROW_H + 6, boxes);
   }
@@ -211,7 +211,7 @@ const Staff = (() => {
     const pcols = []; notes.forEach(n => collect(pcols, n));
     const top = new VF.Annotation(T.disp(cfg.sym));
     ctx.save(); ctx.setFont('sans-serif', 13, 'bold'); ctx.fillText(T.disp(cfg.sym) + ' 和弦 · ' + cfg.name, 6, 14); ctx.restore();
-    const svg = el.querySelector('svg'); if (svg) { svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.style.width = '100%'; svg.style.height = 'auto'; }
+    const svg = el.querySelector('svg'); if (svg) { svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.style.width = '100%'; svg.style.height = 'auto'; el.style.width = el.style.height = ''; }
     clickable(el, pcols, W, H);
   }
 
@@ -267,7 +267,7 @@ const Staff = (() => {
         x += w;
       });
     });
-    const svg = el.querySelector('svg'); if (svg) { svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.style.width = '100%'; svg.style.height = 'auto'; svg.style.cursor = 'pointer'; }
+    const svg = el.querySelector('svg'); if (svg) { svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.style.width = '100%'; svg.style.height = 'auto'; el.style.width = el.style.height = ''; svg.style.cursor = 'pointer'; }
     el.onclick = e => {
       const rc = svg.getBoundingClientRect(), sx = (e.clientX - rc.left) * W / rc.width, sy = (e.clientY - rc.top) * H / rc.height;
       const h = hits.find(t => sx >= t.x0 && sx <= t.x1 && sy >= t.y0 && sy <= t.y1);
