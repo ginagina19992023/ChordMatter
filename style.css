@@ -577,3 +577,33 @@ a.more { display: block; text-align: right; font-size: 13px; color: var(--mute);
 details.mine { margin-top: 10px; }
 details.mine summary { font-size: 13.5px; color: var(--mute); cursor: pointer; padding: 6px 0; }
 .madenote { border-left: 2px solid var(--acc); padding-left: 10px; }
+
+/* 旋律 → 伴奏 推理 */
+.jn.ct em { color: var(--S); }
+.jn.nct em { color: var(--mute); }
+.ctdemo { color: var(--S); font-weight: 600; }
+details.melwhy { margin-top: 12px; }
+details.melwhy summary { font-weight: 600; font-size: 15px; cursor: pointer; padding: 6px 0; }
+.whylist { margin: 6px 0 0; padding: 0; list-style: none; }
+.whylist li { border-top: 1px solid var(--line); padding: 8px 0; font-size: 14px; line-height: 1.6; }
+.whylist li small { display: block; color: var(--mute); font-size: 12px; }
+
+/* 原曲说明 + 跟录音弹 */
+.origcopy { margin-top: 10px; font-size: 14px; line-height: 1.65; }
+.origcopy p { margin: 6px 0; }
+.origcopy .btn { display: block; text-align: center; margin: 10px 0; color: var(--bg); }
+.origcopy a:not(.btn) { color: var(--S); }
+.alsteps { font-size: 13.5px; line-height: 1.6; padding-left: 20px; color: var(--mute); }
+.alsteps a { color: var(--S); }
+.alnow { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; align-items: end; margin: 16px 0 8px; }
+.alnow small { display: block; color: var(--mute); font-size: 12px; }
+.alnow b { font-size: 56px; font-weight: 600; line-height: 1.1; display: inline-block; }
+.alnow b.pop { animation: alpop .25s ease-out; }
+@keyframes alpop { from { transform: scale(1.12); color: var(--acc); } to { transform: none; } }
+.alnow i { font-style: normal; font-family: "Times New Roman", serif; font-size: 20px; margin-left: 8px; color: var(--mute); }
+.alnow span { font-size: 24px; color: var(--mute); }
+.beats { display: flex; gap: 8px; margin: 6px 0 14px; }
+.beats i { flex: 1; height: 6px; border-radius: 3px; background: var(--line); }
+.beats i.on { background: var(--acc); }
+.tapbtn { width: 100%; height: 84px; border-radius: 16px; border: 1.5px solid var(--ink); background: none; font: inherit; font-size: 22px; letter-spacing: .3em; cursor: pointer; color: var(--ink); }
+.tapbtn:active { background: var(--soft); }

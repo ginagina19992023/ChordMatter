@@ -143,7 +143,7 @@ const SONGS = [
     note: '整首都是分解和弦，最适合同时练琶音、七和弦和背谱。',
   },
   {
-    id: 'castle', src: 'simplified', orig: { apple: 'https://music.apple.com/cn/search?term=%E5%A4%A9%E7%A9%BA%E4%B9%8B%E5%9F%8E%20%E4%B9%85%E7%9F%B3%E8%AE%A9' }, title: '天空之城', sub: '久石让 · 常见钢琴改编（A 小调）', key: 'Am', tag: '流行', bpm: 76,
+    id: 'castle', copy: 1, src: 'simplified', orig: { apple: 'https://music.apple.com/cn/search?term=%E5%A4%A9%E7%A9%BA%E4%B9%8B%E5%9F%8E%20%E4%B9%85%E7%9F%B3%E8%AE%A9' }, title: '天空之城', sub: '久石让 · 常见钢琴改编（A 小调）', key: 'Am', tag: '流行', bpm: 76,
     sections: [
       { name: 'A 段', bars: 'Am Em | F C | Dm G | C E7 | Am Em | F C | Dm E7 | Am' },
       { name: 'B 段', bars: 'F G | Em Am | Dm G | C | F G | E7 Am | Dm E7 | Am' },
@@ -151,12 +151,12 @@ const SONGS = [
     note: '改编版本很多，这是最常见的一种，请以你的谱为准（在「编辑」里改）。',
   },
   {
-    id: 'canon', src: 'analyzed', orig: { imslp: 'https://imslp.org/index.php?search=Pachelbel+Canon', apple: 'https://music.apple.com/cn/search?term=Pachelbel%20Canon%20in%20D' }, title: '卡农', sub: '帕赫贝尔 · D 大调', key: 'D', tag: '古典', bpm: 60,
+    id: 'canon', src: 'analyzed', melody: 'canon', orig: { imslp: 'https://imslp.org/index.php?search=Pachelbel+Canon', apple: 'https://music.apple.com/cn/search?term=Pachelbel%20Canon%20in%20D' }, title: '卡农', sub: '帕赫贝尔 · D 大调', key: 'D', tag: '古典', bpm: 60,
     sections: [{ name: '低音主题', bars: 'D A | Bm F#m | G D | G A' }],
     note: '流行音乐里「卡农进行」的源头。',
   },
   {
-    id: 'alwayson', src: 'analyzed', title: 'Always Online', sub: '林俊杰 · 弹琴吧钢琴谱（全曲 77 小节）', key: 'C', tag: '流行', bpm: 120,
+    id: 'alwayson', copy: 1, src: 'analyzed', title: 'Always Online', sub: '林俊杰 · 弹琴吧钢琴谱（全曲 77 小节）', key: 'C', tag: '流行', bpm: 120,
     sections: [
       { name: '前奏 1–8', bars: 'Fmaj7 | G | Em | Am | Dm | G | C | C' },
       { name: '主歌 9–24 ‖: 反复从这里开始', bars: 'F | G | Em | Am | F | G | Em | Am | F | G | Em | Am | F | D7 | G | G/D' },
@@ -169,7 +169,7 @@ const SONGS = [
     orig: { apple: 'https://music.apple.com/cn/search?term=Always%20Online%20%E6%9E%97%E4%BF%8A%E6%9D%B0' },
   },
   {
-    id: 'cityofstars', src: 'printed', title: 'City of Stars（简易版）', sub: '《爱乐之城》· Anne Ku 简易钢琴版（13 小节）', key: 'F', tag: '流行', bpm: 100,
+    id: 'cityofstars', copy: 1, src: 'printed', title: 'City of Stars（简易版）', sub: '《爱乐之城》· Anne Ku 简易钢琴版（13 小节）', key: 'F', tag: '流行', bpm: 100,
     sections: [
       { name: '前奏 1–4', bars: 'Gm7 | Gm7 | Gm7 | Gm7' },
       { name: '主歌 5–13', bars: 'Gm Gm7 | C C7 | Dm | Dm | Gm Gm7 | C C7 | F7 | F7 | Gm Gm7' },
@@ -178,7 +178,7 @@ const SONGS = [
     orig: { apple: 'https://music.apple.com/cn/search?term=City%20of%20Stars%20La%20La%20Land' },
   },
   {
-    id: 'cosrowan', src: 'analyzed', title: 'City of Stars（改编版）', sub: '《爱乐之城》· RowanMusic 钢琴改编（全曲 61 小节）', key: 'F', tag: '流行', bpm: 105,
+    id: 'cosrowan', copy: 1, src: 'analyzed', title: 'City of Stars（改编版）', sub: '《爱乐之城》· RowanMusic 钢琴改编（全曲 61 小节）', key: 'F', tag: '流行', bpm: 105,
     sections: [
       { name: '前奏 1–4', bars: 'Gm7 | Gm7 | Gm7 | Gm7' },
       { name: '主歌 5–12', bars: 'Gm7 | C7 | Dm7 | Dm7 | Gm7 | C7 | Fmaj7 | Fmaj7' },
@@ -192,7 +192,7 @@ const SONGS = [
     orig: { apple: 'https://music.apple.com/cn/search?term=City%20of%20Stars%20La%20La%20Land' },
   },
   {
-    id: 'letitbe', src: 'simplified', orig: { apple: 'https://music.apple.com/cn/search?term=Let%20It%20Be%20The%20Beatles' }, title: 'Let It Be', sub: 'The Beatles · 主歌', key: 'C', tag: '流行', bpm: 72,
+    id: 'letitbe', copy: 1, src: 'simplified', orig: { apple: 'https://music.apple.com/cn/search?term=Let%20It%20Be%20The%20Beatles' }, title: 'Let It Be', sub: 'The Beatles · 主歌', key: 'C', tag: '流行', bpm: 72,
     sections: [{ name: '主歌', bars: 'C G | Am F | C G | F C' }],
     note: '1564 进行的经典例子。',
   },
@@ -226,6 +226,13 @@ const SING = [
     bars: [
       ["5 3_ 5_ 1'-", '长 亭 ~ 外', 'C'], ["6 1' 5-", '古 道 边', 'F C'], ['5 1_ 2_ 3 2_ 1_', '芳 草 ~ 碧 连 ~', 'C'], ['2---', '天', 'G'],
       ["5 3_ 5_ 1'. 7_", '晚 风 ~ 拂 柳', 'C'], ["6 1' 5-", '笛 声 残', 'F C'], ['5 2_ 3_ 4. 7,_', '夕 阳 ~ 山 外', 'G'], ['1---', '山', 'C'],
+    ],
+  },
+  {
+    id: 'canon', title: '卡农', sub: '帕赫贝尔 · D 大调 · 第一小提琴进来的那一句', key: 'D', beats: 4, bpm: 60,
+    bars: [
+      ["3'- 2'-", '', 'D A'], ["1'- 7-", '', 'Bm F#m'], ['6- 5-', '', 'G D'], ['6- 7-', '', 'G A'],
+      ["3'- 2'-", '', 'D A'], ["1'- 7-", '', 'Bm F#m'], ['6- 5-', '', 'G D'], ['6- 7-', '', 'G A'],
     ],
   },
   {

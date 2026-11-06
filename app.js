@@ -415,10 +415,10 @@
     route = (location.hash.replace(/^#\/?/, '') || 'today').split(/[-\/]/).map(decodeURIComponent);
     const r = route[0];
     document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.dataset.r === r || (r === 'song' && a.dataset.r === 'songs') || (r === 'unit' && a.dataset.r === 'path')));
-    drillStop(); document.querySelectorAll('.giftov, .cpop, .tpop').forEach(x => x.remove());
+    drillStop(); alStop(); document.querySelectorAll('.giftov, .cpop, .tpop').forEach(x => x.remove());
     document.body.classList.toggle('focus', ['quiz', 'arp', 'mem', 'sing', 'acctest'].includes(r) || (['sym', 'inv', 'logic'].includes(r) && route[1]));
     document.querySelectorAll('nav a').forEach(x => { if ((r === 'sing' || r === 'acctest') && x.dataset.r === 'acc') x.classList.add('on'); if (['know', 'sym', 'inv', 'logic'].includes(r) && x.dataset.r === 'path') x.classList.add('on'); if ((r === 'score' || r === 'scan') && x.dataset.r === 'songs') x.classList.add('on'); });
-    ({ today: vToday, path: vPath, unit: vUnit, chords: vChords, songs: vSongs, song: vSong, edit: vEdit, quiz: vQuiz, arp: vArp, mem: vMem, me: vMe, acc: vAcc, sing: vSing, acctest: vAccTest, know: vKnow, score: vScore, scan: vScan, pk: vPk, browse: vBrowse, sym: vSym, inv: vInv, cards: vCards, logic: vLogic }[r] || vToday)();
+    ({ today: vToday, path: vPath, unit: vUnit, chords: vChords, songs: vSongs, song: vSong, edit: vEdit, quiz: vQuiz, arp: vArp, mem: vMem, me: vMe, acc: vAcc, sing: vSing, acctest: vAccTest, know: vKnow, score: vScore, scan: vScan, pk: vPk, browse: vBrowse, along: vAlong, sym: vSym, inv: vInv, cards: vCards, logic: vLogic }[r] || vToday)();
     if (r === 'song') mountMyScore(route[1]);
     if (S.pendingGift && !document.body.classList.contains('focus')) setTimeout(flushGift, 400);
     window.scrollTo(0, 0); const ph = document.getElementById('phone'); if (ph) ph.scrollTop = 0;
@@ -667,6 +667,53 @@
     return hits;
   }
   // 一段 4 小节的乐句（小节号对齐原谱），命中的格子标橙；点一下整句播放
+  // 原曲：公有领域的给旋律 + 伴奏；有版权的说明为什么没有旋律，并给「跟录音弹」
+  function origBox(s) {
+    if (s.melody) return `<a class="scorelink" href="#sing-${s.melody}"><b>原曲旋律 + 伴奏一起听、一起弹</b><small>双手谱：右手是原曲旋律，左手是这些和弦 · 逐小节讲为什么配这个和弦</small><span>→</span></a>`;
+    if (!s.copy) return '';
+    return `<div class="origcopy"><p><b>原曲在哪？</b>这首歌有版权，App 里不能放它的旋律和录音，只放和弦。要把伴奏和原曲对上，用这两步：</p>
+      <p>① 点下面 <b>Apple Music</b> 先完整听一遍原曲，边听边看下面的和弦格子（小节号对着原曲）。<br>② 打开 <b>跟录音弹</b>：在 Apple Music 里放原曲，跟着拍子点 4 下，App 就按原曲的速度一小节一小节亮出和弦，你和录音一起弹伴奏——你弹的和弦和歌手唱的旋律同时响，就知道伴奏是怎么托住旋律的了。</p>
+      <a class="btn" href="#along-${s.id}">跟录音弹 →</a>
+      <p class="fine">想先弄懂「旋律 → 伴奏」是怎么配出来的，可以先看没有版权的例子：<a href="#sing-twinkle">小星星</a>、<a href="#sing-canon">卡农</a>，那里旋律和伴奏写在同一张谱上。</p></div>`;
+  }
+  // ---- 跟录音弹：按用户点的速度（跟着原曲录音点 4 下）一小节一小节亮出和弦 ----
+  const AL = { sec: 0, sound: false, taps: [], iv: null };
+  function vAlong() {
+    const s = allSongs().find(x => x.id === route[1]); if (!s) return go('#songs');
+    if (AL.id !== s.id) { AL.id = s.id; AL.sec = 0; }
+    const st = sectionStarts(s), sec = s.sections[AL.sec] || s.sections[0];
+    view.innerHTML = `<div class="qbar"><a href="#song-${s.id}" class="x">×</a><span class="meter"><i id="albar" style="width:0%"></i></span><small>跟录音弹</small></div>
+      <section class="along"><small>${esc(s.title)} · 和原曲一起弹伴奏</small>
+      <ol class="alsteps"><li>在 Apple Music 放原曲 <a href="${(s.orig || {}).apple || '#'}" target="_blank" rel="noopener">打开 ↗</a></li><li>选你要跟的段落</li><li>这一段开始前的那一小节，跟着录音的拍子点「拍」4 下</li><li>App 从下一拍起按你的速度亮和弦，循环这一段；对不上就停止重来</li></ol>
+      <div class="chips">${s.sections.map((x, i) => `<button class="chip${i === AL.sec ? ' on' : ''}" data-act="alsec" data-v="${i}">${esc(x.name)}</button>`).join('')}</div>
+      <div class="alnow"><div><small>现在 · 第 <span id="aln">${st[AL.sec] || 1}</span> 小节</small><b id="alc">${D(parseBars(sec.bars)[0][0])}</b><i id="ald">${degLabel(parseBars(sec.bars)[0][0], s.key)}</i></div><div><small>下一个</small><span id="alx">${D((parseBars(sec.bars)[1] || parseBars(sec.bars)[0])[0])}</span></div></div>
+      <div class="beats" id="albeats">${'<i></i>'.repeat(4)}</div>
+      <button class="tapbtn" data-act="altap">拍</button>
+      <div class="row"><button class="ghost sm" data-act="alstop">停止</button><button class="ghost sm${AL.sound ? ' on' : ''}" data-act="alsound">App 也轻声弹和弦：${AL.sound ? '开' : '关'}</button></div>
+      <p class="fine" id="alhint">点 4 下「拍」之后开始。速度会按你点的来，原曲大约 ♩=${s.bpm}。</p></section>`;
+  }
+  function alStop() { if (AL.iv) clearInterval(AL.iv); AL.iv = null; AL.taps = []; }
+  function alTap() {
+    const now = performance.now(); A.init();
+    AL.taps = AL.taps.filter(t => now - t < 6000).slice(-3); AL.taps.push(now); // 4 下最长 6 秒：慢到 ♩=40 也能用
+    const b = $('#albeats'); if (b) b.querySelectorAll('i').forEach((x, i) => x.classList.toggle('on', i < AL.taps.length));
+    if (AL.taps.length < 4) return;
+    const s = allSongs().find(x => x.id === route[1]); const sec = s.sections[AL.sec], bars = parseBars(sec.bars), n0 = sectionStarts(s)[AL.sec];
+    const beat = (AL.taps[3] - AL.taps[0]) / 3, t0 = AL.taps[3] + beat, beats = 4;
+    alStop();
+    $('#alhint').textContent = `速度 ♩=${Math.round(60000 / beat)} · 循环这一段 · 点「停止」结束`;
+    let last = '';
+    AL.iv = setInterval(() => {
+      const el = $('#alc'); if (!el) return alStop();
+      const bi = Math.floor((performance.now() - t0) / beat); if (bi < 0) return;
+      const barI = Math.floor(bi / beats) % bars.length, inBar = bi % beats, ch = bars[barI], ci = Math.min(ch.length - 1, Math.floor(inBar / (beats / ch.length)));
+      const key = barI + ':' + ci + ':' + inBar;
+      if (key === last) return; last = key;
+      document.querySelectorAll('#albeats i').forEach((x, i) => x.classList.toggle('on', i === inBar));
+      const sym = ch[ci], nxt = ci + 1 < ch.length ? ch[ci + 1] : bars[(barI + 1) % bars.length][0];
+      if (el.dataset.k !== barI + ':' + ci) { el.dataset.k = barI + ':' + ci; el.textContent = D(sym); $('#ald').textContent = degLabel(sym, s.key); $('#alx').textContent = D(nxt); $('#aln').textContent = n0 + barI; $('#albar').style.width = ((barI + 1) / bars.length * 100) + '%'; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); if (AL.sound) A.chord(chordMidis(sym), 0, 0.01, 0.35); }
+    }, 25);
+  }
   function srcBox(s) {
     const src = s.src || 'simplified', ev = s.ev ? Object.values(s.ev) : [];
     const low = ev.filter(e => e.conf === 'low').length, printed = ev.filter(e => e.printed).length;
@@ -830,9 +877,11 @@
     const songs = allSongs();
     const drafts = SONG_DRAFTS.filter(d => !songs.some(s => s.title === d.title));
     view.innerHTML = `<header class="top"><div><small>经典与流行 · 和声逻辑 · 背谱</small><h1>曲目</h1></div><a class="stat" href="#scan"><b>⌗</b><small>识谱</small></a><a class="stat" href="#edit-new"><b>＋</b><small>手动</small></a></header>
+      <section class="cxblock withmel"><h3>原曲旋律 + 伴奏 <small>· 没有版权，旋律和和弦写在同一张谱上</small></h3><ul class="list">${SING.map(x => `<li><a href="#sing-${x.id}"><span><b>${esc(x.title)}</b><small>${esc(x.sub)} · 双手谱 · 逐小节讲为什么配这个和弦</small></span><span class="arr">→</span></a></li>`).join('')}</ul></section>
+      <h3 class="h3">曲库 · 和弦分析</h3>
       <a class="unitbar" href="#browse"><small>按和弦找</small><b>和弦浏览：曲库里有哪些和弦、没有哪些</b><small>选一个和弦，列出所有含它的乐句，点一下就能听、跟着弹</small></a>
       <a class="unitbar" href="#scan"><small>新歌</small><b>上传谱子的截图或 PDF，自动认出和弦</b><small>认出后自动判断调、级数和功能，马上可以练</small></a>
-      <ul class="list">${songs.map(s => { const lv = (S.songs[s.id] || { level: 0 }).level; return `<li><a href="#song-${s.id}"><span><b>${esc(s.title)}</b><small>${esc(s.sub || '')} · ${s.key ? kz(s.key) : '未设调'} · ${srcLabel(s)}</small></span><span class="lv2"><span class="lv">${[0, 1, 2, 3].map(i => `<i class="${i < lv ? 'on' : i < (S.songs[s.id] || {}).away ? 'half' : ''}"></i>`).join('')}</span><small>${pkTag(songSt(s.id)) || '未学'}</small></span></a></li>`; }).join('')}
+      <ul class="list">${songs.map(s => { const lv = (S.songs[s.id] || { level: 0 }).level; return `<li><a href="#song-${s.id}"><span><b>${esc(s.title)}</b><small>${esc(s.sub || '')} · ${s.key ? kz(s.key) : '未设调'} · ${srcLabel(s)}${s.melody ? ' · 有原曲旋律' : s.copy ? ' · 有版权：只放和弦，可跟录音弹' : ''}</small></span><span class="lv2"><span class="lv">${[0, 1, 2, 3].map(i => `<i class="${i < lv ? 'on' : i < (S.songs[s.id] || {}).away ? 'half' : ''}"></i>`).join('')}</span><small>${pkTag(songSt(s.id)) || '未学'}</small></span></a></li>`; }).join('')}
       ${drafts.map(d => `<li class="draft"><a href="#edit-new-${SONG_DRAFTS.indexOf(d)}"><span><b>${esc(d.title)}</b><small>${esc(d.sub)}</small></span><span class="arr">＋</span></a></li>`).join('')}</ul>
       <p class="fine">右边四格 = 背谱的四层：看全谱 → 遮 1/3 → 遮 2/3 → 只看功能。在「编辑」里改成你手上谱的和弦，系统会自动分析级数、功能和终止式。</p>`;
   }
@@ -882,6 +931,7 @@
       <section class="orig first"><h3>原谱</h3>
         ${s.orig && s.orig.score ? (s.orig.score.made ? `<a class="scorelink" href="#score-${s.id}"><b>打开新造谱</b><small>按你上传的谱逐小节转写：左手是原谱左手，右手是这一小节的和弦 · 每小节标好和弦 · 可听、可点音、可分段 · 小节号对原谱</small><span>→</span></a>` : `<a class="scorelink" href="#score-${s.id}"><b>打开完整原谱</b><small>每小节上方标好了和弦和级数 · 学习段落高亮 · 点音符发声 · 可听全部</small><span>→</span></a>`) : ''}
         ${s.orig && s.orig.score && s.orig.score.made ? `<details class="mine"><summary>对照你手上的原谱（图片只存在这台手机）</summary><div id="myscore"></div></details>` : '<div id="myscore"></div>'}
+        ${origBox(s)}
         ${origLinks}
       </section>
       ${srcBox(s)}
@@ -1154,17 +1204,45 @@
           <p class="fine">格子里是每半拍弹什么：根 = 和弦根音，五 = 五音，高根 / 高三 = 高八度的根音 / 三音，和弦 = 三个音一起按。换和弦时形状不变，只是整体平移。</p>
         </section>
         ${jianpuBars(song)}
-        <section class="twohand"><h3>双手谱 · 右手旋律 + 左手和弦</h3>
-          <p class="fine">最常见的配和弦练习：右手弹上面的旋律，左手在每个和弦开始时按下这个和弦（柱式）。先分手，再合手。每小节上方是和弦和级数，点任何音符听它。</p>
+        <section class="twohand"><h3>原曲旋律 + 伴奏 · 双手谱</h3>
+          <p class="fine">右手是这首歌原本的旋律，左手是给它配的和弦。▶ 听的时候两只手一起响：先听懂旋律，再看左手为什么这样配。练法：先右手唱/弹旋律，再左手单独按和弦，最后合手。</p>
           <div class="chips"><button class="chip${SG.lh === 'root' ? '' : ' on'}" data-act="sglh" data-v="block">左手柱式和弦</button><button class="chip${SG.lh === 'root' ? ' on' : ''}" data-act="sglh" data-v="root">左手只弹根音（更简单）</button></div>
           <div class="score" id="twoscore"><p class="fine">正在生成双手谱…（第一次需要下载乐谱引擎）</p></div>
-          <div class="row"><button class="ghost sm" data-act="scplay" id="scbtn">▶ 听双手谱</button><button class="ghost sm" data-act="screte" data-v="-0.1">慢</button><button class="ghost sm" data-act="screte" data-v="0.1">快</button></div>
+          <div class="row"><button class="ghost sm" data-act="scplay" id="scbtn">▶ 旋律 + 伴奏一起听</button><button class="ghost sm" data-act="screte" data-v="-0.1">慢</button><button class="ghost sm" data-act="screte" data-v="0.1">快</button></div>
+          ${melWhyHtml(song)}
         </section>
         <div class="row"><button class="btn" data-act="sgplay" data-id="${song.id}" id="sgbtn">▶ 开始（先数一小节）</button></div>
         <div class="row"><button class="ghost sm${SG.acc ? ' on' : ''}" data-act="sgtog" data-k="acc">伴奏示范 ${SG.acc ? '开' : '关'}</button><button class="ghost sm${SG.mel ? ' on' : ''}" data-act="sgtog" data-k="mel">旋律 ${SG.mel ? '开' : '关'}</button><button class="ghost sm" data-act="sgrate" data-v="-0.1">慢</button><button class="ghost sm" data-act="sgrate" data-v="0.1">快</button></div>
         <p class="fine">速度 ${Math.round(song.bpm * SG.rate)} BPM。关掉「伴奏示范」就是你自己弹伴奏；关掉「旋律」就是你自己唱。</p>
       </section>`;
     setTimeout(() => singScore(song), 0);
+    melFit(song).forEach(f => { if (f.n.midi == null) return; const e = view.querySelector(`.jm .jn[data-n="${f.n.i}"]`); if (e) e.classList.add(f.role ? 'ct' : 'nct'); });
+  }
+  // 旋律 → 伴奏：每个旋律音落在当时那个和弦里的哪个位置（根 / 三 / 五 / 七），不在就是经过音
+  function melFit(song) {
+    const tl = songTimeline(song);
+    return tl.notes.map(n => {
+      const sl = tl.slots.find(x => n.start >= x.start - 1e-6 && n.start < x.start + x.d - 1e-6);
+      if (!sl || n.midi == null) return { n, sl, role: null };
+      const c = T.parseChord(sl.sym), k = c ? c.notes.findIndex(x => x.pc === ((n.midi % 12) + 12) % 12) : -1;
+      return { n, sl, role: k < 0 ? null : ['根音', '三音', '五音', '七音'][k] };
+    });
+  }
+  function melWhyHtml(song) {
+    const fit = melFit(song), sc = T.scale(T.parseKey(song.key), true).map(x => x.name);
+    const rows = song.bars.map((b, bi) => {
+      const fs = fit.filter(f => f.n.bar === bi && f.sl);
+      const groups = []; fs.forEach(f => { let g = groups.find(x => x.sl === f.sl); if (!g) groups.push((g = { sl: f.sl, fs: [] })); g.fs.push(f); });
+      if (!groups.length) return '';
+      const parts = groups.map(g => {
+        const ct = g.fs.filter(f => f.role), nct = g.fs.filter(f => !f.role && f.n.midi != null);
+        const uniqCt = []; ct.forEach(f => { if (!uniqCt.some(u => u.n.deg === f.n.deg)) uniqCt.push(f); });
+        const where = groups.length > 1 ? `${g.sl.t === 0 ? '前' : '后'} ${g.sl.d} 拍` : '这一小节';
+        return `${where}旋律 <b>${g.fs.filter(f => f.n.midi != null).map(f => f.n.deg).join(' ')}</b> → ${uniqCt.map(f => `${f.n.deg}（${D(sc[f.n.deg - 1])}）是 <b>${D(g.sl.sym)}</b> 的${f.role}`).join('，') || '没有落在和弦里的音'}，所以配 <b>${D(g.sl.sym)}</b>${nct.length ? `；${[...new Set(nct.map(f => f.n.deg))].join('、')} 不在和弦里，是一带而过的经过音` : ''}`;
+      });
+      return `<li><small>第 ${bi + 1} 小节${b[1] ? ' · ' + esc(String(b[1]).replace(/\s+/g, '')) : ''}</small><span>${parts.join('；')}。</span></li>`;
+    }).join('');
+    return `<details class="melwhy" open><summary>为什么配这些和弦？（逐小节）</summary><p class="fine">配和弦的方法只有一条：<b>看这几拍旋律唱的是哪个音，找一个包含它的和弦</b>，优先用 1、4、5 级（${D(T.degreeChord(T.parseKey(song.key), 0))}、${D(T.degreeChord(T.parseKey(song.key), 3))}、${D(T.degreeChord(T.parseKey(song.key), 4))}）。上面简谱里<span class="ctdemo">蓝色</span>的音是和弦音，灰色的是经过音。</p><ol class="whylist">${rows}</ol></details>`;
   }
   // 生成双手谱（Humdrum kern）：右手 = 简谱旋律，左手 = 每个和弦（柱式或根音）
   const KSIG = { C: '*k[]', G: '*k[f#]', D: '*k[f#c#]', F: '*k[b-]', Bb: '*k[b-e-]' };
@@ -2011,6 +2089,10 @@
       case 'scstop': stopAll(); el.textContent = '▶ 播放'; el.dataset.act = 'scplay'; break;
       case 'screte': SC.rate = Math.max(0.5, Math.min(1.3, Math.round((SC.rate + +el.dataset.v) * 10) / 10)); render(); break;
       case 'pro': S.pro = el.dataset.v === '1'; save(); render(); break;
+      case 'altap': alTap(); break;
+      case 'alstop': alStop(); render(); break;
+      case 'alsec': alStop(); AL.sec = +el.dataset.v; render(); break;
+      case 'alsound': AL.sound = !AL.sound; el.classList.toggle('on', AL.sound); el.textContent = 'App 也轻声弹和弦：' + (AL.sound ? '开' : '关'); break;
       case 'brq': BR.q = el.dataset.v; go('#browse'); render(); break;
       case 'place': S.place = el.dataset.v; save(); render(); break;
       case 'key': if (['sym', 'inv', 'logic'].includes(route[0])) symTap(+el.dataset.m); else drillTapKey(+el.dataset.m); break;
