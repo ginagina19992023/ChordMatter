@@ -455,6 +455,7 @@
         <div class="ring-t"><b>${n}/4</b><small>${n === 4 ? '完成' : '约 12 分钟'}</small></div>
       </section>
       ${n < 4 ? `<div class="cta flow">${flowBtn(n === 0 ? '开始今天的练习' : '继续 · ' + steps.find(x => !d[x[0]])[1])}</div>` : '<p class="donemsg">今天的 4 步都完成了。想多练可以试试下面的即兴伴奏。</p>'}
+      <div class="pills todayshare"><button class="pill" data-act="shareday" data-v="${today()}">分享今天的卡片</button></div>
       <ol class="steps">${steps.map(([k, t, s, h], i) => `<li><a href="${h}" class="${d[k] ? 'done' : ''}"><span class="dot">${d[k] ? '✓' : i + 1}</span><span><b>${t}</b><small>${esc(s)}${d[k] ? (d[k + 'M'] === 'away' ? ' · 今天在屏幕上完成' : d[k + 'M'] === 'piano' ? ' · 今天在琴上完成' : '') : ''}</small></span><span class="arr">→</span></a></li>`).join('')}</ol>
       ${todoBox()}
       <a class="unitbar" href="#unit-${cur.id}"><small>当前单元</small><b>${cur.n} ${cur.title}</b><span class="meter"><i style="width:${mastery(cur.id)}%"></i></span><small>${mastery(cur.id)}% · 达到 80% 自动解锁下一单元</small></a>
@@ -1409,6 +1410,7 @@
       <section class="stats"><div><b>${streak()}</b><small>连续天</small></div><div><b>${S.xp}</b><small>XP</small></div><div><b>${UNITS.filter(u => unitState(u.id).done).length}/${UNITS.length}</b><small>单元</small></div></section>
       ${pkSummary()}
       <div class="calhead"><button class="ghost sm" data-act="calmonth" data-v="-1">‹</button><b>${CAL.y} 年 ${CAL.m + 1} 月</b><button class="ghost sm" data-act="calmonth" data-v="1">›</button></div>
+      <div class="pills calshare"><button class="pill" data-act="sharemonth">分享这个月</button><button class="pill" data-act="shareday" data-v="${today()}">分享今天</button></div>
       <div id="calmonth">${calHtml(calWeeks(CAL.y, CAL.m))}</div>
       <p class="fine callegend">一天一小节：音符越高 = 练得越久，颜色越深 · 实心 = 当天 4 步都完成 · 空心 = 练了一部分 · 休止符 = 休息日 · 橙色双竖线 = 背下了一首曲子。点任意一天看详情。</p>
       <div id="caldetail" class="caldetail"></div>
@@ -2521,12 +2523,92 @@
   function calHtml(weeks, compact) {
     return Staff.html({ calendar: true, compact: !!compact, weeks: weeks.map(w => w.map(x => ({ ds: x.ds, label: x.label, other: x.other, today: x.today, future: x.future, active: x.active, min: x.min, full: x.full, piece: x.piece }))) });
   }
+  // ---------------- 分享：今日卡片（按内容自动排版）/ 这个月的五线谱日历 ----------------
+  // 这一天练过哪些和弦：琶音、背谱的曲子、组合和弦、和弦页里弹过的和弦（如实从记录里取）
+  function dayChords(ds) {
+    const out = [], add = (sym, key, from) => { if (!T.parseChord(sym)) return; const k = sym + '@' + (key || 'C'); if (!out.some(x => x.k === k)) out.push({ k, sym, key: key || 'C', from }); };
+    const songs = new Set(), combos = new Set(), arps = new Set();
+    (S.log || []).filter(e => e.d === ds).forEach(e => {
+      if (e.t === 'arp' && e.s) { arps.add(e.s); add(e.s, 'C', '琶音'); }
+      if ((e.t === 'mem' || e.t === 'piece') && e.id) { const sg = allSongs().find(x => x.id === e.id); if (sg) { songs.add(sg.title); [...new Set(songFlat(sg))].slice(0, 10).forEach(x => add(x, sg.key, sg.title)); } }
+      if ((e.t === 'combo' || e.t === 'cbq') && e.id) { const cb = COMBOS.find(x => x.id === e.id); if (cb) { combos.add(cb.name); cbChords(cb, cb.minor ? 'Am' : 'C').forEach(x => add(x, cb.minor ? 'Am' : 'C', cb.name)); } }
+      if (e.t === 'chord' && e.s) add(e.s, 'C', '和弦页');
+    });
+    return { chords: out, songs: [...songs], combos: [...combos], arps: [...arps] };
+  }
+  const FCOL = { T: '#464646', S: '#2f6fdb', D: '#e8541e', N: '#9a9a9a' };
+  // 今日卡片：画在 canvas 上，宽 1080，高度按内容自己长
+  function dayCardCanvas(ds) {
+    const x = dayInfo(ds), dc = dayChords(ds), W = 1080, P = 72;
+    const dt = new Date(ds + 'T12:00:00'), title = dt.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' });
+    const cv = document.createElement('canvas'), g = cv.getContext('2d'), F = '-apple-system, "PingFang SC", "Helvetica Neue", sans-serif';
+    // 先量一遍高度
+    const chipH = 88, gap = 16;
+    const layoutChips = (ctx) => { ctx.font = `600 40px ${F}`; let cx = P, cy = 0, rows = 1; dc.chords.forEach(c => { const w = ctx.measureText(D(c.sym)).width + 56; if (cx + w > W - P) { cx = P; cy += chipH + gap; rows++; } c._x = cx; c._y = cy; c._w = w; cx += w + gap; }); return dc.chords.length ? rows * (chipH + gap) : 0; };
+    const tmp = document.createElement('canvas').getContext('2d');
+    const chipsH = layoutChips(tmp);
+    const lines = [dc.songs.length ? '曲子：' + dc.songs.join('、') : '', dc.combos.length ? '组合和弦：' + dc.combos.join('、') : '', dc.arps.length ? '琶音：' + dc.arps.map(D).join(' ') : ''].filter(Boolean);
+    const H = P + 60 + 90 + 180 + (chipsH ? 70 + chipsH : 70) + lines.length * 62 + 150 + P;
+    cv.width = W; cv.height = H;
+    g.fillStyle = '#ffffff'; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#9a9a9a'; g.font = `500 34px ${F}`; g.fillText('ChordMatter · 和弦练习', P, P + 30);
+    g.fillStyle = '#1a1a1a'; g.font = `700 72px ${F}`; g.fillText(title, P, P + 130);
+    // 数字：分钟 / 步数 / 连续天
+    const stats = [[String(x.min || 0), '分钟'], [x.steps + '/4', '今日步数'], [String(streak()), '连续天']];
+    stats.forEach(([v, l], i) => { const sx = P + i * 300; g.fillStyle = '#1a1a1a'; g.font = `600 84px ${F}`; g.fillText(v, sx, P + 270); g.fillStyle = '#9a9a9a'; g.font = `400 32px ${F}`; g.fillText(l, sx, P + 318); });
+    let y = P + 410;
+    g.fillStyle = '#1a1a1a'; g.font = `600 38px ${F}`; g.fillText(dc.chords.length ? `今天练的和弦 · ${dc.chords.length} 个` : '今天还没有练和弦', P, y); y += 40;
+    layoutChips(g);
+    dc.chords.forEach(c => { const f = chordFunc(c.sym, c.key); g.fillStyle = FCOL[f] || FCOL.N; roundRectPath(g, c._x, y + c._y, c._w, chipH, 22); g.fill(); g.fillStyle = '#fff'; g.font = `600 40px ${F}`; g.fillText(D(c.sym), c._x + 28, y + c._y + 58); });
+    y += chipsH + 30;
+    g.fillStyle = '#5a5a5a'; g.font = `400 34px ${F}`;
+    lines.forEach(l => { let t = l; while (g.measureText(t).width > W - 2 * P && t.length > 4) t = t.slice(0, -2); if (t !== l) t += '…'; g.fillText(t, P, y + 40); y += 62; });
+    // 图例 + 页脚
+    y += 30; [['稳', 'T'], ['走', 'S'], ['紧', 'D']].forEach(([n, f], i) => { g.fillStyle = FCOL[f]; g.fillRect(P + i * 130, y + 10, 30, 30); g.fillStyle = '#5a5a5a'; g.font = `400 32px ${F}`; g.fillText(n, P + i * 130 + 42, y + 36); });
+    g.fillStyle = '#c0c0c0'; g.font = `400 28px ${F}`; g.fillText('颜色 = 和弦的感觉', P + 420, y + 36);
+    return cv;
+  }
+  function roundRectPath(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+  // 这个月的五线谱日历 → 图片（把画好的 SVG 原样转成图，再加上标题）
+  async function monthCanvas() {
+    const svg = document.querySelector('#calmonth svg'); if (!svg) return null;
+    const vb = svg.viewBox.baseVal, W = 1080, k = W / vb.width, P = 60, head = 170, H = Math.round(vb.height * k) + head + P + 70;
+    const xml = new XMLSerializer().serializeToString(svg).replace(/currentColor/g, '#1a1a1a');
+    const img = new Image(); const url = URL.createObjectURL(new Blob([xml], { type: 'image/svg+xml' }));
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+    const cv = document.createElement('canvas'); cv.width = W + 2 * P; cv.height = H; const g = cv.getContext('2d'), F = '-apple-system, "PingFang SC", sans-serif';
+    g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+    g.fillStyle = '#9a9a9a'; g.font = `500 32px ${F}`; g.fillText('ChordMatter · 练琴日历', P, P + 26);
+    g.fillStyle = '#1a1a1a'; g.font = `700 64px ${F}`; g.fillText(`${CAL.y} 年 ${CAL.m + 1} 月`, P, P + 110);
+    const days = Object.keys(S.days).filter(d => d.startsWith(`${CAL.y}-${String(CAL.m + 1).padStart(2, '0')}`) && dayInfo(d).active);
+    const mins = days.reduce((a, d) => a + dayInfo(d).min, 0);
+    g.fillStyle = '#5a5a5a'; g.font = `400 32px ${F}`; g.fillText(`练了 ${days.length} 天 · 共 ${mins} 分钟 · 连续 ${streak()} 天`, P + 420, P + 110);
+    g.drawImage(img, P, head, W, vb.height * k);
+    g.fillStyle = '#b0b0b0'; g.font = `400 26px ${F}`; g.fillText('一天一小节：音符越高 = 练得越久 · 休止符 = 休息日', P, H - 36);
+    URL.revokeObjectURL(url);
+    return cv;
+  }
+  // 预览 + 分享（iPhone 分享面板）/ 保存图片；也可以长按预览图存到相册
+  async function sharePreview(cv, name, title) {
+    document.querySelectorAll('.sharepop').forEach(x => x.remove());
+    const host = document.getElementById('phone') || document.body, url = cv.toDataURL('image/png');
+    const el = document.createElement('div'); el.className = 'sharepop';
+    el.innerHTML = `<div class="sharecard"><div class="shead"><b>${title}</b><button class="fsx" data-act="shareclose">×</button></div><img src="${url}" alt="${title}"><p class="fine">也可以长按图片，存到相册。</p><div class="row"><button class="btn" data-act="sharego">分享</button><button class="ghost" data-act="sharesave">保存图片</button></div></div>`;
+    host.appendChild(el);
+    el.__blob = await new Promise(r => cv.toBlob(r, 'image/png')); el.__name = name;
+  }
+  async function shareGo(save) {
+    const el = document.querySelector('.sharepop'); if (!el || !el.__blob) return;
+    const file = new File([el.__blob], el.__name, { type: 'image/png' });
+    if (!save) { try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: el.__name }); return; } } catch (e) { if (e && e.name === 'AbortError') return; } toast('这里不能直接分享 · 已改为保存图片'); }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = el.__name; document.body.appendChild(a); a.click(); a.remove();
+  }
   function calDetail(ds) {
     const x = dayInfo(ds), el = $('#caldetail'); if (!el) return;
     const dt = new Date(ds + 'T12:00:00');
     const title = dt.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' });
     if (!x.active) { el.innerHTML = `<b>${title}</b><p class="fine">${ds > today() ? '还没到。' : '休止符：休息日。休息也是练习的一部分。'}</p>`; return; }
-    el.innerHTML = `<b>${title}</b><p>练习 ${x.min} 分钟 · 今日 ${x.steps}/4 步${x.piece ? ' · 背下了一首曲子' : ''}</p>${x.grades.length ? `<p class="fine">评级：${x.grades.join(' ')}</p>` : ''}${x.cards.length ? `<p class="fine">得到卡：${x.cards.map(id => (cardSong(id) || { title: id }).title).join('、')}</p>` : ''}`;
+    el.innerHTML = `<b>${title}</b> <button class="pill" data-act="shareday" data-v="${ds}">分享这一天</button><p>练习 ${x.min} 分钟 · 今日 ${x.steps}/4 步${x.piece ? ' · 背下了一首曲子' : ''}</p>${x.grades.length ? `<p class="fine">评级：${x.grades.join(' ')}</p>` : ''}${x.cards.length ? `<p class="fine">得到卡：${x.cards.map(id => (cardSong(id) || { title: id }).title).join('、')}</p>` : ''}`;
   }
 
 
@@ -2739,6 +2821,11 @@
       case 'tagreset': e.preventDefault(); if (S.tags) delete S.tags[el.dataset.id]; save(); render(); document.querySelectorAll('.tpop').forEach(x => x.remove()); break;
       case 'klstep': { const s = allSongs().find(x => x.id === route[1]); klShow(KL.i + +el.dataset.v); playChord(songFlat(s)[KL.i]); break; }
       case 'klset': { const cfg = klCfg(), k = el.dataset.k, v = el.dataset.v; if (k === 'label') cfg.label = v; else if (k === 'show') cfg.show[v] = cfg.show[v] ? 0 : 1; else cfg[k] = !cfg[k]; save(); klShow(KL.i); if (k === 'feel') { const sg = allSongs().find(x => x.id === route[1]); document.querySelectorAll('#grid .cell').forEach(cl => { const old = cl.querySelector('.cshape'); if (old) old.outerHTML = chordShape(cl.dataset.s, sg.key); }); } break; }
+      case 'shareday': sharePreview(dayCardCanvas(el.dataset.v), 'ChordMatter-' + el.dataset.v + '.png', '今日卡片'); break;
+      case 'sharemonth': monthCanvas().then(cv => cv ? sharePreview(cv, `ChordMatter-${CAL.y}-${CAL.m + 1}.png`, '这个月的练琴日历') : toast('日历还没画好')).catch(() => toast('生成图片失败')); break;
+      case 'sharego': shareGo(false); break;
+      case 'sharesave': shareGo(true); break;
+      case 'shareclose': document.querySelectorAll('.sharepop').forEach(x => x.remove()); break;
       case 'dockplay': dockPlay(); break;
       case 'rlmode': RL.mode = el.dataset.v; Roll.stop(); drillStop(); if (document.querySelector('.rollfs')) rollOpen(); else render(); break;
       case 'rllvl': if (el.dataset.locked) { toast('先在「中等」用「等你弹」一遍弹对，困难才解锁'); break; } RL.lvl = +el.dataset.v; Roll.stop(); drillStop(); if (document.querySelector('.rollfs')) rollOpen(); else render(); break;
@@ -2793,7 +2880,7 @@
       case 'atsubmit': accTestSubmit(); break;
       case 'atmel': accTestPlay(false); break;
       case 'atplay': accTestPlay(true); break;
-      case 'play': playChord(el.dataset.s, !!el.dataset.arp); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 300); break;
+      case 'play': if (route[0] === 'chords' && el.dataset.s) { const L = S.log || []; if (!L.some(e => e.d === today() && e.t === 'chord' && e.s === el.dataset.s)) logEv('chord', { s: el.dataset.s }); } playChord(el.dataset.s, !!el.dataset.arp); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 300); break;
       case 'prog': playProg(el, el.dataset.k, el.dataset.c.split(','), 84, 2); break;
       case 'flow': nextStep(); break;
       case 'chordpop': e.preventDefault(); chordPop(el.dataset.s); break;

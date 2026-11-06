@@ -224,8 +224,10 @@ const Staff = (() => {
     const a = p(c1), b = p(c2); return 'rgb(' + a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(',') + ')';
   }
   function drawCalendar(el, cfg, VF) {
-    const W = Math.max(280, el.clientWidth || 340), compact = cfg.compact;
-    const ROW = compact ? 92 : 104, TOP = 4, head = 42;
+    // 月历：整张谱按比例缩小（虚拟宽度放大 1.75 倍再缩回屏幕宽），一个月大约一屏；日期数字单独加大保证看得清
+    const compact = cfg.compact, K = compact ? 1 : 1.75;
+    const W = Math.max(280, el.clientWidth || 340) * K;
+    const ROW = compact ? 92 : 100, TOP = 4, head = 42;
     const H = cfg.weeks.length * ROW + 6;
     el.innerHTML = '';
     const r = new VF.Renderer(el, VF.Renderer.Backends.SVG); r.resize(W, H);
@@ -257,10 +259,10 @@ const Staff = (() => {
         new VF.Formatter().joinVoices([v]).format([v], Math.max(10, x + w - ns - 10));
         v.draw(ctx, st);
         if (dd.piece) { ctx.save(); ctx.setFillStyle(acc); ctx.fillRect(x + w - 6, y + 40, 1.5, 40); ctx.fillRect(x + w - 2.5, y + 40, 2.5, 40); ctx.restore(); }
-        ctx.save(); ctx.setFont('sans-serif', 10, dd.today ? 'bold' : 'normal'); ctx.setFillStyle(dd.today ? acc : dd.other ? line : mute);
-        const cx = (di === 0 ? x + head : x) + (w - (di === 0 ? head : 0)) / 2;
-        ctx.fillText(String(dd.label), cx - 4, y + 94 - (compact ? 6 : 0)); ctx.restore();
-        if (dd.today) { ctx.save(); ctx.setFillStyle(acc); ctx.fillRect(cx - 7, y + 97 - (compact ? 6 : 0), 14, 1.5); ctx.restore(); }
+        const fs = compact ? 10 : 17, cx = (di === 0 ? x + head : x) + (w - (di === 0 ? head : 0)) / 2;
+        ctx.save(); ctx.setFont('sans-serif', fs, dd.today ? 'bold' : 'normal'); ctx.setFillStyle(dd.today ? acc : dd.other ? line : mute);
+        ctx.fillText(String(dd.label), cx - fs * 0.4 * String(dd.label).length, y + 94 - (compact ? 6 : 0) + (compact ? 0 : 2)); ctx.restore();
+        if (dd.today) { ctx.save(); ctx.setFillStyle(acc); ctx.fillRect(cx - fs * 0.7, y + 97 - (compact ? 6 : 0) + (compact ? 0 : 4), fs * 1.4, compact ? 1.5 : 2.5); ctx.restore(); }
         hits.push({ x0: x + (di === 0 ? head : 0), x1: x + w, y0: y, y1: y + ROW, ds: dd.ds });
         x += w;
       });

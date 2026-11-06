@@ -838,3 +838,13 @@ body.land .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
 .hbar.on-play { outline: 2px solid var(--ink); outline-offset: 1px; border-radius: 5px; }
 .hbar.on-play i { filter: brightness(1.15); }
+
+/* 分享 */
+.sharepop { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.sharecard { background: var(--bg); border-radius: 18px; padding: 12px 14px 14px; width: 100%; max-width: 420px; max-height: 92%; display: flex; flex-direction: column; }
+.shead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.shead b { font-size: 16px; }
+.sharecard img { width: 100%; max-height: 60vh; object-fit: contain; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.sharecard .row { margin: 8px 0 0; }
+.todayshare { margin: -6px 0 10px; justify-content: flex-end; }
+.calshare { margin: 4px 0 8px; justify-content: center; }
