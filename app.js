@@ -582,23 +582,22 @@
         <p class="cxline">${c.notes.map(n => D(n.name)).join(' – ')} · ${c.quality.f} · ${CX.hand !== 'R' ? '<span class="lhc">左手 ' + fgL.join('-') + '</span> ' : ''}${CX.hand !== 'L' ? '右手 ' + fgR.join('-') : ''}</p>
       </section>
       <div class="cxrow"><p><b>① 根音</b> 和弦从哪个音开始叠</p>
-      <div class="chips scroll">${ROOT_MAJ.map(r => `<button class="chip${r === CX.root ? ' on' : ''}" data-act="cx" data-k="root" data-v="${r}">${D(r)}</button>`).join('')}</div></div>
-      <div class="cxrow"><p><b>② 性质</b> 听起来是什么颜色（小字是和弦名里的写法）</p>
-      <div class="chips scroll">${qlist.map(q => `<button class="chip q${q === CX.q ? ' on' : ''}" data-act="cx" data-k="q" data-v="${q}"><b>${QINFO[q][0]}</b><small>${q === '' ? '不写' : D(q)} · ${QINFO[q][1]}</small></button>`).join('')}</div></div>
+      <div class="chips grid6">${ROOT_MAJ.map(r => `<button class="chip${r === CX.root ? ' on' : ''}" data-act="cx" data-k="root" data-v="${r}">${D(r)}</button>`).join('')}</div></div>
+      <div class="cxrow"><p><b>② 性质</b> 听起来是什么颜色 · 小字是和弦名里的写法</p>
+      <div class="chips grid5">${qlist.map(q => `<button class="chip q${q === CX.q ? ' on' : ''}" data-act="cx" data-k="q" data-v="${q}"><b>${QINFO[q][0]}</b><small>${q === '' ? '不写' : D(q)}</small></button>`).join('')}</div></div>
       <div class="cxrow"><p><b>③ 转位</b> 哪个音放最下面 · <b>手</b> 看哪只手的指法</p>
       <div class="chips">${c.notes.map((_, i) => `<button class="chip${i === invi ? ' on' : ''}" data-act="cx" data-k="inv" data-v="${i}">${INV[i][0]}</button>`).join('')}
         <span class="sp"></span><button class="chip${CX.hand === 'R' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="R">右手</button><button class="chip${CX.hand === 'L' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="L">左手</button><button class="chip${CX.hand === 'B' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="B">双手</button></div></div>
       <p class="explain"><b>${D(c.sym)}</b>：以 ${D(c.root.name)} 为根音的${c.quality.zh}，${qi[2]}，听起来${qi[1]}。${invi ? `${INV[invi][0]}：最下面弹 ${D(bottom.name)}（${INV[invi][1]}），所以写成 ${D(c.sym)}，斜线后面就是最低音。` : '原位：根音 ' + D(c.root.name) + ' 在最下面。'}键盘上的数字是手指（1 = 拇指，5 = 小指）${CX.hand === 'B' ? '，蓝色是左手（低八度），橙色是右手' : CX.hand === 'L' ? '，左手在低八度' : ''}。<a href="#know-k0">看不懂？</a></p>
       ${arp.white && T.Q[CX.q].ints.length === 3 && !CX.q.startsWith('sus') ? `<a class="link" href="#arp-${CX.root + CX.q}"><small>练这个和弦</small><b>${D(CX.root + CX.q)} 琶音 · 带指法和收音</b><span>→</span></a>` : ''}
-      <section class="cxpractice"><h3>拿它来练</h3>
-        ${(() => { const ctx = chordContext(c); return ctx ? `<p class="fine">${ctx[1]}（点一下听，跟着弹）</p>${progRow(c.root.name + (c.q === 'm' || c.q === 'm7b5' || c.q === 'dim7' ? '' : ''), ctx[0])}` : ''; })()}
-        ${(() => { const ss = chordSongs(c); return ss.length ? `<ul class="list">${ss.map(x => `<li><a href="${x.href}"><span><b>${esc(x.title)}</b><small>${['', '有同类型的和弦（换个根音）', '有这个和弦（换个转位）', '原样出现 ' + D(c.sym)][x.best]} · ${x.kind}</small></span><span class="arr">→</span></a></li>`).join('')}</ul>` : '<p class="fine">曲库里还没有用到这种和弦的曲子，先用上面的小进行练。</p>'; })()}
-      </section>`;
-    const sc = view.querySelector(`.chips.scroll .chip.on`); document.querySelectorAll('.chips.scroll').forEach(row => { const on = row.querySelector('.on'); if (on) row.scrollLeft = on.offsetLeft - row.clientWidth / 2 + on.clientWidth / 2; });
+      ${(() => { const ctx = chordContext(c); return ctx ? `<section class="cxblock"><h3>先在小进行里听它</h3><p class="fine">${ctx[1]} · 点一下听，跟着弹</p>${progRow(c.root.name, ctx[0])}</section>` : ''; })()}
+      <section class="cxblock"><h3>在曲子里找到它</h3>${chordFinds(c)}</section>
+      <p class="pageend">— 到底了 —</p>`;
   }
 
 
   // 每个和弦组合：找含有它的曲子；找不到就给一段「它通常怎么用」的小进行（按所选根音移调）
+  document.addEventListener('toggle', e => { const d = e.target; if (d.matches && d.matches('details.find') && d.open) document.querySelectorAll('details.find[open]').forEach(x => x !== d && (x.open = false)); }, true);
   function chordContext(c) {
     const r = c.root, nt = (st, se) => T.noteAt(r.li + st, r.pc + se).name;
     const me = c.sym;
@@ -615,6 +614,38 @@
       sus4: [[me, r.name, me, r.name], '挂四 → 大三：悬着的四音落回三音'],
     }[c.q];
     return P;
+  }
+  // 和弦页「在曲子里找到它」：逐小节查，每首曲子可展开，直接看到它出现在哪几小节（按 4 小节乐句显示），再一键跳到曲目页的那一段
+  function chordHits(s, c) {
+    const st = sectionStarts(s), hits = [];
+    s.sections.forEach((sec, si) => parseBars(sec.bars).forEach((bar, k) => bar.forEach(x => {
+      const p = T.parseChord(x); if (!p) return;
+      const lv = p.sym === c.sym ? 3 : p.root.pc === c.root.pc && p.q === c.q ? 2 : p.q === c.q ? 1 : 0;
+      if (lv) hits.push({ si, k, n: st[si] + k, sym: x, lv });
+    })));
+    return hits;
+  }
+  function chordFinds(c) {
+    const LV = ['', '同类型（换了根音）', '同一个和弦（换了转位）', '原样出现'];
+    const rows = allSongs().map(s => { const h = chordHits(s, c); return h.length ? { s, h, best: Math.max(...h.map(x => x.lv)) } : null; }).filter(Boolean)
+      .sort((x, y) => y.best - x.best || y.h.filter(z => z.lv === y.best).length - x.h.filter(z => z.lv === x.best).length);
+    if (!rows.length) return '<p class="fine">曲库里还没有用到这种和弦的曲子，先用上面的小进行练。</p>';
+    return rows.slice(0, 6).map(({ s, h, best }) => {
+      const use = h.filter(x => x.lv === best), st = sectionStarts(s);
+      const names = [...new Set(use.map(x => x.sym))].map(D).join('、');
+      const nums = [...new Set(use.map(x => x.n))];
+      // 乐句：以命中小节所在的 4 小节为一组（按段落起点对齐），最多显示 3 组
+      const phr = []; use.forEach(x => { const p0 = Math.floor(x.k / 4) * 4; const id = x.si + ':' + p0; if (!phr.some(p => p.id === id)) phr.push({ id, si: x.si, p0 }); });
+      const blocks = phr.slice(0, 3).map(p => {
+        const sec = s.sections[p.si], bars = parseBars(sec.bars).slice(p.p0, p.p0 + 4);
+        const flat = []; const cells = bars.map((bar, j) => bar.map((x, m) => { const i = flat.length; flat.push(x); const n = st[p.si] + p.p0 + j; const a = T.analyze(x, s.key);
+          return `<div class="pc${use.some(u => u.n === n && u.sym === x) ? ' hit' : ''}" data-i="${i}">${m === 0 ? `<small class="pbn">${n}</small>` : ''}<b>${D(x)}</b><i>${a ? degLabel(x, s.key) : '?'}</i></div>`; }).join('')).join('');
+        return `<p class="fine phead">${esc(sec.name)} · 第 ${st[p.si] + p.p0}–${st[p.si] + p.p0 + bars.length - 1} 小节</p><div class="prog phrase" data-act="prog" data-k="${esc(s.key)}" data-c="${esc(flat.join(','))}">${cells}<em>▶</em></div>`;
+      }).join('');
+      const more = phr.length > 3 ? `<p class="fine">还有 ${phr.length - 3} 处，在曲目页里都高亮了。</p>` : '';
+      return `<details class="find"><summary><span><b>${esc(s.title)}</b><small>${LV[best]}：${names} · 第 ${nums.slice(0, 6).join('、')}${nums.length > 6 ? ' 等' : ''}小节</small></span><span class="arr">⌄</span></summary>
+        <div class="findbody">${blocks}${more}<a class="ghost sm" href="#song-${s.id}-${nums.join('.')}-${encodeURIComponent(c.sym)}">到曲目页看这一段 →</a></div></details>`;
+    }).join('');
   }
   function chordSongs(c) {
     const out = [];
@@ -753,6 +784,7 @@
       <section class="songmain">
         <div class="chips"><button class="chip${S.pro ? '' : ' on'}" data-act="pro" data-v="0">简单写法</button><button class="chip${S.pro ? ' on' : ''}" data-act="pro" data-v="1">专业写法</button><a class="chip" href="#logic">这些字是什么意思？</a></div>
         <p class="fine legend">每格左上角的小数字 = 原谱的小节号，对着原谱看。${S.pro ? 'I IV V = 大三和弦，ii vi = 小三和弦，T 主 · S 下属 · D 属' : '6m = 六级小和弦 · 5⁷/2 = 五级七和弦、低音弹 2 · 稳 = 在家 · 走 = 出门 · 紧 = 想回家'}</p>
+        ${route[2] ? `<p class="hitnote">从 <b>${D(route[3] || '')}</b> 和弦页过来：橙色框的是第 ${route[2].split('.').join('、')} 小节。点格子可以听。</p>` : ''}
         <div class="grid" id="grid">${songGrid(s)}</div>
         <p class="explain" id="explain">点任意和弦：听声音，并看它是什么意思。</p>
         <div class="row"><button class="ghost" data-act="splay" data-id="${s.id}">▶ 播放进行</button><a class="btn" href="#mem-${s.id}">弹下来 · 第 ${Math.min(4, lv + 1)} 层 →</a></div>
@@ -767,7 +799,13 @@
         <p>2. <b>分块</b>：按乐句（通常 2 或 4 小节）记，不按单个音记。</p>
         <p>3. <b>找相同与不同</b>：重复的地方只记一次，只把注意力放在不同处。</p>
         <p>4. <b>离开琴背</b>：能在脑中把级数说出来，手上才稳。</p></section>`;
+      if (route[2]) {
+      const want = route[2].split('.').map(Number); let first = null;
+      view.querySelectorAll('#grid .bar').forEach(el => { const n = +el.querySelector('.bn').textContent; if (want.includes(n)) { el.classList.add('hit'); first = first || el; } });
+      if (first) setTimeout(() => first.closest('.sec').scrollIntoView({ block: 'center', behavior: 'smooth' }), 80);
+    }
   }
+
   function vEdit() {
     const id = route[1];
     const base = id === 'new' ? { id: 'my' + Date.now().toString(36), title: (SONG_DRAFTS[+route[2]] || {}).title || '', sub: '', key: '', sections: [] } : allSongs().find(s => s.id === id);
