@@ -555,3 +555,25 @@ a.more { display: block; text-align: right; font-size: 13px; color: var(--mute);
 .tpop-link { display: block; font-size: 13.5px; color: var(--S); font-weight: 500; }
 .termref.on { background: color-mix(in srgb, var(--S) 14%, transparent); border-radius: 3px; }
 @media (prefers-reduced-motion: reduce) { .tpop-card { transition: none; } }
+
+/* 和弦浏览 */
+.brchips .chip { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.2; padding: 5px 10px; border-radius: 12px; }
+.brchips .chip b { font-weight: 500; }
+.brchips .chip small { font-size: 10px; color: var(--mute); }
+.brchips .chip.on small { color: var(--bg); opacity: .75; }
+.ghostchip { border-style: dashed; color: var(--mute); }
+.brsong { border-top: 1px solid var(--line); padding: 12px 0; }
+.brh { display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; }
+.brh b { font-weight: 500; }
+.brh small { color: var(--mute); font-size: 12.5px; }
+.cxblock h3 small { font-weight: 400; color: var(--mute); font-size: 12px; }
+
+/* 和弦来源 + 每小节依据 */
+.srcbox { border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; margin: 0 0 16px; }
+.srcbox h3 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+.srcbox p { margin: 4px 0; font-size: 14px; line-height: 1.6; }
+.evd { display: block; font-size: 13.5px; line-height: 1.6; padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px solid var(--line); }
+.cell.lowconf { background: repeating-linear-gradient(135deg, transparent 0 6px, var(--soft) 6px 8px); }
+details.mine { margin-top: 10px; }
+details.mine summary { font-size: 13.5px; color: var(--mute); cursor: pointer; padding: 6px 0; }
+.madenote { border-left: 2px solid var(--acc); padding-left: 10px; }

@@ -22,7 +22,7 @@ const Score = (() => {
   let cur = null; // { tk, el, notes:[{t,dur,pitch,id,m}], measures }
   async function render(el, sc, opt) {
     const tk = await toolkit();
-    const kern = await data(sc.src);
+    const kern = sc.kern || await data(sc.src);
     const W = Math.max(300, el.clientWidth);
     const scale = W < 500 ? 32 : 40;
     tk.setOptions({ pageWidth: Math.round(W * 100 / scale), scale, adjustPageHeight: true, breaks: 'auto', pageMarginLeft: 20, pageMarginRight: 20, pageMarginTop: 20, footer: 'none', header: opt.section ? 'none' : 'auto', svgViewBox: true, svgHtml5: true });

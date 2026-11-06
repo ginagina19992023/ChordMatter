@@ -3,20 +3,46 @@ const LOGICS = (() => {
   const v = s => T.voicing(T.parseChord(s)).map(n => n.midi);
   const keys = s => T.voicing(T.parseChord(s)).map(n => ({ m: n.midi, f: T.disp(n.name) }));
   const pick = (arr, i) => arr[i % arr.length];
-  const feel = (sym, ans, ask) => ({ type: 'pick', ask: ask || 'C 大调里，听这个和弦是哪种感觉？', options: ['稳', '走', '紧'], answer: ans, play: sym });
+  // 稳 / 走 / 紧 的判断规则：不是靠感觉，看和弦的根音是调里第几级
+  //   1、3、6 级 → 稳（和一级和弦共用两个音）；2、4 级 → 走（含 4 级音）；5、7 级 → 紧（含 7 级音 = 导音，离主音只差半音）
+  const FAM = { T: '稳', S: '走', D: '紧' };
+  function famWhy(sym, key = 'C') {
+    const a = T.analyze(sym, key); if (!a) return '';
+    const K = T.parseKey(key), sc = T.scale(K, true).map(x => x.name), d = T.disp;
+    const notes = T.parseChord(sym).notes.map(x => x.name), I1 = T.degreeChord(K, 0), I = T.parseChord(I1).notes.map(x => x.name);
+    const lvl = sc.findIndex(x => T.parseNote(x).pc === T.parseChord(sym).root.pc) + 1;
+    const f = FAM[a.func];
+    let r = `① <b>${d(sym)}</b> 的根音 ${d(notes[0])} 是 ${d(key)} ${K.minor ? '小调' : '大调'}的第 <b>${lvl || '?'}</b> 级。② 规则：1、3、6 级稳；2、4 级走；5、7 级紧 → <b>${f}</b>。`;
+    if (a.kind === 'sec') r = `① <b>${d(sym)}</b> 不是调里本来的和弦，它是<b>副属和弦</b>：临时的「五级」，指向下一个和弦。② 五级 = 紧 → <b>紧</b>。`;
+    if (f === '稳') { const sh = notes.filter(n => I.some(x => T.parseNote(x).pc === T.parseNote(n).pc)); r += ` ③ 为什么：它和一级和弦 ${d(I1)}（${I.map(d).join(' ')}）共用 ${sh.map(d).join('、')}，听起来像家。`; }
+    if (f === '走') { const four = sc[3]; r += ` ③ 为什么：它里面有 ${d(four)}（4 级音），${d(four)} 不在一级和弦里，所以离开了家。`; }
+    if (f === '紧' && a.kind !== 'sec') { const lt = sc[6]; r += ` ③ 为什么：它里面有 ${d(lt)}（7 级音 = 导音），${d(lt)} 离 ${d(sc[0])} 只差半音，特别想往上走回家。${notes.length > 3 ? ' 七和弦还多了 ' + d(notes[3]) + '，更紧。' : ''}`; }
+    return r;
+  }
+  const famQ = (sym, key = 'C', ask) => ({ type: 'pick', ask: ask || `${T.disp(key)} ${/m$/.test(key) ? '小调' : '大调'}里，<b>${T.disp(sym)}</b> 是稳、走还是紧？先数它是第几级。`, options: ['稳', '走', '紧'], answer: FAM[T.analyze(sym, key).func], play: sym, why: famWhy(sym, key) });
+  const feel = (sym, ans, ask) => ({ type: 'pick', ask: ask || 'C 大调里，听这个和弦是哪种感觉？', options: ['稳', '走', '紧'], answer: ans, play: sym, why: famWhy(sym, 'C') });
   return [
     { id: 'l1', big: '功能', title: '「功能」= 和弦在乐句里的角色', say: '和弦不只是一组音，它在乐句里还有角色，叫<b>功能</b>。只有三种：<b>稳</b>（在家）、<b>走</b>（出门）、<b>紧</b>（急着回家）。谱面逻辑里的「功能：稳 走 紧 稳」就是一句话的角色表。',
       demo: { keys: keys('C'), staff: 'C', seq: [v('C'), v('F'), v('G7'), v('C')] },
       task: i => pick([feel('C', '稳'), feel('F', '走'), feel('G7', '紧')], i) },
-    { id: 'l2', big: '稳', title: '稳 = 主功能，像在家', say: '听完会觉得「结束了、安心了」。C 大调里最稳的是 <b>C</b>（1 级）；<b>Am</b>（6m）和 <b>Em</b>（3m）也算稳，但没那么踏实。',
+    { id: 'l2', big: '稳', title: '稳 = 主功能，像在家', say: '听完会觉得「结束了、安心了」。C 大调里最稳的是 <b>C</b>（1 级）；<b>Am</b>（6 级）和 <b>Em</b>（3 级）也算稳，因为它们和 C 和弦共用两个音，只是没那么踏实。规则见「数级数」那一课：1、3、6 级 = 稳。',
       demo: { keys: keys('C'), staff: 'C', seq: [v('C'), [], v('Am'), [], v('Em')] },
-      task: i => ({ type: 'pick', ask: 'C 大调里，哪个和弦最「稳」？', options: pick([['C', 'F', 'G'], ['G', 'C', 'Dm'], ['F', 'G7', 'C']], i), answer: 'C' }) },
-    { id: 'l3', big: '走', title: '走 = 下属功能，出门了', say: '离开家，往前走，但还不急。C 大调里是 <b>F</b>（4 级）和 <b>Dm</b>（2m）。',
+      task: i => ({ type: 'pick', ask: 'C 大调里，哪个和弦最「稳」？', options: pick([['C', 'F', 'G'], ['G', 'C', 'Dm'], ['F', 'G7', 'C']], i), answer: 'C', why: 'C 是 1 级，就是「家」本身，所以最稳。F 是 4 级（走），G / G7 是 5 级（紧），Dm 是 2 级（走）。规则：1、3、6 级稳；2、4 级走；5、7 级紧。' }) },
+    { id: 'l3', big: '走', title: '走 = 下属功能，出门了', say: '离开家，往前走，但还不急。C 大调里是 <b>F</b>（4 级）和 <b>Dm</b>（2 级）。它们都含 F（4 级音），F 不在 C 和弦里，所以「离开了家」。规则：2、4 级 = 走。',
       demo: { keys: keys('F'), staff: 'F', seq: [v('C'), v('F'), v('Dm')] },
-      task: i => ({ type: 'pick', ask: 'C 大调里，哪个和弦是「走」？', options: pick([['F', 'C', 'G'], ['C', 'Dm', 'G7'], ['G', 'Am', 'F']], i), answer: pick(['F', 'Dm', 'F'], i) }) },
-    { id: 'l4', big: '紧', title: '紧 = 属功能，急着回家', say: '听着有点紧张，很想往下走到「稳」。C 大调里是 <b>G</b>、<b>G7</b>（5 级）和 <b>Bdim</b>。G7 比 G 更紧，因为多了一个 F。',
+      task: i => ({ type: 'pick', ask: 'C 大调里，哪个和弦是「走」？', options: pick([['F', 'C', 'G'], ['C', 'Dm', 'G7'], ['G', 'Am', 'F']], i), answer: pick(['F', 'Dm', 'F'], i), why: pick(['F 是 4 级 → 走（含 4 级音 F）。C 是 1 级（稳），G 是 5 级（紧）。', 'Dm 是 2 级 → 走（含 4 级音 F）。C 是 1 级（稳），G7 是 5 级（紧）。', 'F 是 4 级 → 走。G 是 5 级（紧），Am 是 6 级（稳）。'], i) }) },
+    { id: 'l4', big: '紧', title: '紧 = 属功能，急着回家', say: '听着有点紧张，很想往下走到「稳」。C 大调里是 <b>G</b>、<b>G7</b>（5 级）和 <b>Bdim</b>。它们都含 B（7 级音，导音），B 离 C 只差半音，特别想回去。G7 比 G 更紧，因为多了一个 F。规则：5、7 级 = 紧。',
       demo: { keys: keys('G7'), staff: 'G7', seq: [v('G'), v('G7'), v('C')] },
-      task: i => ({ type: 'pick', ask: 'C 大调里，哪个和弦最「紧」？', options: pick([['G7', 'C', 'F'], ['Am', 'G7', 'Dm'], ['C', 'F', 'G']], i), answer: pick(['G7', 'G7', 'G'], i) }) },
+      task: i => ({ type: 'pick', ask: 'C 大调里，哪个和弦最「紧」？', options: pick([['G7', 'C', 'F'], ['Am', 'G7', 'Dm'], ['C', 'F', 'G']], i), answer: pick(['G7', 'G7', 'G'], i), why: pick(['G7 是 5 级 → 紧（含导音 B，还多了一个 F）。C 是 1 级（稳），F 是 4 级（走）。', 'G7 是 5 级 → 紧。Am 是 6 级（稳），Dm 是 2 级（走）。', 'G 是 5 级 → 紧（含导音 B，离 C 只差半音）。C 是 1 级（稳），F 是 4 级（走）。'], i) }) },
+    { id: 'l13', big: '1 3 6 · 2 4 · 5 7', title: '稳走紧不是靠感觉：数级数', say: '判断只要两步：① 数这个和弦的根音是调里第几级；② 套规则——<b>1、3、6 级 = 稳</b>，<b>2、4 级 = 走</b>，<b>5、7 级 = 紧</b>。<br>为什么这么分？看和弦里的音：<br>· 稳：C、Em、Am 都和 C 和弦（C E G）共用两个音，所以都「像家」。<br>· 走：F、Dm 里都有 <b>F</b>（4 级音），F 不在 C 和弦里，所以离开了家。<br>· 紧：G、Bdim 里都有 <b>B</b>（7 级音，导音），B 离 C 只差半音，特别想回去。G7 再多一个 F，更紧。<br>先会数，再去听，耳朵会越来越确定。',
+      demo: { keys: keys('C'), staff: 'C', seq: [v('C'), v('Am'), [], v('F'), v('Dm'), [], v('G'), v('G7'), [], v('C')] },
+      task: i => pick([famQ('Am'), famQ('Dm'), famQ('Em'), famQ('G7'), famQ('F'), famQ('Bdim')], i + Math.floor(Math.random() * 3)) },
+    { id: 'l14', big: '换调', title: '换个调，规则不变，只是级数换了', say: '在 G 大调里，1 = G。所以 <b>G 稳、C 走、D 紧</b>；Em（6 级）稳，Am（2 级）走。<br>同一个 C 和弦，在 C 大调是稳，在 G 大调是走：<b>和弦本身没有稳走紧，是在调里的位置决定的</b>。',
+      demo: { keys: keys('G'), staff: 'G', seq: [v('G'), v('C'), v('D7'), v('G')] },
+      task: i => pick([famQ('C', 'G'), famQ('D7', 'G'), famQ('Em', 'G'), famQ('Am', 'G'), famQ('Bb', 'F'), famQ('C7', 'F'), famQ('Gm7', 'F'), famQ('Dm', 'F')], i * 2 + Math.floor(Math.random() * 2)) },
+    { id: 'l15', big: '曲子里', title: '在你的曲子里数一遍', say: '<b>Always Online</b>（C 大调）主歌：F → G → Em → Am。数级数：4 → 5 → 3 → 6，所以是 <b>走 → 紧 → 稳 → 稳</b>。<br><b>City of Stars</b>（F 大调）开头：Gm7 → C7 → Dm7。Gm 是 2 级（走），C7 是 5 级（紧），Dm 是 6 级（稳）——紧之后没回 1 级 F，落到了 6 级，这就是阻碍终止的「意外」。<br>副属和弦（比如 Always Online 里的 <b>D7</b>、<b>E</b>，City of Stars 里的 <b>A7</b>）不在调里，一律算紧：它们是临时的五级，指向下一个和弦。',
+      demo: { keys: keys('F'), staff: 'F', seq: [v('F'), v('G'), v('Em'), v('Am')] },
+      task: i => pick([famQ('F', 'C', 'Always Online 主歌第 9 小节 <b>F</b>（C 大调）：稳、走还是紧？'), famQ('Em', 'C', 'Always Online 第 3 小节 <b>Em</b>（C 大调）：稳、走还是紧？'), famQ('D7', 'C', 'Always Online 第 22 小节 <b>D7</b>（C 大调）：稳、走还是紧？'), famQ('Gm7', 'F', 'City of Stars 第 5 小节 <b>Gm7</b>（F 大调）：稳、走还是紧？'), famQ('Dm7', 'F', 'City of Stars 第 7 小节 <b>Dm7</b>（F 大调）：稳、走还是紧？'), famQ('A7', 'F', 'City of Stars 第 18 小节 <b>A7</b>（F 大调）：稳、走还是紧？')], i * 2 + Math.floor(Math.random() * 2)) },
     { id: 'l5', big: '稳→走→紧→稳', title: '一句话的标准路线', say: '大多数乐句都走这条路：在家 → 出门 → 急着回家 → 回到家。C → F → G → C 就是最短的一句。',
       demo: { keys: keys('C'), staff: 'C', seq: [v('C'), v('F'), v('G7'), v('C')] },
       task: i => ({ type: 'pick', ask: pick(['C → F → G7 → ？ 最自然的下一个是', 'Am → Dm → G → ？ 最自然的下一个是', 'C → Am → F → ？ 最自然的下一个是'], i), options: ['C', 'F', 'G', 'Dm'].slice(0, 4), answer: pick(['C', 'C', 'G'], i), play: pick([['C', 'F', 'G7'], ['Am', 'Dm', 'G'], ['C', 'Am', 'F']], i) }) },

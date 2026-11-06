@@ -121,12 +121,12 @@ const UNITS = [
 // 注意：均为学习用的简化和声分析，请对照你手上的乐谱核对
 const SONGS = [
   {
-    id: 'k545', orig: { score: { src: 'https://raw.githubusercontent.com/craigsapp/mozart-piano-sonatas/master/kern/sonata15-1.krn', measures: '1-4', credit: 'Craig Stuart Sapp 数字版，依据 1878 年《旧莫扎特全集》，CC BY-NC-SA 4.0' }, imslp: 'https://imslp.org/index.php?search=Mozart+K.545', apple: 'https://music.apple.com/cn/search?term=Mozart%20K.545%20Allegro' }, title: '莫扎特 C 大调奏鸣曲 K.545', sub: '第一乐章 · 开头', key: 'C', tag: '古典', bpm: 100,
+    id: 'k545', src: 'analyzed', orig: { score: { src: 'https://raw.githubusercontent.com/craigsapp/mozart-piano-sonatas/master/kern/sonata15-1.krn', measures: '1-4', credit: 'Craig Stuart Sapp 数字版，依据 1878 年《旧莫扎特全集》，CC BY-NC-SA 4.0' }, imslp: 'https://imslp.org/index.php?search=Mozart+K.545', apple: 'https://music.apple.com/cn/search?term=Mozart%20K.545%20Allegro' }, title: '莫扎特 C 大调奏鸣曲 K.545', sub: '第一乐章 · 开头', key: 'C', tag: '古典', bpm: 100,
     sections: [{ name: '主题 1–4 小节', bars: 'C | G7/D C | F/C C | G7/B C' }],
     note: '左手 Alberti 低音的和声骨架（简化）。请对照乐谱核对。',
   },
   {
-    id: 'clementi', orig: { imslp: 'https://imslp.org/index.php?search=Clementi+Op.36', apple: 'https://music.apple.com/cn/search?term=Clementi%20Sonatina%20Op.36%20No.1' }, title: '克列门蒂 小奏鸣曲 Op.36 No.1', sub: '第一乐章 · 开头（简化）', key: 'C', tag: '古典', bpm: 96,
+    id: 'clementi', src: 'simplified', orig: { imslp: 'https://imslp.org/index.php?search=Clementi+Op.36', apple: 'https://music.apple.com/cn/search?term=Clementi%20Sonatina%20Op.36%20No.1' }, title: '克列门蒂 小奏鸣曲 Op.36 No.1', sub: '第一乐章 · 开头（简化）', key: 'C', tag: '古典', bpm: 96,
     sections: [
       { name: '前句', bars: 'C | C | G | G' },
       { name: '后句', bars: 'C | F | G7 | C' },
@@ -134,7 +134,7 @@ const SONGS = [
     note: '开头右手是 C 大三和弦的分解（琶音！）。这里是简化的骨架，请对照乐谱核对。',
   },
   {
-    id: 'bach', rec: { clip: 'media/bach-prelude-m1-11.mp3', full: 'media/bach-prelude-full.mp3', clipName: '1–11 小节（约 45 秒）', credit: 'Sam Tennison 演奏，公有领域，来源 Internet Archive', url: 'https://archive.org/details/BachWellTemperedKlavierBookI-PreludeInCMajor' }, orig: { score: { src: 'https://raw.githubusercontent.com/humdrum-tools/bach-wtc/master/kern/wtc1p01.krn', measures: '1-11', credit: 'CCARH（Walter Hewlett）数字版，依据巴赫协会版；从原站实时加载，仅供学习' }, imslp: 'https://imslp.org/index.php?search=BWV+846', apple: 'https://music.apple.com/cn/search?term=Bach%20Prelude%20C%20major%20BWV%20846' }, title: '巴赫 C 大调前奏曲 BWV 846', sub: '《平均律》第一首 · 1–11 小节', key: 'C', tag: '古典', bpm: 66,
+    id: 'bach', src: 'analyzed', rec: { clip: 'media/bach-prelude-m1-11.mp3', full: 'media/bach-prelude-full.mp3', clipName: '1–11 小节（约 45 秒）', credit: 'Sam Tennison 演奏，公有领域，来源 Internet Archive', url: 'https://archive.org/details/BachWellTemperedKlavierBookI-PreludeInCMajor' }, orig: { score: { src: 'https://raw.githubusercontent.com/humdrum-tools/bach-wtc/master/kern/wtc1p01.krn', measures: '1-11', credit: 'CCARH（Walter Hewlett）数字版，依据巴赫协会版；从原站实时加载，仅供学习' }, imslp: 'https://imslp.org/index.php?search=BWV+846', apple: 'https://music.apple.com/cn/search?term=Bach%20Prelude%20C%20major%20BWV%20846' }, title: '巴赫 C 大调前奏曲 BWV 846', sub: '《平均律》第一首 · 1–11 小节', key: 'C', tag: '古典', bpm: 66,
     sections: [
       { name: '1–4', bars: 'C | Dm7/C | G7/B | C' },
       { name: '5–8', bars: 'Am/C | D7/C | G/B | Cmaj7/B' },
@@ -143,7 +143,7 @@ const SONGS = [
     note: '整首都是分解和弦，最适合同时练琶音、七和弦和背谱。',
   },
   {
-    id: 'castle', orig: { apple: 'https://music.apple.com/cn/search?term=%E5%A4%A9%E7%A9%BA%E4%B9%8B%E5%9F%8E%20%E4%B9%85%E7%9F%B3%E8%AE%A9' }, title: '天空之城', sub: '久石让 · 常见钢琴改编（A 小调）', key: 'Am', tag: '流行', bpm: 76,
+    id: 'castle', src: 'simplified', orig: { apple: 'https://music.apple.com/cn/search?term=%E5%A4%A9%E7%A9%BA%E4%B9%8B%E5%9F%8E%20%E4%B9%85%E7%9F%B3%E8%AE%A9' }, title: '天空之城', sub: '久石让 · 常见钢琴改编（A 小调）', key: 'Am', tag: '流行', bpm: 76,
     sections: [
       { name: 'A 段', bars: 'Am Em | F C | Dm G | C E7 | Am Em | F C | Dm E7 | Am' },
       { name: 'B 段', bars: 'F G | Em Am | Dm G | C | F G | E7 Am | Dm E7 | Am' },
@@ -151,25 +151,25 @@ const SONGS = [
     note: '改编版本很多，这是最常见的一种，请以你的谱为准（在「编辑」里改）。',
   },
   {
-    id: 'canon', orig: { imslp: 'https://imslp.org/index.php?search=Pachelbel+Canon', apple: 'https://music.apple.com/cn/search?term=Pachelbel%20Canon%20in%20D' }, title: '卡农', sub: '帕赫贝尔 · D 大调', key: 'D', tag: '古典', bpm: 60,
+    id: 'canon', src: 'analyzed', orig: { imslp: 'https://imslp.org/index.php?search=Pachelbel+Canon', apple: 'https://music.apple.com/cn/search?term=Pachelbel%20Canon%20in%20D' }, title: '卡农', sub: '帕赫贝尔 · D 大调', key: 'D', tag: '古典', bpm: 60,
     sections: [{ name: '低音主题', bars: 'D A | Bm F#m | G D | G A' }],
     note: '流行音乐里「卡农进行」的源头。',
   },
   {
-    id: 'alwayson', title: 'Always Online', sub: '林俊杰 · 弹琴吧钢琴谱（全曲 77 小节）', key: 'C', tag: '流行', bpm: 120,
+    id: 'alwayson', src: 'analyzed', title: 'Always Online', sub: '林俊杰 · 弹琴吧钢琴谱（全曲 77 小节）', key: 'C', tag: '流行', bpm: 120,
     sections: [
-      { name: '前奏 1–8', bars: 'F | G | Em | Am | Dm | G | C | C' },
-      { name: '主歌 9–24', bars: 'F | G | Em | Am | F | G | Em | Am | F | G | Em | Am | F | D7 | G | G7' },
-      { name: '副歌 25–40', bars: 'F | G | Em | Am | F | G | C | E | F | G | Em | Am | Dm | G | C | C' },
-      { name: '桥段 41–49', bars: 'Eb | F | Dm | G7 | Eb | F | D/C# | G | G7/D' },
-      { name: '副歌 50–65', bars: 'F | G | Em | Am | F | G | C | G/B | F | G | Em | Am | F | G | C | G7' },
-      { name: '尾声 66–77', bars: 'Dm | G | C | C | F | G | Em | Am | Dm | G | C | C' },
+      { name: '前奏 1–8', bars: 'Fmaj7 | G | Em | Am | Dm | G | C | C' },
+      { name: '主歌 9–24 ‖: 反复从这里开始', bars: 'F | G | Em | Am | F | G | Em | Am | F | G | Em | Am | F | D7 | G | G/D' },
+      { name: '副歌 25–40 :‖ 9–40 弹两遍', bars: 'Fmaj7 | G | Em7 | Am | F | G | C | E | Fmaj7 | G | Em7 | Am | Dm | G | C | C' },
+      { name: '桥段 41–49', bars: 'Eb | F | Dm | G | Eb | F | D7/F# | G | G/D' },
+      { name: '副歌 50–65', bars: 'Fmaj7 | G | Em7 | Am | F | G | C | G/B | F | G | Em | Am | F | G | C | C/G' },
+      { name: '尾声 66–77', bars: 'Dm | G | C | C | Fmaj7 | G | Em | Am | Dm | G | C | C' },
     ],
-    note: '和弦是逐小节看你上传的谱（左手低音 + 右手和声）分析出来的。主歌、副歌都是 4536 王道进行（F G Em Am）；D7、E 是副属和弦；桥段的 E♭ 是从 C 小调借来的和弦，D/C♯ 是低音半音下行的过渡。第 66 小节起速度放慢到 ♩=90，第 69 小节回到 ♩=120。',
+    note: '谱上没有印和弦记号，每个和弦都是按左手低音 + 右手和声音判断的（点任意一格看依据）。结构：前奏 → ‖: 主歌 → 副歌 :‖（9–40 弹两遍）→ 桥段 → 副歌 → 尾声。主歌、副歌都是 4536（F G Em Am）；D7、E 是副属和弦；桥段的 E♭ 是从 C 小调借来的。第 47 小节谱上低音印的是 E♯（听起来是 F），按低音线 E♭ → F → ? → G 推测应是 F♯（D7/F♯），可能是印错了。第 66 小节起 ♩=90，第 69 小节回到 ♩=120。',
     orig: { apple: 'https://music.apple.com/cn/search?term=Always%20Online%20%E6%9E%97%E4%BF%8A%E6%9D%B0' },
   },
   {
-    id: 'cityofstars', title: 'City of Stars（简易版）', sub: '《爱乐之城》· Anne Ku 简易钢琴版（13 小节）', key: 'F', tag: '流行', bpm: 100,
+    id: 'cityofstars', src: 'printed', title: 'City of Stars（简易版）', sub: '《爱乐之城》· Anne Ku 简易钢琴版（13 小节）', key: 'F', tag: '流行', bpm: 100,
     sections: [
       { name: '前奏 1–4', bars: 'Gm7 | Gm7 | Gm7 | Gm7' },
       { name: '主歌 5–13', bars: 'Gm Gm7 | C C7 | Dm | Dm | Gm Gm7 | C C7 | F7 | F7 | Gm Gm7' },
@@ -178,21 +178,21 @@ const SONGS = [
     orig: { apple: 'https://music.apple.com/cn/search?term=City%20of%20Stars%20La%20La%20Land' },
   },
   {
-    id: 'cosrowan', title: 'City of Stars（改编版）', sub: '《爱乐之城》· RowanMusic 钢琴改编（全曲 60 小节）', key: 'F', tag: '流行', bpm: 105,
+    id: 'cosrowan', src: 'analyzed', title: 'City of Stars（改编版）', sub: '《爱乐之城》· RowanMusic 钢琴改编（全曲 61 小节）', key: 'F', tag: '流行', bpm: 105,
     sections: [
       { name: '前奏 1–4', bars: 'Gm7 | Gm7 | Gm7 | Gm7' },
       { name: '主歌 5–12', bars: 'Gm7 | C7 | Dm7 | Dm7 | Gm7 | C7 | Fmaj7 | Fmaj7' },
-      { name: '13–18', bars: 'Gm7b5 | C | F | F7/Eb | Gm7 | A7' },
-      { name: '主歌 19–26', bars: 'Dm7 | F/C | Gm7 | C7 | Dm7 | Dm7 | Gm7 | C7' },
-      { name: '27–34', bars: 'F | Am/E | Gm7 | C7 | F | F7/Eb | Gm7 | A7' },
-      { name: '桥段 35–48', bars: 'Bb | A7 | A7 | Dm | Bb | C | Dm | Dm | Bb | C | A7 | Dm | Bb | A7' },
-      { name: '尾声 49–60', bars: 'Dm7 | F/C | Gm7 | C7 | Fmaj7 | Fmaj7 | Gm7 | A7 | A7 | Dm7 | Dm | Dm' },
+      { name: '13–18', bars: 'Gm7 | C | F Am/E | F7/Eb | Gm | A7' },
+      { name: '主歌 19–26', bars: 'Dm7 | Dm7/C | Gm7 | C7 | Dm7 | Dm7 | Gm7 | C7' },
+      { name: '27–34', bars: 'F | Am/E | Gm7 | C | F Am/E | F7/Eb | Gm | A7' },
+      { name: '桥段 35–48', bars: 'Bb | C7 | A7 | Dm | Bb | C | Dm | Dm | Bbmaj7 | C | A7 | Dm | Bb | A7' },
+      { name: '尾声 49–60', bars: 'Dm7 | Dm7/C | Gm7 | C | Fmaj7 | Fmaj7 | Gm7 | A7 | A7 | Dm7 | Dm7 | Dm7' },
     ],
-    note: '这份谱没写调号，但 B♭ 一直在用，其实是 F 大调。和弦是逐小节看你上传的谱分析的：Gm7 → C7 → Dm7 就是简易版里的 2–5–6（阻碍终止）；F7/E♭ 是低音一路往下走；桥段反复出现 A7 → Dm，是暂时转到 D 小调。第 13 小节右手写了 D♭，所以标成 Gm7♭5（半减七）。',
+    note: '谱上没有印和弦记号，也没写调号（B♭ 都是临时记号），但整首都在 F 大调里。每个和弦都是按左手低音 + 右手和声音判断的（点任意一格看依据）。Gm7 → C7 → Dm7 就是简易版里的 2–5–6（阻碍终止）；F7/E♭ 是低音往下走；桥段反复出现 A7 → Dm，是暂时转到 D 小调。桥段里很多小节最后一个八分音符就提前进入下一个和弦。',
     orig: { apple: 'https://music.apple.com/cn/search?term=City%20of%20Stars%20La%20La%20Land' },
   },
   {
-    id: 'letitbe', orig: { apple: 'https://music.apple.com/cn/search?term=Let%20It%20Be%20The%20Beatles' }, title: 'Let It Be', sub: 'The Beatles · 主歌', key: 'C', tag: '流行', bpm: 72,
+    id: 'letitbe', src: 'simplified', orig: { apple: 'https://music.apple.com/cn/search?term=Let%20It%20Be%20The%20Beatles' }, title: 'Let It Be', sub: 'The Beatles · 主歌', key: 'C', tag: '流行', bpm: 72,
     sections: [{ name: '主歌', bars: 'C G | Am F | C G | F C' }],
     note: '1564 进行的经典例子。',
   },
