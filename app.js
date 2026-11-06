@@ -578,7 +578,7 @@
     view.innerHTML = `<section class="cxtop">
         <div class="cxhead"><div class="cxname"><b>${D(c.sym)}</b><span>${qi[0]}和弦${invi ? ' · ' + INV[invi][0] : ''} · ${qi[1]}</span></div>
           <button class="ghost sm" data-act="play" data-s="${esc(c.sym)}">▶ 柱式</button><button class="ghost sm" data-act="play" data-s="${esc(c.sym)}" data-arp="1">▶ 分解</button></div>
-        <div class="cxview">${Staff.html({ bars: [[c.sym]], numerals: false, perRow: 1, minBar: 60, exact: true, notes: showN.map(n => ({ name: n.name, midi: n.midi })) })}${kb(showN, { trim: true })}</div>
+        <div class="cxview">${Staff.html({ bars: [[c.sym]], numerals: false, perRow: 1, minBar: 60, exact: true, notes: showN.map(n => ({ name: n.name, midi: n.midi, lh: n.lh ? 1 : 0 })) })}${kb(showN, CX.hand === 'R' ? { lo: 60, hi: 88 } : CX.hand === 'L' ? { lo: 48, hi: 76 } : { lo: 48, hi: 88 })}</div>
         <p class="cxline">${c.notes.map(n => D(n.name)).join(' – ')} · ${c.quality.f} · ${CX.hand !== 'R' ? '<span class="lhc">左手 ' + fgL.join('-') + '</span> ' : ''}${CX.hand !== 'L' ? '右手 ' + fgR.join('-') : ''}</p>
       </section>
       <div class="cxrow"><p><b>① 根音</b> 和弦从哪个音开始叠</p>

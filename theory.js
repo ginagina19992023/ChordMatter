@@ -64,8 +64,7 @@ const T = (() => {
       if (b === out[0].midi) b -= 12;
       out.unshift({ midi: b, name: c.bass.name, deg: -1 });
     }
-    while (Math.min(...out.map(n => n.midi)) < base - 5) out.forEach(n => (n.midi += 12));
-    while (Math.min(...out.map(n => n.midi)) >= base + 7) out.forEach(n => (n.midi -= 12));
+    // 不再整体挪八度：原位的根音固定在 base 这个八度，转位只把下面的音搬上去，其他音原地不动
     return out;
   }
 

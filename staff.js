@@ -121,7 +121,9 @@ const Staff = (() => {
           if (cfg.exact) {
             // 和键盘完全一致：同样的音，中央 C 以上写高音谱表，以下写低音谱表
             const vs = (cfg.notes ? cfg.notes.slice() : T.voicing(T.parseChord(sym))).sort((x, y) => x.midi - y.midi);
-            const hi = vs.filter(n => n.midi >= 60).map(n => vexKey(n.name, n.midi)), lo = vs.filter(n => n.midi < 60).map(n => vexKey(n.name, n.midi));
+            // 按手分谱表：右手永远在高音谱表，左手永远在低音谱表（没有手的信息时按中央 C 分）
+            const isL = n => (n.lh != null ? !!n.lh : n.midi < 60);
+            const hi = vs.filter(n => !isL(n)).map(n => vexKey(n.name, n.midi)), lo = vs.filter(isL).map(n => vexKey(n.name, n.midi));
             t = hi.length ? new VF.StaveNote({ keys: hi, duration: d, clef: 'treble', auto_stem: true }) : new VF.GhostNote({ duration: d });
             b = lo.length ? new VF.StaveNote({ keys: lo, duration: d, clef: 'bass', auto_stem: true }) : new VF.GhostNote({ duration: d });
           } else {

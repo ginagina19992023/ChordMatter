@@ -2,13 +2,14 @@
   --bg: #f7f6f2; --ink: #111; --mute: #8a8880; --line: #d9d7d0; --soft: #ecebe6;
   --acc: #e8541e; --acc-soft: #fbe3d8; --good: #1f8a5b; --bad: #c8372d;
   --T: #111; --S: #2f6fdb; --D: #e8541e;
+  --kw: #fffefb; --kbk: #161616; --kline: #111; --kon: #fbd9c9; --kontext: #c2410c; --klh: #d6e3fb;
   --r: 10px;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --bg: #111; --ink: #f2f1ec; --mute: #8d8b84; --line: #2e2d2a; --soft: #1c1b19; --acc: #ff6a33; --acc-soft: #3a2117; --good: #3fbf86; --bad: #ff6a5f; --T: #f2f1ec; --S: #6d9cff; --D: #ff6a33; color-scheme: dark; }
+  :root:not([data-theme="light"]) { --bg: #111; --ink: #f2f1ec; --mute: #8d8b84; --line: #2e2d2a; --soft: #1c1b19; --acc: #ff6a33; --acc-soft: #3a2117; --good: #3fbf86; --bad: #ff6a5f; --T: #f2f1ec; --S: #6d9cff; --D: #ff6a33; --kw: #ecebe6; --kbk: #0b0b0b; --kline: #000; --kon: #ffc7ad; --kontext: #b8400d; --klh: #c9dafb; color-scheme: dark; }
 }
-:root[data-theme="dark"] { --bg: #111; --ink: #f2f1ec; --mute: #8d8b84; --line: #2e2d2a; --soft: #1c1b19; --acc: #ff6a33; --acc-soft: #3a2117; --good: #3fbf86; --bad: #ff6a5f; --T: #f2f1ec; --S: #6d9cff; --D: #ff6a33; color-scheme: dark; }
+:root[data-theme="dark"] { --bg: #111; --ink: #f2f1ec; --mute: #8d8b84; --line: #2e2d2a; --soft: #1c1b19; --acc: #ff6a33; --acc-soft: #3a2117; --good: #3fbf86; --bad: #ff6a5f; --T: #f2f1ec; --S: #6d9cff; --D: #ff6a33; --kw: #ecebe6; --kbk: #0b0b0b; --kline: #000; --kon: #ffc7ad; --kontext: #b8400d; --klh: #c9dafb; color-scheme: dark; }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; background: var(--bg); color: var(--ink); }
 button:focus-visible, a:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
@@ -84,16 +85,16 @@ nav svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-wi
 
 /* keyboard */
 .kb { width: 100%; height: auto; display: block; }
-.kb .k { stroke: var(--ink); stroke-width: 0.8; }
-.kb .w { fill: var(--bg); }
-.kb .b { fill: var(--ink); }
-.kb .w.on { fill: var(--acc-soft); stroke: var(--acc); }
+.kb .k { stroke: var(--kline); stroke-width: 0.8; }
+.kb .w { fill: var(--kw); }
+.kb .b { fill: var(--kbk); }
+.kb .w.on { fill: var(--kon); stroke: var(--acc); }
 .kb .b.on { fill: var(--acc); stroke: var(--acc); }
 .kb .k.on-play { fill: var(--acc); }
 .kb .w.on-play { fill: var(--acc); }
-.kb text { font-size: 10px; text-anchor: middle; fill: var(--acc); font-weight: 600; pointer-events: none; }
+.kb text { font-size: 10px; text-anchor: middle; fill: var(--kontext); font-weight: 600; pointer-events: none; }
 .kb text.fb { fill: #fff; font-size: 9px; }
-.kb text.cl { fill: var(--mute); font-weight: 400; font-size: 8px; }
+.kb text.cl { fill: #8a8880; font-weight: 400; font-size: 8px; }
 
 /* lesson */
 .lesson p { margin: 0 0 14px; }
@@ -239,7 +240,7 @@ details { margin: 14px 0; } summary { cursor: pointer; color: var(--ink); }
 
 /* 练习引擎 */
 .kb .k[data-act] { cursor: pointer; }
-.kb .w.sel { fill: var(--acc-soft); stroke: var(--acc); }
+.kb .w.sel { fill: var(--kon); stroke: var(--acc); }
 .kb .b.sel { fill: var(--acc); }
 .kb .w.next { fill: var(--acc); }
 .kb .b.next { fill: var(--acc); stroke: var(--acc); }
@@ -373,7 +374,7 @@ audio { width: 100%; margin: 4px 0; }
 .jpdemo small { font: 11px -apple-system, sans-serif; color: var(--mute); margin-right: 10px; }
 .symask { font-size: 16px; margin: 16px 0 8px; }
 .symask .tag { display: inline-block; font-size: 11px; color: var(--mute); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; margin-right: 8px; vertical-align: 2px; }
-.kb .w.want { fill: color-mix(in srgb, var(--good) 30%, transparent); stroke: var(--good); }
+.kb .w.want { fill: #c9ecd9; stroke: var(--good); }
 .kb .b.want { fill: var(--good); }
 .symchip { font-family: "Times New Roman", serif; color: var(--acc); margin-right: 4px; }
 .symlist .lock { opacity: .45; }
@@ -434,9 +435,9 @@ dl.stor { margin: 0 0 6px; font-size: 13px; }
 @media (prefers-reduced-motion: reduce) { .grade, .flip > div, .tcard.foil::after { animation: none; transition: none; } }
 
 /* 双手 */
-.kb .w.on.lh { fill: color-mix(in srgb, var(--S) 18%, var(--bg)); stroke: var(--S); }
+.kb .w.on.lh { fill: var(--klh); stroke: var(--S); }
 .kb .b.on.lh { fill: var(--S); stroke: var(--S); }
-.kb text.fl { fill: var(--S); }
+.kb text.fl { fill: #1d4ed8; }
 .kb .b.on.lh + text.fn, .kb text.fb.fl { fill: #fff; }
 .lhc { color: var(--S); }
 .cxpractice { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 12px; }
