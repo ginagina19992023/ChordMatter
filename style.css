@@ -817,3 +817,21 @@ body.land .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .cshape rect { fill: #1d1d1d; }
 .cshape rect.lh { opacity: .55; }
 .cshape.fT rect { fill: #464646; } .cshape.fS rect { fill: #2f6fdb; } .cshape.fD rect { fill: #e8541e; }
+
+/* 翻页 */
+.pager { margin: 14px 0 6px; }
+.pgtabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--line); margin-bottom: 10px; }
+.pgtabs::-webkit-scrollbar { display: none; }
+.pgtab { flex: none; background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 10px 7px; font: inherit; font-size: 14px; color: var(--mute); cursor: pointer; }
+.pgtab.on { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+.pgtrack { display: flex; align-items: flex-start; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; transition: height .2s; }
+.pgtrack::-webkit-scrollbar { display: none; }
+.pg { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; padding: 0 1px; }
+.pg h3 { margin: 2px 0 6px; font-size: 16px; font-weight: 600; }
+.pg h3 small { font-weight: 400; color: var(--mute); font-size: 12px; }
+.pgdots { display: flex; justify-content: center; gap: 6px; margin: 10px 0 0; }
+.pgdots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
+.pgdots i.on { background: var(--ink); width: 16px; border-radius: 3px; }
+.cbtop .prog { margin-bottom: 6px; }
+.shaperow { display: flex; gap: 6px; padding-right: 28px; }
+.shaperow span { flex: 1; display: flex; justify-content: center; }

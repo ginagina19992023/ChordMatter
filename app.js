@@ -644,10 +644,12 @@
       <div class="chips">${c.notes.map((_, i) => `<button class="chip${i === invi ? ' on' : ''}" data-act="cx" data-k="inv" data-v="${i}">${INV[i][0]}</button>`).join('')}
         <span class="sp"></span><button class="chip${CX.hand === 'R' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="R">右手</button><button class="chip${CX.hand === 'L' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="L">左手</button><button class="chip${CX.hand === 'B' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="B">双手</button></div></div>
       <p class="explain"><b>${D(c.sym)}</b>：以 ${D(c.root.name)} 为根音的${c.quality.zh}，${qi[2]}，听起来${qi[1]}。${invi ? `${INV[invi][0]}：最下面弹 ${D(bottom.name)}（${INV[invi][1]}），所以写成 ${D(c.sym)}，斜线后面就是最低音。` : '原位：根音 ' + D(c.root.name) + ' 在最下面。'}键盘上的数字是手指（1 = 拇指，5 = 小指）${CX.hand === 'B' ? '，蓝色是左手（低八度），橙色是右手' : CX.hand === 'L' ? '，左手在低八度' : ''}。<a href="#know-k0">看不懂？</a></p>
-      ${arp.white && T.Q[CX.q].ints.length === 3 && !CX.q.startsWith('sus') ? `<a class="link" href="#arp-${CX.root + CX.q}"><small>练这个和弦</small><b>${D(CX.root + CX.q)} 琶音 · 带指法和收音</b><span>→</span></a>` : ''}
-      ${(() => { const ctx = chordContext(c); return ctx ? `<section class="cxblock"><h3>先在小进行里听它</h3><p class="fine">${ctx[1]} · 点一下听，跟着弹</p>${progRow(c.root.name, ctx[0])}</section>` : ''; })()}
-      <section class="cxblock"><h3>在曲子里找到它</h3>${chordFinds(c)}<a class="link" href="#browse-${encodeURIComponent(c.root.name + c.q)}"><small>浏览</small><b>曲库里所有和弦 · 有的和没有的</b><span>→</span></a><a class="link" href="#combo"><small>连起来记</small><b>组合和弦：一串一串记</b><span>→</span></a></section>
-      <p class="pageend">— 到底了 —</p>`;
+      ${pager('chord', [
+        ['小进行', `${(() => { const ctx = chordContext(c); return ctx ? `<h3>先在小进行里听它</h3><p class="fine">${ctx[1]} · 点一下听，跟着弹</p>${progRow(c.root.name, ctx[0])}` : '<p class="fine">这个和弦没有常用的小进行。</p>'; })()}`],
+        ['曲子里', `<h3>在曲子里找到它</h3>${chordFinds(c)}<a class="link" href="#browse-${encodeURIComponent(c.root.name + c.q)}"><small>浏览</small><b>曲库里所有和弦 · 有的和没有的</b><span>→</span></a><a class="link" href="#combo"><small>连起来记</small><b>组合和弦：一串一串记</b><span>→</span></a>`],
+        ['练', `${arp.white && T.Q[CX.q].ints.length === 3 && !CX.q.startsWith('sus') ? `<a class="link" href="#arp-${CX.root + CX.q}"><small>练这个和弦</small><b>${D(CX.root + CX.q)} 琶音 · 带指法和收音</b><span>→</span></a>` : ''}<a class="link" href="#combo"><small>连起来记</small><b>组合和弦：一串一串记</b><span>→</span></a>`],
+      ])}`;
+    pagerInit();
   }
 
 
@@ -756,6 +758,31 @@
     const kern = FullScore.build(FULL[s.id].kern, { mode: M, barChords: bm, kp, title: s.title + ' · ' + { compare: '上下对比', practice: '练习版', orig: '原曲' }[M], lyrics: lyr, from: sec && CMP.sec >= 0 ? sec[1] : null, to: sec && CMP.sec >= 0 ? sec[2] : null });
     Score.render($('#cmpscore'), { kern }, { section: false, labels: lab, barAct: true }).catch(e => ($('#cmpscore').innerHTML = '<p class="no">谱面生成失败：' + esc(String(e && e.message || e)) + '</p>'));
   }
+  // ---------------- 翻页：上面只放主要内容，细节一页一页左右翻（滑动或点页签）----------------
+  const PG = {};
+  function pager(id, pages) {
+    const at = Math.min(PG[id] || 0, pages.length - 1);
+    return `<div class="pager" data-pg="${id}"><div class="pgtabs">${pages.map(([t], i) => `<button class="pgtab${i === at ? ' on' : ''}" data-act="pgto" data-pg="${id}" data-v="${i}">${t}</button>`).join('')}</div>
+      <div class="pgtrack">${pages.map(([t, h], i) => `<section class="pg" data-i="${i}">${h}</section>`).join('')}</div>
+      <div class="pgdots">${pages.map((_, i) => `<i class="${i === at ? 'on' : ''}"></i>`).join('')}</div></div>`;
+  }
+  function pagerInit() {
+    view.querySelectorAll('.pager').forEach(pg => {
+      const id = pg.dataset.pg, tr = pg.querySelector('.pgtrack'), pages = [...tr.children];
+      const fit = i => { const p = pages[i]; if (p) tr.style.height = p.scrollHeight + 'px'; pg.querySelectorAll('.pgtab').forEach((b, k) => b.classList.toggle('on', k === i)); pg.querySelectorAll('.pgdots i').forEach((d, k) => d.classList.toggle('on', k === i)); };
+      const at = Math.min(PG[id] || 0, pages.length - 1);
+      tr.scrollLeft = at * tr.clientWidth; fit(at);
+      let t = null;
+      tr.addEventListener('scroll', () => { clearTimeout(t); t = setTimeout(() => { const i = Math.round(tr.scrollLeft / Math.max(1, tr.clientWidth)); if (i !== PG[id]) { PG[id] = i; } fit(i); }, 60); }, { passive: true });
+      const ro = new ResizeObserver(() => fit(PG[id] || 0)); pages.forEach(p => ro.observe(p));
+      pg.__fit = fit;
+    });
+  }
+  function pagerGo(id, i) {
+    const pg = view.querySelector(`.pager[data-pg="${id}"]`); if (!pg) return;
+    const tr = pg.querySelector('.pgtrack'); PG[id] = i; tr.scrollTo({ left: i * tr.clientWidth, behavior: 'smooth' }); pg.__fit && pg.__fit(i);
+    const top = pg.getBoundingClientRect().top; if (top < 0) pg.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
   // ---------------- 组合和弦：一串和弦当成一个「词组」记 ----------------
   const CB = { key: 'C', mkey: 'Am', hide: null, q: null };
   const FAMD = { 1: 'T', 3: 'T', 6: 'T', 2: 'S', 4: 'S', 5: 'D', 7: 'D' };
@@ -801,22 +828,23 @@
     const pos = CB.hide;
     view.innerHTML = `<header class="top"><div><a class="back" href="#combo">←</a><small>组合和弦 · ${cb.alias}</small><h1>${cb.name}</h1></div></header>
       ${keyChips(cb.minor)}
-      <section class="cxblock"><h3>这一串</h3>${progRow(key, ch)}
-        <p class="chain">${cb.deg.map((d, i) => `<span><b>${cb.show ? cb.show[i] : d}</b><i>${famWord(d)}</i></span>`).join('<em>→</em>')}</p>
-        <p class="fine">${cb.say}${cb.where ? ' · 你在 ' + cb.where + ' 里见过它。' : ''}</p>
-        ${Staff.html({ key, bars: ch.map(x => [x]), end: true, time: true, start: 1 })}</section>
-      <section class="cxblock"><h3>抠掉一个，换成它的「字」</h3>
-        <p class="fine">选一个位置抠掉。它变成一个字（稳 / 走 / 紧）：<b>同一个字的和弦都能填进去</b>，每填一个就是一个新变体。点每一行听。</p>
+      <section class="cbtop">${progRow(key, ch)}
+        <div class="shaperow">${ch.map(x => `<span>${chordShape(x, key, 56, 60)}</span>`).join('')}</div>
+        <p class="fine">${cb.say}${cb.where ? ' · 你在 ' + cb.where + ' 里见过它。' : ''}</p></section>
+      ${pager('combo', [
+        ['变体', `<h3>抠掉一个，换成它的「字」</h3>        <p class="fine">选一个位置抠掉。它变成一个字（稳 / 走 / 紧）：<b>同一个字的和弦都能填进去</b>，每填一个就是一个新变体。点每一行听。</p>
         <div class="chips">${ch.map((x, i) => `<button class="chip${pos === i ? ' on' : ''}" data-act="cbhide" data-v="${i}">抠掉第 ${i + 1} 个（${D(x)}）</button>`).join('')}</div>
         ${pos == null ? '' : `<p class="chain holed">${ch.map((x, i) => i === pos ? `<span class="hole"><b>？</b><i>${famWord(cb.deg[i])}</i></span>` : `<span><b>${D(x)}</b><i>${famWord(cb.deg[i])}</i></span>`).join('<em>→</em>')}</p>
           ${cbCands(cb, pos).map(c => { const row = ch.slice(); row[pos] = c.sym; const sh = cbShared(ch[pos], c.sym);
             return `<div class="variant${c.orig ? ' isorig' : ''}"><small>${c.orig ? '原版' : '变体'} · 填 <b>${D(c.sym)}</b>（${c.d} 级${c.sev ? '七和弦' : ''}）${c.orig ? '' : sh.length ? ` · 和 ${D(ch[pos])} 共用 ${sh.join('、')}，所以都是「${famWord(cb.deg[pos])}」` : ` · 同样是「${famWord(cb.deg[pos])}」`}</small>${progRow(key, row)}</div>`; }).join('')}`}
-      </section>
-      <section class="cxblock"><h3>填空 <small>${st ? `· 做过 ${st.n} 题，原版答对 ${st.r} 题` : ''}</small></h3>${cbQuizHtml(cb)}</section>
-      <section class="cxblock"><h3>在曲子里</h3>${finds.length ? finds.map(f => `<a class="link" href="#song-${f.s.id}-${f.hits.flat().join('.')}-${encodeURIComponent(cbChords(cb, f.s.key)[0])}"><small>${esc(f.s.title)}</small><b>第 ${f.hits.map(h => h[0] + '–' + h[h.length - 1]).slice(0, 4).join('、')}${f.hits.length > 4 ? ' 等' : ''} 小节 · ${cbChords(cb, f.s.key).map(D).join(' ')}</b><span>→</span></a>`).join('') : '<p class="fine">曲库里还没有完整出现这一串。</p>'}</section>
-      <section class="cxblock"><h3>看着彩条弹（练手感）</h3>${rollEntry('combo', '把这一串连着落两遍，左右手跟着彩条弹')}</section>
-      <section class="cxblock"><h3>在琴上弹这一串</h3><p class="fine">一个和弦弹对了才往下走。</p>${placeChips()}<div id="cbtarget" class="chain">${ch.map((x, i) => `<span data-i="${i}"><b>${D(x)}</b></span>`).join('<em>→</em>')}</div><div id="dctl"></div></section>
-      <p class="pageend">— 到底了 —</p>`;
+`],
+        ['填空', `<h3>填空 <small>${st ? `· 做过 ${st.n} 题，原版答对 ${st.r} 题` : ''}</small></h3>${cbQuizHtml(cb)}`],
+        ['曲子里', `<h3>在曲子里</h3>${finds.length ? finds.map(f => `<a class="link" href="#song-${f.s.id}-${f.hits.flat().join('.')}-${encodeURIComponent(cbChords(cb, f.s.key)[0])}"><small>${esc(f.s.title)}</small><b>第 ${f.hits.map(h => h[0] + '–' + h[h.length - 1]).slice(0, 4).join('、')}${f.hits.length > 4 ? ' 等' : ''} 小节 · ${cbChords(cb, f.s.key).map(D).join(' ')}</b><span>→</span></a>`).join('') : '<p class="fine">曲库里还没有完整出现这一串。</p>'}`],
+        ['跟练', `<h3>看着彩条弹</h3>${rollEntry('combo', '把这一串连着落两遍，左右手跟着彩条弹')}`],
+        ['琴上', `<h3>在琴上弹这一串</h3><p class="fine">一个和弦弹对了才往下走。</p>${placeChips()}<div id="cbtarget" class="chain">${ch.map((x, i) => `<span data-i="${i}"><b>${D(x)}</b></span>`).join('<em>→</em>')}</div><div id="dctl"></div>`],
+        ['谱', `<h3>五线谱</h3>${Staff.html({ key, bars: ch.map(x => [x]), end: true, time: true, start: 1 })}`],
+      ])}`;
+    pagerInit();
     drillStart(ch.map(x => ({ kind: 'chord', pcs: T.parseChord(x).notes.map(n => n.pc), label: x })), {
       onAdvance: i => document.querySelectorAll('#cbtarget span').forEach((e, k) => { e.classList.toggle('now', k === i); e.classList.toggle('done', k < i); }),
       onMiss: () => toast('不对，再试一次'),
@@ -2681,11 +2709,12 @@
       case 'lyrsave': S.lyrics = S.lyrics || {}; S.lyrics[route[1]] = $('#lyrtext').value.trim(); save(); render(); toast('歌词已贴到谱上（只存在这台手机）'); break;
       case 'lyrclear': if (S.lyrics) delete S.lyrics[route[1]]; save(); render(); break;
       case 'cbkey': if (/m$/.test(el.dataset.v)) CB.mkey = el.dataset.v; else CB.key = el.dataset.v; CB.q = null; render(); break;
-      case 'cbhide': CB.hide = CB.hide === +el.dataset.v ? null : +el.dataset.v; render(); break;
-      case 'cbnext': CB.q = null; render(); setTimeout(() => { const e = view.querySelectorAll('.cxblock')[2]; if (e) e.scrollIntoView({ block: 'start' }); }, 30); break;
+      case 'cbhide': CB.hide = CB.hide === +el.dataset.v ? null : +el.dataset.v; { const y = scrollY; render(); scrollTo(0, y); } break;
+      case 'pgto': pagerGo(el.dataset.pg, +el.dataset.v); break;
+      case 'cbnext': CB.q = null; { const y = scrollY; render(); scrollTo(0, y); } break;
       case 'cbredo': render(); break;
       case 'cbqplay': case 'cbqyours': { const cb = COMBOS.find(x => x.id === route[1]); const ch = cbChords(cb); if (act === 'cbqyours') ch[CB.q.pos] = CB.q.ans; A.init(); ch.forEach((x, i) => A.chord(chordMidis(x), i * 0.9, 0.01, 1)); break; }
-      case 'cbans': { const cb = COMBOS.find(x => x.id === route[1]); const ch = cbChords(cb); CB.q.ans = el.dataset.v; const ok = CB.q.ans === ch[CB.q.pos]; S.combo = S.combo || {}; const r = (S.combo[cb.id] = S.combo[cb.id] || { n: 0, r: 0 }); r.n++; if (ok) r.r++; logEv('cbq', { id: cb.id, ok: ok ? 1 : 0, pick: CB.q.ans }); save(); render(); setTimeout(() => { const e = view.querySelectorAll('.cxblock')[2]; if (e) e.scrollIntoView({ block: 'start' }); }, 30); break; }
+      case 'cbans': { const cb = COMBOS.find(x => x.id === route[1]); const ch = cbChords(cb); CB.q.ans = el.dataset.v; const ok = CB.q.ans === ch[CB.q.pos]; S.combo = S.combo || {}; const r = (S.combo[cb.id] = S.combo[cb.id] || { n: 0, r: 0 }); r.n++; if (ok) r.r++; logEv('cbq', { id: cb.id, ok: ok ? 1 : 0, pick: CB.q.ans }); save(); { const y = scrollY; render(); scrollTo(0, y); } break; }
       case 'playfrom': playBars(+el.dataset.n, null); toast('从第 ' + el.dataset.n + ' 小节播放到结尾'); break;
       case 'selplay': playBars(Math.min(SELB.a, SELB.b), Math.max(SELB.a, SELB.b)); break;
       case 'selclear': SELB.on = false; selPaint(); stopAll(); dockReset(); break;
