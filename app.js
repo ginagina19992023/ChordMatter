@@ -678,8 +678,6 @@
     save(); if (d.clean >= 3 && route[2] === 'today') completeStep('warm');
     vArp();
   }
-  function _arpEnd() {
-  }
   function arpDemo(sym) {
     stopAll(); A.init();
     const c = T.parseChord(sym), a = T.arpeggio(c, ARP.hand), st = S.arp[sym];
@@ -729,24 +727,14 @@
     out.push(`<b>低音线</b> ${bass.join(' ')}`);
     return out;
   }
-  // 把谱面逻辑里的术语换成可点的链接（跳到「读懂谱面逻辑」对应的课）
-  const TERMS = [['功能', 'l1'], ['稳', 'l2'], ['走', 'l3'], ['紧', 'l4'], ['结尾', 'l6'], ['正格终止', 'l7'], ['变格终止', 'l6'], ['半终止', 'l8'], ['阻碍终止', 'l9'], ['2–5–1', 'l10'], ['4536 进行（王道）', 'l11'], ['1564 进行', 'l11'], ['6415 进行', 'l11'], ['1645 进行（50年代）', 'l11'], ['卡农进行', 'l11'], ['低音线', 'l12'], ['副属和弦', 'k7'], ['借用和弦', 'k7'], ['调性', 'k1']];
-  function termLinks(html) {
-    let out = html;
-    TERMS.forEach(([w, id]) => {
-      const href = id.startsWith('k') ? '#know-' + id : '#sym-' + id;
-      out = out.split(/(<[^>]+>)/).map(part => part.startsWith('<') ? part : part.split(w).join(`\u0000${w}\u0001${href}\u0002`)).join('');
-    });
-    return out.replace(/\u0000([^\u0001]+)\u0001([^\u0002]+)\u0002/g, (m, w, href) => `<a class="term" href="${href}">${w}</a>`);
-  }
   function sectionStarts(s) { let n = 1; return s.sections.map(sec => { const m = /(\d+)/.exec(sec.name); const st = m ? +m[1] : n; n = st + parseBars(sec.bars).length; return st; }); }
   function songBarMap(s) { const map = {}, st = sectionStarts(s); s.sections.forEach((sec, i) => parseBars(sec.bars).forEach((b, k) => (map[st[i] + k] = b))); return map; }
-  function songGrid(s, hideFn, showFn) {
+  function songGrid(s) {
     const key = s.key, starts = sectionStarts(s);
     let idx = 0;
     return s.sections.map((sec, si) => `<div class="sec"><small>${esc(sec.name)}</small><div class="bars">${parseBars(sec.bars).map((bar, bi) => `<div class="bar"><span class="bn">${starts[si] + bi}</span>${bar.map(sym => {
-      const a = T.analyze(sym, key), i = idx++, hid = hideFn ? hideFn(i) : false;
-      return `<div class="cell${hid ? ' hid' : ''}" data-i="${i}" data-act="${hid ? 'reveal' : 'explain'}" data-s="${esc(sym)}"><b>${hid ? '?' : D(sym)}</b><i>${hid && !(showFn && showFn()) ? '' : a ? degLabel(sym, key) : '?'}</i>${funcTag(a && a.func)}</div>`;
+      const a = T.analyze(sym, key), i = idx++;
+      return `<div class="cell" data-i="${i}" data-act="explain" data-s="${esc(sym)}"><b>${D(sym)}</b><i>${a ? degLabel(sym, key) : '?'}</i>${funcTag(a && a.func)}</div>`;
     }).join('')}</div>`).join('')}</div></div>`).join('');
   }
   function songFlat(s) { return s.sections.flatMap(sec => parseBars(sec.bars).flat()); }
@@ -780,7 +768,6 @@
         <p>3. <b>找相同与不同</b>：重复的地方只记一次，只把注意力放在不同处。</p>
         <p>4. <b>离开琴背</b>：能在脑中把级数说出来，手上才稳。</p></section>`;
   }
-  const HIDE = [i => false, i => i % 3 === 2, i => i % 3 !== 0, i => true];
   function vEdit() {
     const id = route[1];
     const base = id === 'new' ? { id: 'my' + Date.now().toString(36), title: (SONG_DRAFTS[+route[2]] || {}).title || '', sub: '', key: '', sections: [] } : allSongs().find(s => s.id === id);
@@ -849,9 +836,6 @@
   }
   function vMe() {
     CAL = CAL || { y: new Date().getFullYear(), m: new Date().getMonth() };
-    const days = Object.keys(S.days).sort().slice(-28);
-    const grid = []; const t = dayNum(today());
-    for (let i = 27; i >= 0; i--) { const d = Object.keys(S.days).find(k => dayNum(k) === t - i); const n = d ? STEPS.filter(k => S.days[d][k]).length : 0; grid.push(`<i class="h${n}"></i>`); }
     view.innerHTML = `<header class="top"><div><a class="back" href="#today">←</a><small>记录</small><h1>我</h1></div></header>
       <section class="stats"><div><b>${streak()}</b><small>连续天</small></div><div><b>${S.xp}</b><small>XP</small></div><div><b>${UNITS.filter(u => unitState(u.id).done).length}/${UNITS.length}</b><small>单元</small></div></section>
       <div class="calhead"><button class="ghost sm" data-act="calmonth" data-v="-1">‹</button><b>${CAL.y} 年 ${CAL.m + 1} 月</b><button class="ghost sm" data-act="calmonth" data-v="1">›</button></div>
@@ -991,7 +975,6 @@
     const pat = pats.find(p => p.id === SG.pat[song.id]) || pats[1];
     const tl = songTimeline(song);
     const spb = 60 / (song.bpm * SG.rate);
-    const pick = tl.notes.length && song.bars[0] && tl.slots.length && tl.slots[0].start > 0 ? 0 : 0;
     // 预备拍：一整小节，弱起时减去弱起长度
     const firstSlot = tl.slots[0] ? tl.slots[0].start : 0;
     const count = song.beats;
@@ -1095,7 +1078,6 @@
     const ans = rand([I, IV, V]);
     if (Math.random() < 0.25) {
       const pats = PATTERNS[4], p = rand(pats);
-      const play = [];
       return { q: '听：这是哪种伴奏型？', options: pats.map(x => x.name), answer: p.name, why: `${p.name}：${p.tip}`, play: [], pat: p, auto: true };
     }
     const strong = rand(uniqueTones[ans]);
@@ -1135,7 +1117,7 @@
     return s;
   }
 
-  // ---------------- 练习引擎：在琴边（收音）/ 不在琴边（点键盘）/ 自评 ----------------
+  // ---------------- 练习引擎：在琴边（麦克风收音）/ 不在琴边（点屏幕键盘），只按真实结果判定 ----------------
   // targets: [{kind:'chord'|'note', pcs:[..], label}]
   let DR = null, relisten = false;
   const place = () => S.place || 'piano';
@@ -1798,10 +1780,6 @@
       case 'splay': { const s = allSongs().find(x => x.id === el.dataset.id); const flat = songFlat(s); stopAll(); A.init(); const spc = 60 / (s.bpm || 76) * 2;
         flat.forEach((sym, i) => { const p = T.parseChord(sym); A.note((p.bass ? p.bass.pc : p.root.pc) + 36, i * spc, spc, 0.6); A.chord(chordMidis(sym), i * spc, 0.01, spc); later(() => document.querySelectorAll('#grid .cell').forEach(c => c.classList.toggle('on-play', +c.dataset.i === i)), i * spc * 1000); });
         later(() => document.querySelectorAll('#grid .cell').forEach(c => c.classList.remove('on-play')), flat.length * spc * 1000); break; }
-      case 'reveal': { const s = allSongs().find(x => x.id === route[1]); const a = T.analyze(el.dataset.s, s.key); el.classList.remove('hid'); el.dataset.act = 'play'; el.querySelector('b').textContent = D(el.dataset.s); el.querySelector('i').textContent = a.numeral; playChord(el.dataset.s);
-        const ms = document.querySelector('#memstaff .staff'); if (ms) { const cfg = JSON.parse(ms.dataset.staff); cfg.hide = (cfg.hide || []).filter(x => x !== +el.dataset.i); ms.dataset.staff = JSON.stringify(cfg); try { Staff.draw(ms); } catch (err) {} }
-        break; }
-      case 'revealall': document.querySelectorAll('.cell.hid').forEach(c => c.click()); break;
       case 'sdel': S.custom = S.custom.filter(c => c.id !== el.dataset.id); save(); try { indexedDB.open('hexian-scores', 1).onsuccess = e => { const d = e.target.result; if (d.objectStoreNames.contains('pages')) d.transaction('pages', 'readwrite').objectStore('pages').delete(el.dataset.id); }; } catch (err) {} go('#songs'); break;
       case 'export': exportBackup(); break;
       case 'import': { const i = document.createElement('input'); i.type = 'file'; i.accept = 'application/json,.json'; i.onchange = () => { const r = new FileReader(); r.onload = () => { try { const o = JSON.parse(r.result); if (!o || typeof o !== 'object' || !('xp' in o)) throw 0; S = migrate(o); save(); toast('已导入备份'); render(); } catch (err) { toast('这不是 ChordMatter 的备份文件'); } }; r.readAsText(i.files[0]); }; i.click(); break; }

@@ -192,7 +192,6 @@ dd { margin: 0; }
 .cell { flex: 1; text-align: center; padding: 6px 2px; cursor: pointer; border-radius: 6px; border: 1px solid transparent; min-width: 0; }
 .cell b { display: block; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cell i { display: block; font-size: 13.5px; min-height: 1.3em; }
-.cell.hid b { color: var(--acc); }
 .mem h2 { margin-bottom: 4px; }
 
 /* form */
@@ -206,12 +205,6 @@ dd { margin: 0; }
 .stats div { text-align: center; padding: 16px 0; }
 .stats div + div { border-left: 1px solid var(--line); }
 .stats b { display: block; font-size: 24px; font-weight: 500; }
-.heat { display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; }
-.heat i { aspect-ratio: 1; border: 1px solid var(--line); border-radius: 3px; }
-.heat .h1 { background: color-mix(in srgb, var(--acc) 25%, transparent); }
-.heat .h2 { background: color-mix(in srgb, var(--acc) 50%, transparent); }
-.heat .h3 { background: color-mix(in srgb, var(--acc) 75%, transparent); }
-.heat .h4 { background: var(--acc); border-color: var(--acc); }
 
 #toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 84px); transform: translate(-50%, 20px); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: 14px; opacity: 0; pointer-events: none; transition: all .25s; white-space: nowrap; z-index: 9; }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }

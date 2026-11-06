@@ -40,6 +40,9 @@ iPhone：用 Safari 打开 → 分享 → 「添加到主屏幕」。
 ## 部署
 GitHub Pages 从 `gh-pages` 分支发布。更新时：`git push origin main && git push origin main:gh-pages`。
 
+## 架构与自查
+架构、数据存储、路由和自查方法见 [ARCHITECTURE.md](ARCHITECTURE.md)。一键自查：`bash tools/run-all.sh`。
+
 ## 文件
 `theory.js` 乐理引擎 · `data.js` 课程、曲库、知识点 · `app.js` 界面 · `staff.js` 五线谱 · `listen.js` 弹奏识别 · `score.js` 原曲乐谱 · `ocr.js` 识谱 · `style.css` · `sw.js` 离线缓存
 
