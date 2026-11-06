@@ -11,12 +11,20 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 2;
-  const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [] };
+  const KEY = 'hexian.v1', SCHEMA = 3;
+  const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
     o = Object.assign({}, DEF, o || {});
     if (!o.v || o.v < 2) { o.sym = o.sym || {}; o.log = o.log || []; o.v = 2; }
+    if (o.v < 3) {
+      // v3：「屏幕上学会」和「在琴上弹过」分开记。旧记录只把有收音证据（m: 'mic'）的算作琴上弹过
+      o.pk = o.pk || {}; const lg = o.log || [];
+      Object.keys(o.sym || {}).forEach(id => { o.pk['sym:' + id] = { a: '旧记录' }; });
+      lg.filter(e => e.t === 'arp' && !e.miss).forEach(e => { const r = (o.pk['arp:' + e.s] = o.pk['arp:' + e.s] || { a: e.d }); if (e.m === 'mic') { r.p = r.p || e.d; r.pn = (r.pn || 0) + 1; } });
+      Object.keys(o.songs || {}).forEach(id => { const st = o.songs[id]; st.away = st.level || 0; st.level = Math.max(0, ...lg.filter(e => e.t === 'mem' && e.id === id && e.m === 'mic' && !e.miss && !e.hint).map(e => e.lv + 1)); });
+      o.v = 3;
+    }
     return o;
   }
   try { S = migrate(JSON.parse(localStorage.getItem(KEY) || 'null')); } catch (e) { S = migrate(null); }
@@ -68,12 +76,33 @@
   function completeStep(k) {
     const d = day();
     if (d[k]) return;
-    d[k] = 1; S.xp += 20; save();
+    d[k] = 1; d[k + 'M'] = place(); S.xp += 20; save();
     if (dayComplete(d)) toast('今日完成 · 连续 ' + streak() + ' 天');
   }
 
   // 如实记录：每次作答 / 每次弹奏的真实结果
   function logEv(t, data) { S.log = S.log || []; S.log.push(Object.assign({ d: today(), t }, data)); if (S.log.length > 800) S.log.splice(0, S.log.length - 800); save(); }
+  // ---- 两种状态分开记：没钢琴时在屏幕上学会 = 「已学 · 未上琴」；有钢琴并且收音听到你弹对 = 「琴上弹过」 ----
+  const PK = {
+    rec: k => (S.pk && S.pk[k]) || null,
+    state(k) { const r = PK.rec(k); return !r ? 0 : r.p ? 2 : 1; },
+    mark(k, onPiano) { S.pk = S.pk || {}; const r = (S.pk[k] = S.pk[k] || {}); const t = today(); r.a = r.a || t; if (onPiano) { r.p = r.p || t; r.pl = t; r.pn = (r.pn || 0) + 1; } save(); },
+  };
+  const PKL = ['未学', '已学 · 未上琴', '琴上弹过'];
+  const pkTag = st => st ? `<span class="pk pk${st}">${PKL[st]}</span>` : '';
+  const songSt = id => { const st = S.songs[id] || {}; return st.level > 0 ? 2 : st.away > 0 ? 1 : 0; };
+  const songLv = (id, m = place()) => { const st = S.songs[id] || {}; return (m === 'away' ? st.away : st.level) || 0; };
+  // 符号/转位/逻辑课里，有「在键盘上点出来」的课，才需要上琴；纯看懂的课不需要
+  const needsPiano = card => [0, 1, 2].some(i => { try { return card.task(i).type === 'tap'; } catch (e) { return false; } });
+  const symSt = card => !symDone(card.id) ? 0 : !needsPiano(card) ? 3 : PK.state('sym:' + card.id) === 2 ? 2 : 1;
+  const symTag = card => { const st = symSt(card); return st === 3 ? '<span class="pk pk2">已学 · 不用上琴</span>' : pkTag(st); };
+  function pianoTodo() {
+    const out = [];
+    COURSE_ORDER.forEach(ck => COURSES[ck].cards.forEach(c => { if (symSt(c) === 1) out.push({ k: 'sym', t: `${c.big} · ${c.title}`, sub: COURSES[ck].title + ' · 在琴上弹出 3 题', href: '#pk-' + c.id, d: (PK.rec('sym:' + c.id) || {}).a }); }));
+    Object.keys(S.arp || {}).forEach(a => { if (PK.state('arp:' + a) === 1) out.push({ k: 'arp', t: `${D(a)} 琶音`, sub: '屏幕上点对过 · 在琴上弹一遍上行 + 下行', href: '#arp-' + a, d: (PK.rec('arp:' + a) || {}).a }); });
+    allSongs().forEach(s => { const st = S.songs[s.id] || {}; if ((st.away || 0) > (st.level || 0)) out.push({ k: 'song', t: s.title, sub: `屏幕上到第 ${st.away} 层 · 琴上第 ${st.level || 0} 层 · 去琴上弹第 ${(st.level || 0) + 1} 层`, href: '#mem-' + s.id, d: '' }); });
+    return out;
+  }
   // 一条练习流：自动进入下一个没完成的步骤
   function stepHref(k) {
     const cur = currentUnit(), song = todaysSong(), arp = todaysArp();
@@ -389,7 +418,7 @@
     drillStop(); document.querySelectorAll('.giftov, .cpop').forEach(x => x.remove());
     document.body.classList.toggle('focus', ['quiz', 'arp', 'mem', 'sing', 'acctest'].includes(r) || (['sym', 'inv', 'logic'].includes(r) && route[1]));
     document.querySelectorAll('nav a').forEach(x => { if ((r === 'sing' || r === 'acctest') && x.dataset.r === 'acc') x.classList.add('on'); if (['know', 'sym', 'inv', 'logic'].includes(r) && x.dataset.r === 'path') x.classList.add('on'); if ((r === 'score' || r === 'scan') && x.dataset.r === 'songs') x.classList.add('on'); });
-    ({ today: vToday, path: vPath, unit: vUnit, chords: vChords, songs: vSongs, song: vSong, edit: vEdit, quiz: vQuiz, arp: vArp, mem: vMem, me: vMe, acc: vAcc, sing: vSing, acctest: vAccTest, know: vKnow, score: vScore, scan: vScan, sym: vSym, inv: vInv, cards: vCards, logic: vLogic }[r] || vToday)();
+    ({ today: vToday, path: vPath, unit: vUnit, chords: vChords, songs: vSongs, song: vSong, edit: vEdit, quiz: vQuiz, arp: vArp, mem: vMem, me: vMe, acc: vAcc, sing: vSing, acctest: vAccTest, know: vKnow, score: vScore, scan: vScan, pk: vPk, sym: vSym, inv: vInv, cards: vCards, logic: vLogic }[r] || vToday)();
     if (r === 'song') mountMyScore(route[1]);
     if (S.pendingGift && !document.body.classList.contains('focus')) setTimeout(flushGift, 400);
     window.scrollTo(0, 0); const ph = document.getElementById('phone'); if (ph) ph.scrollTop = 0;
@@ -400,31 +429,42 @@
     const n = STEPS.filter(k => d[k]).length;
     const C = 2 * Math.PI * 34;
     const steps = [
-      ['warm', '热身', `${D(arp)} 琶音 · 一个音不错弹完 3 遍`, `#arp-${arp}-today`],
+      ['warm', '热身', place() === 'away' ? `${D(arp)} 琶音 · 屏幕上按指法点对 3 遍` : `${D(arp)} 琶音 · 在琴上一个音不错弹完 3 遍`, `#arp-${arp}-today`],
       ['learn', '学', coursesDone() ? `${cur.n} · ${cur.title}` : `${COURSES[courseOf(nextAny())].title} · ${nextAny().big}（今天学 2 课）`, stepHref('learn')],
       ['quiz', '练', '8 题 · 新知 + 自动复习', '#quiz-today'],
-      ['song', '用', `${song.title.split(' ')[0]} · 弹下来 第 ${Math.min(4, (S.songs[song.id] || { level: 0 }).level + 1)} 层`, `#mem-${song.id}-today`],
+      ['song', '用', `${song.title.split(' ')[0]} · ${place() === 'away' ? '屏幕上点出和弦' : '在琴上弹下来'} 第 ${Math.min(4, songLv(song.id) + 1)} 层`, `#mem-${song.id}-today`],
     ];
     view.innerHTML = `
       <header class="top"><div><small>${new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })}</small><h1>今天</h1></div>
         <a class="stat" href="#me"><b>${streak()}</b><small>连续天</small></a><a class="stat" href="#me"><b>${S.xp}</b><small>XP</small></a></header>
+      ${modeSwitch()}
       <section class="ring-wrap">
         <svg viewBox="0 0 80 80" class="ring"><circle cx="40" cy="40" r="34"/><circle class="p" cx="40" cy="40" r="34" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - n / 4)}"/></svg>
         <div class="ring-t"><b>${n}/4</b><small>${n === 4 ? '完成' : '约 12 分钟'}</small></div>
       </section>
       ${n < 4 ? `<div class="cta flow">${flowBtn(n === 0 ? '开始今天的练习' : '继续 · ' + steps.find(x => !d[x[0]])[1])}</div>` : '<p class="donemsg">今天的 4 步都完成了。想多练可以试试下面的即兴伴奏。</p>'}
-      <ol class="steps">${steps.map(([k, t, s, h], i) => `<li><a href="${h}" class="${d[k] ? 'done' : ''}"><span class="dot">${d[k] ? '✓' : i + 1}</span><span><b>${t}</b><small>${esc(s)}</small></span><span class="arr">→</span></a></li>`).join('')}</ol>
+      <ol class="steps">${steps.map(([k, t, s, h], i) => `<li><a href="${h}" class="${d[k] ? 'done' : ''}"><span class="dot">${d[k] ? '✓' : i + 1}</span><span><b>${t}</b><small>${esc(s)}${d[k] ? (d[k + 'M'] === 'away' ? ' · 今天在屏幕上完成' : d[k + 'M'] === 'piano' ? ' · 今天在琴上完成' : '') : ''}</small></span><span class="arr">→</span></a></li>`).join('')}</ol>
+      ${todoBox()}
       <a class="unitbar" href="#unit-${cur.id}"><small>当前单元</small><b>${cur.n} ${cur.title}</b><span class="meter"><i style="width:${mastery(cur.id)}%"></i></span><small>${mastery(cur.id)}% · 达到 80% 自动解锁下一单元</small></a>
       <a class="calweek" href="#me"><small>这一周 · 一天一小节，越高练得越久</small>${calHtml(calWeeks(new Date().getFullYear(), new Date().getMonth(), today()), true)}</a>
       <a class="ptsline" href="#cards"><span class="meter"><i style="width:${Math.min(100, (1 - ((S.ptsNext || PTS_STEP) - (S.pts || 0)) / PTS_STEP) * 100)}%"></i></span><small>${S.pts || 0} 分 · 再得 ${Math.max(0, (S.ptsNext || PTS_STEP) - (S.pts || 0))} 分抽一张曲谱卡 · 卡册 ${ownedCards().length}/${CARDS.length}</small></a>
       <section class="bonus${n === 4 ? ' ready' : ''}"><small>加练 · 即兴伴奏${d.acc ? ' · 今日已考 ✓' : ''}</small><div class="row"><a class="ghost" href="#acctest">考一段配和弦</a><a class="ghost" href="#sing-${SING[dayNum(today()) % SING.length].id}">跟弹 · 唱《${SING[dayNum(today()) % SING.length].title}》</a></div></section>`;
   }
+  function modeSwitch() {
+    return `<div class="modesw"><button class="${place() === 'piano' ? 'on' : ''}" data-act="place" data-v="piano"><b>有钢琴</b><small>收音听你弹，记为「琴上弹过」</small></button><button class="${place() === 'away' ? 'on' : ''}" data-act="place" data-v="away"><b>没钢琴</b><small>在屏幕上学，记为「已学 · 未上琴」</small></button></div>`;
+  }
+  function todoBox() {
+    const td = pianoTodo();
+    if (!td.length) return '';
+    if (place() === 'away') return `<a class="unitbar todo" href="#pk"><small>回到琴边要补弹</small><b>${td.length} 项「已学 · 未上琴」</b><small>切到「有钢琴」后，今天页会把它们排在这里</small></a>`;
+    return `<section class="todo"><h3>上琴补弹 <small>· 屏幕上学过、还没在琴上弹过的</small></h3><ul class="list">${td.slice(0, 4).map(x => `<li><a href="${x.href}"><span><b>${x.t}</b><small>${x.sub}</small></span><span class="pk pk1">未上琴</span></a></li>`).join('')}</ul>${td.length > 4 ? `<a class="more" href="#pk">全部 ${td.length} 项 →</a>` : ''}</section>`;
+  }
   function todaysSong() {
     const cur = currentUnit();
     const all = allSongs().filter(s => s.sections.length);
     const linked = all.find(s => s.id === cur.song);
-    const notMastered = all.filter(s => (S.songs[s.id] || { level: 0 }).level < 4);
-    const pick = linked && (S.songs[linked.id] || { level: 0 }).level < 4 ? linked : notMastered[dayNum(today()) % Math.max(1, notMastered.length)] || all[0];
+    const notMastered = all.filter(s => songLv(s.id) < 4);
+    const pick = linked && songLv(linked.id) < 4 ? linked : notMastered[dayNum(today()) % Math.max(1, notMastered.length)] || all[0];
     return pick;
   }
   function todaysArp() {
@@ -670,7 +710,7 @@
     const d = day();
     view.innerHTML = `<div class="qbar"><a href="${fromToday ? '#today' : '#chords'}" class="x">×</a><span class="meter"><i style="width:${Math.min(100, (d.clean || 0) / 3 * 100)}%"></i></span><small>${Math.min(3, d.clean || 0)}/3</small></div>
       <section class="arp">
-        <h2>${D(sym)} 琶音 · 两个八度</h2>
+        <h2>${D(sym)} 琶音 · 两个八度 ${pkTag(PK.state('arp:' + sym))}</h2>
         <div class="chips"><button class="chip${ARP.hand === 'R' ? ' on' : ''}" data-act="ahand" data-v="R">右手</button><button class="chip${ARP.hand === 'L' ? ' on' : ''}" data-act="ahand" data-v="L">左手</button></div>
         ${placeChips()}
         <div id="akb">${kb(a.up.map((n, i) => ({ midi: n.midi, f: fingers[i] || '' })), { tap: place() === 'away' })}</div>
@@ -690,7 +730,7 @@
       onAdvance: i => document.querySelectorAll('#akb .k').forEach(k => k.classList.toggle('next', +k.dataset.m % 12 === seq[i].midi % 12 && Math.abs(+k.dataset.m - seq[i].midi) < (place() === 'away' ? 1 : 13))),
       onMiss: (i, h) => { toast(h ? `听到 ${h}，应该是 ${D(T.noteAt(0, seq[i].midi % 12).name)}` : '不对'); },
       onMode: () => ($('#dctl').innerHTML = arpCtl()),
-      onDone: r => { relisten = DR && DR.mode === 'mic'; logEv('arp', { s: sym, miss: r.miss, n: r.total, bpm: S.arp[sym].bpm, m: DR ? DR.mode : '' }); const g = award(Math.max(0, 1 - r.miss / r.total), 'arp'); arpResult(sym, r.miss === 0, r.miss); toast(`${g[0]} 级 · +${g[2]} 分`); },
+      onDone: r => { relisten = DR && DR.mode === 'mic'; logEv('arp', { s: sym, miss: r.miss, n: r.total, bpm: S.arp[sym].bpm, m: DR ? DR.mode : '' }); const g = award(Math.max(0, 1 - r.miss / r.total), 'arp'); if (r.miss === 0) PK.mark('arp:' + sym, DR && DR.mode === 'mic'); arpResult(sym, r.miss === 0, r.miss); toast(`${g[0]} 级 · +${g[2]} 分`); },
     });
     if (place() === 'away') DR.mode = 'tap';
     $('#dctl').innerHTML = arpCtl();
@@ -729,7 +769,7 @@
     const drafts = SONG_DRAFTS.filter(d => !songs.some(s => s.title === d.title));
     view.innerHTML = `<header class="top"><div><small>经典与流行 · 和声逻辑 · 背谱</small><h1>曲目</h1></div><a class="stat" href="#scan"><b>⌗</b><small>识谱</small></a><a class="stat" href="#edit-new"><b>＋</b><small>手动</small></a></header>
       <a class="unitbar" href="#scan"><small>新歌</small><b>上传谱子的截图或 PDF，自动认出和弦</b><small>认出后自动判断调、级数和功能，马上可以练</small></a>
-      <ul class="list">${songs.map(s => { const lv = (S.songs[s.id] || { level: 0 }).level; return `<li><a href="#song-${s.id}"><span><b>${esc(s.title)}</b><small>${esc(s.sub || '')} · ${s.key ? kz(s.key) : '未设调'}</small></span><span class="lv">${[0, 1, 2, 3].map(i => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')}</span></a></li>`; }).join('')}
+      <ul class="list">${songs.map(s => { const lv = (S.songs[s.id] || { level: 0 }).level; return `<li><a href="#song-${s.id}"><span><b>${esc(s.title)}</b><small>${esc(s.sub || '')} · ${s.key ? kz(s.key) : '未设调'}</small></span><span class="lv2"><span class="lv">${[0, 1, 2, 3].map(i => `<i class="${i < lv ? 'on' : i < (S.songs[s.id] || {}).away ? 'half' : ''}"></i>`).join('')}</span><small>${pkTag(songSt(s.id)) || '未学'}</small></span></a></li>`; }).join('')}
       ${drafts.map(d => `<li class="draft"><a href="#edit-new-${SONG_DRAFTS.indexOf(d)}"><span><b>${esc(d.title)}</b><small>${esc(d.sub)}</small></span><span class="arr">＋</span></a></li>`).join('')}</ul>
       <p class="fine">右边四格 = 背谱的四层：看全谱 → 遮 1/3 → 遮 2/3 → 只看功能。在「编辑」里改成你手上谱的和弦，系统会自动分析级数、功能和终止式。</p>`;
   }
@@ -773,7 +813,7 @@
     const s = allSongs().find(x => x.id === route[1]);
     if (!s) return go('#songs');
     if (!s.sections.length || !s.key) return go('#edit-' + s.id);
-    const lv = (S.songs[s.id] || { level: 0 }).level;
+    const lv = songLv(s.id);
     const origLinks = s.orig ? `<div class="row origlinks">${s.orig.apple ? `<a class="ghost sm" href="${s.orig.apple}" target="_blank" rel="noopener">Apple Music 听录音 ↗</a>` : ''}${s.orig.imslp ? `<a class="ghost sm" href="${s.orig.imslp}" target="_blank" rel="noopener">IMSLP 原版乐谱 ↗</a>` : ''}</div>` : '';
     view.innerHTML = `<header class="top"><div><a class="back" href="#songs">←</a><small>${esc(s.sub || '')}</small><h1>${esc(s.title)}</h1></div><a class="stat" href="#edit-${s.id}"><b>✎</b><small>编辑</small></a></header>
       <section class="orig first"><h3>原谱</h3>
@@ -787,7 +827,7 @@
         ${route[2] ? `<p class="hitnote">从 <b>${D(route[3] || '')}</b> 和弦页过来：橙色框的是第 ${route[2].split('.').join('、')} 小节。点格子可以听。</p>` : ''}
         <div class="grid" id="grid">${songGrid(s)}</div>
         <p class="explain" id="explain">点任意和弦：听声音，并看它是什么意思。</p>
-        <div class="row"><button class="ghost" data-act="splay" data-id="${s.id}">▶ 播放进行</button><a class="btn" href="#mem-${s.id}">弹下来 · 第 ${Math.min(4, lv + 1)} 层 →</a></div>
+        <div class="row"><button class="ghost" data-act="splay" data-id="${s.id}">▶ 播放进行</button><a class="btn" href="#mem-${s.id}">${place() === 'away' ? '屏幕上点出来' : '在琴上弹下来'} · 第 ${Math.min(4, lv + 1)} 层 →</a></div>
         <p class="fine">${esc(s.note || '')}</p>
       </section>
       <section class="logic"><h3>谱面逻辑 <small>· 点下划线的词看解释</small></h3>${songLogic(s).map(l => `<p>${l}</p>`).join('')}</section>
@@ -876,6 +916,7 @@
     CAL = CAL || { y: new Date().getFullYear(), m: new Date().getMonth() };
     view.innerHTML = `<header class="top"><div><a class="back" href="#today">←</a><small>记录</small><h1>我</h1></div></header>
       <section class="stats"><div><b>${streak()}</b><small>连续天</small></div><div><b>${S.xp}</b><small>XP</small></div><div><b>${UNITS.filter(u => unitState(u.id).done).length}/${UNITS.length}</b><small>单元</small></div></section>
+      ${pkSummary()}
       <div class="calhead"><button class="ghost sm" data-act="calmonth" data-v="-1">‹</button><b>${CAL.y} 年 ${CAL.m + 1} 月</b><button class="ghost sm" data-act="calmonth" data-v="1">›</button></div>
       <div id="calmonth">${calHtml(calWeeks(CAL.y, CAL.m))}</div>
       <p class="fine callegend">一天一小节：音符越高 = 练得越久，颜色越深 · 实心 = 当天 4 步都完成 · 空心 = 练了一部分 · 休止符 = 休息日 · 橙色双竖线 = 背下了一首曲子。点任意一天看详情。</p>
@@ -887,6 +928,53 @@
       <div class="row"><button class="ghost" data-act="export">导出备份</button><button class="ghost" data-act="import">导入备份</button><button class="ghost" data-act="reset">清空</button></div>
       <p class="fine">进度保存在这台 iPhone 上（两份 + 每日快照）。建议「添加到主屏幕」使用，iOS 不会清理主屏幕 App 的数据。换手机或重装前点「导出备份」，可以存到「文件」或 iCloud。<br>iPhone 静音键打开时可能听不到声音，请关闭静音。</p>`;
     storInfo();
+  }
+
+  function pkSummary() {
+    const cards = COURSE_ORDER.flatMap(ck => COURSES[ck].cards), cs = cards.map(symSt);
+    const arps = Object.keys(S.arp || {}).map(a => PK.state('arp:' + a)), ss = allSongs().map(s => songSt(s.id));
+    const n = st => cs.filter(x => x === st).length + arps.filter(x => x === st).length + ss.filter(x => x === st).length;
+    return `<section class="stats pkstats"><div><b>${n(2) + cs.filter(x => x === 3).length}</b><small>琴上弹过 / 不用上琴</small></div><div><b>${n(1)}</b><small>已学 · 未上琴</small></div><div><b>${cards.length - cs.filter(Boolean).length}</b><small>还没学的课</small></div></section>
+      ${n(1) ? `<a class="unitbar todo" href="#pk"><small>上琴补弹</small><b>${n(1)} 项等你回到琴边</b></a>` : ''}`;
+  }
+  const toPiano = t => String(t).replace(/在键盘上点出/g, '在琴上弹出').replace(/点出/g, '弹出').replace(/点一个/g, '弹一个').replace(/是哪个键？/g, '弹出来').replace(/^点 /, '弹 ').replace(/<b>点<\/b>/g, '<b>弹</b>');
+  function vPk() {
+    const id = route[1];
+    if (!id) {
+      const td = pianoTodo();
+      view.innerHTML = `<header class="top"><div><a class="back" href="#today">←</a><small>屏幕上学过 · 还没在琴上弹过</small><h1>上琴补弹</h1></div></header>
+        ${modeSwitch()}
+        <p class="fine">没钢琴时学会的东西，只算「已学 · 未上琴」。回到琴边，打开收音，把它们在琴上弹一遍，才会变成「琴上弹过」。手指要真的按过，才会记得住。</p>
+        ${td.length ? `<ul class="list">${td.map(x => `<li><a href="${x.href}"><span><b>${x.t}</b><small>${x.sub}${x.d && x.d !== '旧记录' ? ' · ' + x.d + ' 在屏幕上学的' : ''}</small></span><span class="arr">→</span></a></li>`).join('')}</ul>` : '<p class="donemsg">没有待补弹的。屏幕上学过的，都已经在琴上弹过了。</p>'}
+        <p class="pageend">— 到底了 —</p>`;
+      return;
+    }
+    const card = COURSE_ORDER.flatMap(ck => COURSES[ck].cards).find(c => c.id === id);
+    if (!card) return go('#pk');
+    const tasks = [0, 1, 2].map(i => card.task(i)).filter(t => t.type === 'tap');
+    view.innerHTML = `<div class="qbar"><a href="#pk" class="x">×</a><span class="meter"><i id="pkbar" style="width:0%"></i></span><small id="pkn">1/${tasks.length}</small></div>
+      <section class="pkrun"><small>上琴补弹 · ${esc(card.title)}</small><h2><span class="symchip">${card.big}</span> 在琴上弹出来</h2>
+      ${place() === 'away' ? `<p class="no">现在是「没钢琴」模式。补弹要在琴上、打开收音，才能记为「琴上弹过」。</p>${modeSwitch()}` : `
+      <p class="ask" id="pkask"></p>
+      <div id="dctl"></div>
+      <p class="fine">收音只能判断音对不对。题目里说「最左边 / 最低音」的，请自己看准再弹。</p>`}
+      </section>`;
+    if (place() === 'away') return;
+    drillStart(tasks.map(t => ({ kind: t.pcs.length === 1 ? 'note' : 'chord', pcs: t.pcs, label: toPiano(t.ask) })), {
+      onAdvance: i => { $('#pkask').innerHTML = toPiano(tasks[i].ask); $('#pkn').textContent = (i + 1) + '/' + tasks.length; $('#pkbar').style.width = (i / tasks.length * 100) + '%'; },
+      onMiss: (i, h) => toast(h ? `听到 ${h}，再试一次` : '不对，再试一次'),
+      onMode: () => ($('#dctl').innerHTML = drillControls()),
+      onDone: r => {
+        const mic = DR && DR.mode === 'mic';
+        logEv('pk', { id: card.id, miss: r.miss, n: r.total, m: DR ? DR.mode : '' });
+        if (mic) PK.mark('sym:' + card.id, true);
+        $('#pkbar').style.width = '100%';
+        $('.pkrun').innerHTML = `<h2>${mic ? '在琴上弹出来了' : '完成'}</h2><p class="${mic ? 'ok' : 'no'}">${mic ? `「${esc(card.title)}」现在是「琴上弹过」${r.miss ? `（中间错了 ${r.miss} 次）` : ''}` : '没有通过收音确认，仍记为「已学 · 未上琴」'}</p><div class="cta"><a class="btn" href="#pk">下一项 →</a></div>`;
+      },
+    });
+    DR.cands = tasks.map(t => t.pcs);
+    $('#dctl').innerHTML = drillControls();
+    if ((relisten || S.micOK)) { relisten = false; drillListen(); }
   }
 
   // ---------------- 即兴伴奏 ----------------
@@ -1220,12 +1308,12 @@
       drillJudge(ok);
     }
   }
-  const placeChips = () => `<div class="chips place"><button class="chip${place() === 'piano' ? ' on' : ''}" data-act="place" data-v="piano">在琴边</button><button class="chip${place() === 'away' ? ' on' : ''}" data-act="place" data-v="away">不在琴边</button></div>`;
+  const placeChips = () => `<div class="chips place"><button class="chip${place() === 'piano' ? ' on' : ''}" data-act="place" data-v="piano">有钢琴</button><button class="chip${place() === 'away' ? ' on' : ''}" data-act="place" data-v="away">没钢琴</button></div>`;
   function drillControls() {
     if (!DR) return '';
     if (DR.mode === 'tap') return `<div id="tapkb">${kb([], { lo: 48, hi: 71, tap: true })}</div><p class="fine">在屏幕键盘上点出${DR.targets[0].kind === 'note' ? '下一个音' : '这个和弦的所有音（任意八度）'}。横屏键盘更大。</p>`;
     if (DR.mode === 'mic') return `<div class="micbar"><span class="meter"><i id="lvl"></i></span><small>正在听 · 弹错会标红</small><button class="ghost sm" data-act="dstop">停止</button></div>`;
-    return `<div class="row"><button class="btn" data-act="dlisten">开始收音 · 弹给它听</button></div><p class="fine">打开麦克风后，弹对一个它就自动往下走。不方便出声时，选上面的「不在琴边」在屏幕上点。</p>`;
+    return `<div class="row"><button class="btn" data-act="dlisten">开始收音 · 弹给它听</button></div><p class="fine">打开麦克风后，弹对一个它就自动往下走。不方便出声时，选上面的「没钢琴」在屏幕上点（会记为「已学 · 未上琴」）。</p>`;
   }
 
   // ---------------- 背谱 = 弹下来（四层） ----------------
@@ -1239,11 +1327,11 @@
     const s = allSongs().find(x => x.id === route[1]);
     if (!s) return go('#songs');
     const fromToday = route[2] === 'today';
-    const st = (S.songs[s.id] = S.songs[s.id] || { level: 0 });
-    const lv = Math.min(3, st.level);
+    const st = (S.songs[s.id] = S.songs[s.id] || { level: 0, away: 0 });
+    const away = place() === 'away', lv = Math.min(3, songLv(s.id));
     const flat = songFlat(s), bars = s.sections.flatMap(sec => parseBars(sec.bars));
     const hideMode = [null, 'names', 'degree', 'all'][lv];
-    view.innerHTML = `<div class="qbar"><a href="${fromToday ? '#today' : '#song-' + s.id}" class="x">×</a><span class="meter"><i id="mprog" style="width:0%"></i></span><small>第 ${lv + 1}/4 层</small></div>
+    view.innerHTML = `<div class="qbar"><a href="${fromToday ? '#today' : '#song-' + s.id}" class="x">×</a><span class="meter"><i id="mprog" style="width:0%"></i></span><small>${away ? '屏幕' : '琴上'} 第 ${lv + 1}/4 层</small></div>
       <section class="mem"><h2>${esc(s.title)} · ${MEM_LV[lv][0]}</h2><p class="fine">${MEM_LV[lv][1]} 一个和弦弹对了才会往下走。</p>
       ${placeChips()}
       <div class="stf" id="memstaff">${Staff.html({ key: s.key, bars, hide: lv ? flat.map((_, i) => i) : [], hideMode, mark: 0, end: true })}</div>
@@ -1263,11 +1351,13 @@
         relisten = DR && DR.mode === 'mic';
         const pass = r.miss === 0 && !DR.hinted;
         logEv('mem', { id: s.id, lv, miss: r.miss, n: r.total, hint: DR.hinted ? 1 : 0, m: DR.mode });
-        if (pass) { st.level = Math.min(4, st.level + 1); if (st.level === 4) logEv('piece', { id: s.id }); }
+        const mic = DR && DR.mode === 'mic';
+        if (pass && mic) { st.level = Math.min(4, lv + 1); st.away = Math.max(st.away || 0, st.level); if (st.level === 4) logEv('piece', { id: s.id }); }
+        else if (pass) st.away = Math.min(4, lv + 1);
         const g = award(Math.max(0, 1 - (r.miss + (DR.hinted ? 1 : 0)) / r.total), 'mem');
         S.xp += pass ? 30 : 10; save();
         if (fromToday) completeStep('song');
-        $('#dctl').innerHTML = gradeHtml(g) + `<p class="${pass ? 'ok' : 'no'}">${pass ? '一遍弹下来，没有错 · 升到第 ' + Math.min(4, st.level + 1) + ' 层' : '弹完了，错 ' + r.miss + ' 次' + (DR.hinted ? '、看了提示' : '') + ' · 留在这一层再来一遍'}</p><div class="row">${fromToday ? flowBtn() : `<a class="btn" href="#song-${s.id}">完成</a>`}<button class="ghost" data-act="mredo">再来一遍</button></div>`;
+        $('#dctl').innerHTML = gradeHtml(g) + `<p class="${pass ? 'ok' : 'no'}">${pass ? (mic ? '在琴上一遍弹下来，没有错 · 琴上升到第 ' + Math.min(4, lv + 2) + ' 层' : '屏幕上一遍点对 · 屏幕升到第 ' + Math.min(4, lv + 2) + ' 层（记为「已学 · 未上琴」，回到琴边再弹）') : '弹完了，错 ' + r.miss + ' 次' + (DR.hinted ? '、看了提示' : '') + ' · 留在这一层再来一遍'}</p><div class="row">${fromToday ? flowBtn() : `<a class="btn" href="#song-${s.id}">完成</a>`}<button class="ghost" data-act="mredo">再来一遍</button></div>`;
       },
     });
     DR.cands = cands; DR.hinted = false;
@@ -1391,7 +1481,8 @@
     view.innerHTML = `<header class="top"><div><a class="back" href="#path">←</a><small>${cards.filter(x => symDone(x.id)).length}/${cards.length} 已学会</small><h1>${C.title}</h1></div></header>
       <p class="fine">${intro}</p>
       ${nx ? `<div class="cta flow"><a class="btn" href="#sym-${nx.id}">学下一个：${nx.big} · ${nx.title} →</a></div>` : `<p class="donemsg">${C.title}全部学会了。下面任何一课都可以点开再看。</p>`}
-      <ol class="path symlist">${cards.map((x, i) => { const st = symDone(x.id) ? 'done' : x === nx ? 'cur' : 'lock'; return `<li class="${st}"><a href="${st === 'lock' ? '#sym' : '#sym-' + x.id}"><span class="node">${st === 'done' ? '✓' : i + 1}</span><span><b><span class="symchip">${x.big}</span> ${x.title}</b><small>${st === 'lock' ? '学完前一个后解锁' : x.say.slice(0, 26) + '…'}</small></span></a></li>`; }).join('')}</ol>`;
+      <ol class="path symlist">${cards.map((x, i) => { const st = symDone(x.id) ? 'done' : x === nx ? 'cur' : 'lock'; return `<li class="${st}"><a href="${st === 'lock' ? '#sym' : '#sym-' + x.id}"><span class="node">${st === 'done' ? '✓' : i + 1}</span><span><b><span class="symchip">${x.big}</span> ${x.title}</b><small>${st === 'lock' ? '学完前一个后解锁' : x.say.slice(0, 26) + '…'}</small>${st === 'done' ? symTag(x) : ''}</span></a></li>`; }).join('')}</ol>
+      ${cards.some(x => symSt(x) === 1) ? `<a class="unitbar todo" href="#pk"><small>上琴补弹</small><b>${cards.filter(x => symSt(x) === 1).length} 课已学 · 未上琴</b><small>有钢琴时，在琴上把这几课的题弹一遍</small></a>` : ''}`;
   }
   function symDemo(card) {
     stopAll(); A.init();
@@ -1504,7 +1595,7 @@
     return s + `<br><span class="fine">${card.say}</span>`;
   }
   function symFinish() {
-    S.sym = S.sym || {}; S.sym[SY.card.id] = 1; S.xp += 15;
+    S.sym = S.sym || {}; S.sym[SY.card.id] = 1; S.xp += 15; PK.mark('sym:' + SY.card.id, false);
     const d = day(); d.symToday = (d.symToday || 0) + 1; save();
     if (SY.fromToday && (d.symToday >= 2 || coursesDone())) completeStep('learn');
     $('#symbar').style.width = '100%';

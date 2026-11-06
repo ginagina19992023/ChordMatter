@@ -514,3 +514,27 @@ details.find[open] .arr { transform: rotate(180deg); }
 .bar.hit { outline: 1.5px solid var(--acc); outline-offset: -1.5px; }
 .hitnote { font-size: 13.5px; border-left: 2px solid var(--acc); padding: 2px 0 2px 10px; margin: 6px 0 10px; }
 .pageend { text-align: center; color: var(--line); font-size: 12px; margin: 26px 0 0; letter-spacing: .2em; }
+
+/* 有钢琴 / 没钢琴 */
+.modesw { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; margin: 4px 0 6px; }
+.modesw button { background: none; border: 0; padding: 10px 10px 9px; text-align: left; color: var(--mute); font: inherit; cursor: pointer; }
+.modesw button + button { border-left: 1px solid var(--line); }
+.modesw button b { display: block; font-size: 15px; font-weight: 500; }
+.modesw button small { display: block; font-size: 11px; line-height: 1.35; margin-top: 2px; }
+.modesw button.on { color: var(--ink); background: var(--soft); }
+.modesw button.on b { font-weight: 600; }
+.pk { display: inline-block; font-size: 10.5px; line-height: 1; padding: 3px 6px; border-radius: 999px; border: 1px solid var(--line); color: var(--mute); font-weight: 400; vertical-align: middle; white-space: nowrap; margin-top: 4px; }
+.pk1 { border-style: dashed; border-color: var(--acc); color: var(--acc); }
+.pk2 { border-color: var(--ink); color: var(--ink); }
+h2 .pk { margin: 0 0 0 6px; }
+.lv2 { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.lv2 small { font-size: 10.5px; }
+.lv i.half { background: none; border: 1px dashed var(--acc); height: 1px; }
+section.todo { margin: 18px 0 0; }
+section.todo h3 { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+section.todo h3 small { font-weight: 400; color: var(--mute); font-size: 12px; }
+section.todo .list .pk { margin: 0; }
+a.more { display: block; text-align: right; font-size: 13px; color: var(--mute); padding: 8px 0; }
+.unitbar.todo { border-style: dashed; border-color: var(--acc); }
+.pkrun .ask { font-size: 20px; line-height: 1.5; margin: 18px 0; }
+.pkstats { margin-bottom: 12px; }
