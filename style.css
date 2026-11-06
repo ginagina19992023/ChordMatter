@@ -610,7 +610,7 @@ details.melwhy summary { font-weight: 600; font-size: 15px; cursor: pointer; pad
 /* 原曲说明 + 跟录音弹 */
 .origcopy { margin-top: 10px; font-size: 14px; line-height: 1.65; }
 .origcopy p { margin: 6px 0; }
-.origcopy .btn { display: block; text-align: center; margin: 10px 0; color: var(--bg); }
+.origcopy .btn { display: flex; margin: 10px 0; color: var(--bg); }
 .origcopy a:not(.btn) { color: var(--S); }
 .alsteps { font-size: 13.5px; line-height: 1.6; padding-left: 20px; color: var(--mute); }
 .alsteps a { color: var(--S); }
@@ -698,3 +698,14 @@ g.pfm:hover .pfm-tri, g.pfm:active .pfm-tri { fill: var(--S); opacity: 1; }
 .selbar span { flex: 1; }
 
 .lvchips .chip.locked { color: var(--mute); border-style: dashed; }
+
+/* 曲目页顶部：一排小按钮，说明点 ⓘ 才弹出 */
+.songtop { margin: 0 0 14px; }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill { display: inline-flex; align-items: center; border: 1px solid var(--line); background: none; border-radius: 999px; padding: 5px 11px; font: inherit; font-size: 13px; color: var(--ink); cursor: pointer; white-space: nowrap; }
+.pill.info { color: var(--mute); }
+a.pill { color: var(--S); }
+.mybox { margin-top: 10px; }
+.infopop .infobody p { font-size: 14px; line-height: 1.65; margin: 0 0 8px; }
+.infopop .infobody a { color: var(--S); }
+.infopop { max-height: 70vh; overflow-y: auto; }

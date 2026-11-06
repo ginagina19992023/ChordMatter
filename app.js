@@ -852,6 +852,43 @@
       <div class="opts">${q.opts.map(o => `<button class="opt${q.ans ? (o === right ? ' right' : o === q.ans ? ' wrong' : '') : ''}" data-act="cbans" data-v="${esc(o)}"${q.ans ? ' disabled' : ''}><b>${D(o)}</b><small>${q.ans ? fw(o) : ''}</small></button>`).join('')}</div>
       ${q.ans ? `<p class="why">${why}</p><div class="row"><button class="ghost sm" data-act="cbqyours">▶ 听你选的</button><button class="btn" data-act="cbnext">下一题 →</button></div>` : ''}`;
   }
+  // 曲目页顶部：只放一排小按钮；解释类的内容点 ⓘ 才在旁边弹出
+  function songTop(s) {
+    const o = s.orig || {}, sc = o.score;
+    const main = hasFull(s.id) ? `<a class="scorelink" href="#cmp-${s.id}"><b>原曲 ↔ 和弦伴奏 · 上下对比</b><small>右手旋律 / 原曲左手 / 和弦左手 · 练习版 · 可贴歌词</small><span>→</span></a>`
+      : sc ? `<a class="scorelink" href="#score-${s.id}"><b>${sc.made ? '打开新造谱' : '打开完整原谱'}</b><small>${sc.made ? '原谱左手 + 和弦右手 · 小节号对原谱' : '每小节标好和弦 · 可听全部'}</small><span>→</span></a>` : '';
+    return `<section class="songtop">${main}
+      <div class="pills">
+        <button class="pill info" data-act="info" data-k="src">ⓘ 和弦来源 · ${srcLabel(s)}</button>
+        ${s.copy ? '<button class="pill info" data-act="info" data-k="orig">ⓘ 原曲在哪</button>' : ''}
+        ${s.copy ? `<a class="pill" href="#along-${s.id}">跟录音弹</a>` : ''}
+        ${s.melody ? `<a class="pill" href="#sing-${s.melody}">原曲旋律 + 伴奏</a>` : ''}
+        ${o.apple ? `<a class="pill" href="${o.apple}" target="_blank" rel="noopener">Apple Music ↗</a>` : ''}
+        ${o.imslp ? `<a class="pill" href="${o.imslp}" target="_blank" rel="noopener">IMSLP 原版谱 ↗</a>` : ''}
+        <button class="pill" data-act="mytoggle">我的原谱 ${S.myOpen ? '⌃' : '⌄'}</button>
+      </div>
+      <div class="mybox"${S.myOpen ? '' : ' hidden'}><p class="fine">对照你手上的谱：截图、照片或 PDF，只存在这台手机上。</p><div id="myscore"></div></div></section>`;
+  }
+  function songInfo(s, k) {
+    if (k === 'src') return ['这些和弦从哪来', srcBox(s).replace(/<\/?section[^>]*>/g, '').replace(/<h3>.*?<\/h3>/, '')];
+    if (k === 'orig') return ['原曲在哪', `<p>这首歌有版权，App 里不能放它的旋律和录音，只放和弦。把伴奏和原曲对上：</p><p>① 点「Apple Music」先完整听一遍原曲，边听边看下面的谱（小节号对着原曲）。</p><p>② 点「跟录音弹」：在 Apple Music 里放原曲，跟着拍子点 4 下，App 按原曲的速度一小节一小节亮出和弦，你和录音一起弹伴奏。</p><p class="fine">想先弄懂「旋律 → 伴奏」怎么配出来，可以看没有版权的 <a href="#sing-twinkle">小星星</a>、<a href="#sing-canon">卡农</a>。</p>`];
+    if (k === 'how') return ['怎么看这张谱', `<p>每一小节正上方是它的和弦：<b>小节号 · 和弦 · 级数 · 稳/走/紧</b>。</p><p>点<b>小节空白处</b>播放这一小节；<b>长按</b>可以选好几个小节；小节线上的<b>小三角</b>从那里播到结尾；点<b>和弦标注</b>看这一小节的依据；点<b>音符</b>听这个音。</p><p class="fine">${S.pro ? 'I IV V = 大三和弦，ii vi = 小三和弦' : '6m = 六级小和弦 · 5⁷/2 = 五级七和弦、低音弹 2'}</p>`];
+    return ['', ''];
+  }
+  function infoPop(anchor, title, html) {
+    document.querySelectorAll('.cpop, .tpop').forEach(x => x.remove());
+    const host = document.getElementById('phone') || document.body;
+    const el = document.createElement('div'); el.className = 'tpop'; el.dataset.act = 'tpopclose';
+    el.innerHTML = `<div class="tpop-card infopop" data-act="tpopstay"><i class="tpop-arrow"></i><div class="tpop-h"><b>${title}</b></div><div class="infobody">${html}</div></div>`;
+    host.appendChild(el);
+    const card = el.querySelector('.tpop-card'), arrow = el.querySelector('.tpop-arrow'), hr = el.getBoundingClientRect(), r = anchor.getBoundingClientRect();
+    const W = Math.min(340, hr.width - 24); card.style.width = W + 'px';
+    const cx = r.left - hr.left + r.width / 2, left = Math.max(12, Math.min(hr.width - W - 12, cx - W / 2));
+    const H = card.offsetHeight, below = r.bottom - hr.top + 10, above = r.top - hr.top - 10 - H, up = below + H > hr.height - 70 && above > 10;
+    card.style.left = left + 'px'; card.style.top = Math.max(8, up ? above : below) + 'px';
+    arrow.style.left = Math.max(14, Math.min(W - 14, cx - left)) + 'px'; card.classList.add(up ? 'up' : 'down');
+    tpopAt = Date.now(); requestAnimationFrame(() => el.classList.add('open'));
+  }
   function srcBox(s) {
     const src = s.src || 'simplified', bmS = songBarMap(s), ev = s.ev ? Object.entries(s.ev).filter(([n]) => bmS[n]).map(([, e]) => e) : [];
     const low = ev.filter(e => e.conf === 'low').length, printed = ev.filter(e => e.printed).length;
@@ -1109,16 +1146,9 @@
     const lv = songLv(s.id);
     const origLinks = s.orig ? `<div class="row origlinks">${s.orig.apple ? `<a class="ghost sm" href="${s.orig.apple}" target="_blank" rel="noopener">Apple Music 听录音 ↗</a>` : ''}${s.orig.imslp ? `<a class="ghost sm" href="${s.orig.imslp}" target="_blank" rel="noopener">IMSLP 原版乐谱 ↗</a>` : ''}</div>` : '';
     view.innerHTML = `<header class="top"><div><a class="back" href="#songs">←</a><small>${esc(s.sub || '')}</small><h1>${esc(s.title)}</h1></div><a class="stat" href="#edit-${s.id}"><b>✎</b><small>编辑</small></a></header>
-      <section class="orig first"><h3>原谱</h3>
-        ${hasFull(s.id) ? `<a class="scorelink" href="#cmp-${s.id}"><b>原曲 ↔ 和弦伴奏 · 上下对比</b><small>按你的谱逐音扒下来的原曲 · 每小节三行：右手旋律 / 原曲左手 / 和弦左手 · 还有「右手原曲 + 左手和弦」练习版 · 可贴歌词</small><span>→</span></a>` : s.orig && s.orig.score ? (s.orig.score.made ? `<a class="scorelink" href="#score-${s.id}"><b>打开新造谱</b><small>按你上传的谱逐小节转写：左手是原谱左手，右手是这一小节的和弦 · 每小节标好和弦 · 可听、可点音、可分段 · 小节号对原谱</small><span>→</span></a>` : `<a class="scorelink" href="#score-${s.id}"><b>打开完整原谱</b><small>每小节上方标好了和弦和级数 · 学习段落高亮 · 点音符发声 · 可听全部</small><span>→</span></a>`) : ''}
-        ${s.orig && s.orig.score && s.orig.score.made ? `<details class="mine"><summary>对照你手上的原谱（图片只存在这台手机）</summary><div id="myscore"></div></details>` : '<div id="myscore"></div>'}
-        ${origBox(s)}
-        ${origLinks}
-      </section>
-      ${srcBox(s)}
+      ${songTop(s)}
       <section class="songmain">
-        <div class="chips"><button class="chip${S.songView === 'grid' || S.songView === 'roll' ? '' : ' on'}" data-act="songview" data-v="sheet">谱 + 和弦</button><button class="chip${S.songView === 'roll' ? ' on' : ''}" data-act="songview" data-v="roll">瀑布流</button><button class="chip${S.songView === 'grid' ? ' on' : ''}" data-act="songview" data-v="grid">只看和弦格子</button><span class="sp"></span><button class="chip${S.pro ? '' : ' on'}" data-act="pro" data-v="0">简单写法</button><button class="chip${S.pro ? ' on' : ''}" data-act="pro" data-v="1">专业写法</button></div>
-        <p class="fine legend">${S.songView === 'grid' ? '每格左上角的小数字 = 原谱的小节号。' : '每一小节的正上方就是它的和弦：小节号 · 和弦 · 级数 · 稳/走/紧。<b>点任何一小节</b>，就在旁边看到它在原谱里是什么音、为什么是这个和弦；点音符听它。'}${S.pro ? ' I IV V = 大三和弦，ii vi = 小三和弦' : ' 6m = 六级小和弦 · 5⁷/2 = 五级七和弦、低音弹 2'} · <a href="#logic">这些字是什么意思？</a></p>
+        <div class="chips"><button class="chip${S.songView === 'grid' || S.songView === 'roll' ? '' : ' on'}" data-act="songview" data-v="sheet">谱 + 和弦</button><button class="chip${S.songView === 'roll' ? ' on' : ''}" data-act="songview" data-v="roll">瀑布流</button><button class="chip${S.songView === 'grid' ? ' on' : ''}" data-act="songview" data-v="grid">只看和弦格子</button><span class="sp"></span><button class="chip${S.pro ? '' : ' on'}" data-act="pro" data-v="0">简单写法</button><button class="chip${S.pro ? ' on' : ''}" data-act="pro" data-v="1">专业写法</button><button class="pill info" data-act="info" data-k="how">ⓘ 怎么看</button></div>
         ${route[2] ? `<p class="hitnote">从 <b>${D(route[3] || '')}</b> 和弦页过来：要找的是第 ${route[2].split('.').join('、')} 小节${S.songView === 'grid' ? '（橙色框）' : '（谱上橙色）'}。</p>` : ''}
         ${harmonyStrip(s)}${(() => { RL.maxLv = hasFull(s.id) ? 3 : 2; RL.lvl3name = '两只手全部音符'; if (RL.lvl > RL.maxLv || (RL.lvl === 3 && rollPassed() < 2)) RL.lvl = 1; return ''; })()}
         ${S.songView === 'grid' ? `<div class="grid" id="grid">${songGrid(s)}</div>` : S.songView === 'roll' ? rollPanel('songroll') : songSheet(s)}
@@ -2490,6 +2520,8 @@
       case 'playfrom': playBars(+el.dataset.n, null); toast('从第 ' + el.dataset.n + ' 小节播放到结尾'); break;
       case 'selplay': playBars(Math.min(SELB.a, SELB.b), Math.max(SELB.a, SELB.b)); break;
       case 'selclear': SELB.on = false; selPaint(); stopAll(); dockReset(); break;
+      case 'info': { const sg = allSongs().find(x => x.id === route[1]); if (!sg) break; const [t, h] = songInfo(sg, el.dataset.k); infoPop(el, t, h); break; }
+      case 'mytoggle': S.myOpen = !S.myOpen; save(); { const b = document.querySelector('.mybox'); if (b) b.hidden = !S.myOpen; } el.textContent = '我的原谱 ' + (S.myOpen ? '⌃' : '⌄'); break;
       case 'dockplay': if (document.querySelector('.roll')) { rollGo(); break; } dockPlay(); break;
       case 'rlmode': RL.mode = el.dataset.v; Roll.stop(); drillStop(); render(); break;
       case 'rllvl': if (el.dataset.locked) { toast('先在「中等」用「等你弹」一遍弹对，困难才解锁'); break; } RL.lvl = +el.dataset.v; Roll.stop(); drillStop(); render(); break;
