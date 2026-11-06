@@ -1,15 +1,12 @@
 :root {
-  --bg: #f7f6f2; --ink: #111; --mute: #8a8880; --line: #d9d7d0; --soft: #ecebe6;
+  --bg: #ffffff; --ink: #1a1a1a; --mute: #8e8e8e; --line: #e6e6e6; --soft: #f4f4f4;
   --acc: #e8541e; --acc-soft: #fbe3d8; --good: #1f8a5b; --bad: #c8372d;
   --T: #111; --S: #2f6fdb; --D: #e8541e;
-  --kw: #fffefb; --kbk: #161616; --kline: #111; --kon: #fbd9c9; --kontext: #c2410c; --klh: #d6e3fb;
+  --kw: #ffffff; --kbk: #161616; --kline: #111; --kon: #fbd9c9; --kontext: #c2410c; --klh: #d6e3fb;
   --r: 10px;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --bg: #111; --ink: #f2f1ec; --mute: #8d8b84; --line: #2e2d2a; --soft: #1c1b19; --acc: #ff6a33; --acc-soft: #3a2117; --good: #3fbf86; --bad: #ff6a5f; --T: #f2f1ec; --S: #6d9cff; --D: #ff6a33; --kw: #ecebe6; --kbk: #0b0b0b; --kline: #000; --kon: #ffc7ad; --kontext: #b8400d; --klh: #c9dafb; color-scheme: dark; }
-}
-:root[data-theme="dark"] { --bg: #111; --ink: #f2f1ec; --mute: #8d8b84; --line: #2e2d2a; --soft: #1c1b19; --acc: #ff6a33; --acc-soft: #3a2117; --good: #3fbf86; --bad: #ff6a5f; --T: #f2f1ec; --S: #6d9cff; --D: #ff6a33; --kw: #ecebe6; --kbk: #0b0b0b; --kline: #000; --kon: #ffc7ad; --kontext: #b8400d; --klh: #c9dafb; color-scheme: dark; }
+/* 只用浅色：素、白、线条 */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; background: var(--bg); color: var(--ink); }
 button:focus-visible, a:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
@@ -292,7 +289,7 @@ details { margin: 14px 0; } summary { cursor: pointer; color: var(--ink); }
 
 /* 练习流 */
 .cta.flow { margin: 0 0 18px; }
-.cta.flow .btn { min-height: 54px; font-size: 17px; }
+.cta.flow .btn { min-height: 52px; font-size: 16px; background: none; color: var(--ink); border: 1px solid var(--ink); }
 .cta.flow .ok { color: var(--good); font-weight: 600; margin: 0; }
 .donemsg { text-align: center; color: var(--good); margin: 0 0 18px; }
 /* 参考视频 */
@@ -437,9 +434,9 @@ dl.stor { margin: 0 0 6px; font-size: 13px; }
 
 /* 宽屏（电脑预览）时用手机外框模拟 iPhone：外框是一个固定大小、自己滚动的容器 */
 @media (min-width: 760px) {
-  html, body { background: color-mix(in srgb, var(--ink) 6%, var(--bg)); }
+  html, body { background: #f3f3f3; }
   body { padding: 24px 0; }
-  #phone { width: 390px; height: 800px; margin: 0 auto; border: 10px solid #1b1b1b; border-radius: 48px; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; transform: translateZ(0); box-shadow: 0 30px 60px rgba(0,0,0,.18); scrollbar-width: none; background: var(--bg); position: relative; }
+  #phone { width: 390px; height: 800px; margin: 0 auto; border: 1px solid #dcdcdc; border-radius: 40px; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; transform: translateZ(0); box-shadow: 0 12px 40px rgba(0,0,0,.06); scrollbar-width: none; background: var(--bg); position: relative; }
   #phone::-webkit-scrollbar { display: none; }
   #phone main { padding-top: 34px; }
   #phone .cxtop { margin-top: -34px; padding-top: 40px; }
