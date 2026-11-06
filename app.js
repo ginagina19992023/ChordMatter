@@ -2600,6 +2600,13 @@
   async function shareGo(save) {
     const el = document.querySelector('.sharepop'); if (!el || !el.__blob) return;
     const file = new File([el.__blob], el.__name, { type: 'image/png' });
+    // 在 Claude 里打开时：网页不能自己下载，要走 Claude 的「保存文件」（iPhone 上会弹出系统分享面板）
+    const dl = window.claude && window.claude.use ? await window.claude.use('downloads').catch(() => null) : null;
+    if (dl) {
+      try { await dl.save({ filename: el.__name, data: el.__blob }); toast(save ? '已保存' : '已交给系统'); }
+      catch (e) { const c = e && e.code; if (c === 'declined') return; toast(c === 'rate_limited' ? '上一个保存还没完成，稍等再点' : '这里存不了 · 长按图片保存'); }
+      return;
+    }
     if (!save) { try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: el.__name }); return; } } catch (e) { if (e && e.name === 'AbortError') return; } toast('这里不能直接分享 · 已改为保存图片'); }
     const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = el.__name; document.body.appendChild(a); a.click(); a.remove();
   }
