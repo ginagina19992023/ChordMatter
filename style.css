@@ -954,3 +954,5 @@ html.inart body:not(.land) #pbar { padding-top: calc(env(safe-area-inset-top) + 
 .seg small { padding: 0 4px 0 10px; font-size: 12px; }
 .seg.perrow button { padding: 0 9px; }
 .cbstaff { margin: 0 -6px; }
+/* 左右翻页：每一页的内容只在自己那一页里显示（不然下一页五线谱的大括号会露到这一页右边） */
+.pg { overflow-x: hidden; overflow-x: clip; }
