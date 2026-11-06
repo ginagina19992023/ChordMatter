@@ -8,6 +8,7 @@ step() { echo; echo "── $1"; shift; if "$@"; then ok=$((ok+1)); else bad=$((
 
 step "语法检查" bash -c 'for f in *.js tools/*.js; do node --check "$f" || exit 1; done; echo "✓ $(ls *.js tools/*.js | wc -l) 个文件语法正确"'
 step "没有重名函数（后写的会悄悄覆盖前面的）" bash -c 'd=$(for f in *.js; do grep -oE "^\s*function [a-zA-Z0-9_]+\(" "$f" | sed -E "s/^\s*function //; s/\(//" | sort | uniq -d | sed "s|^|$f: |"; done); if [ -n "$d" ]; then echo "$d"; exit 1; fi; echo "✓ 没有重名函数"'
+step "关键界面不为空" node tools/test-views.js
 step "乐理引擎" node tools/test-theory.js
 
 if ! curl -s -o /dev/null http://localhost:8765/index.html; then (python3 -m http.server 8765 >/dev/null 2>&1 &); sleep 1; fi

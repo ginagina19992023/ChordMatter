@@ -1150,6 +1150,54 @@
     const bm = songBarMap(s)[n]; if (!bm) return '';
     return n + '  ' + bm.map(x => { const a = T.analyze(x, s.key); return D(x) + ' ' + degLabel(x, s.key) + (a && FUNC_ZH[a.func] ? ' ' + FUNC_ZH[a.func] : ''); }).join('  ·  ');
   }
+  // ---------------- 键盘图层：用键盘上的高低看和弦（和弦格子下面）----------------
+  // 三层可以分别开关：调内音（铺底）· 感觉色（稳走紧）· 和弦音（圆点 + 字：级数 / R 3 5 7 / 音名）；「只看」R 3 5 7 9
+  const KL = { i: 0 };
+  const klCfg = () => (S.kl = Object.assign({ scale: true, feel: true, tones: true, label: 'int', show: { R: 1, 3: 1, 5: 1, 7: 1, 9: 1 } }, S.kl || {}));
+  const INTV = { 0: 'R', 1: '♭9', 2: '9', 3: '♭3', 4: '3', 5: '11', 6: '♭5', 7: '5', 8: '♯5', 9: '6', 10: '♭7', 11: '7' };
+  const INT_GROUP = { 0: 'R', 3: '3', 4: '3', 6: '5', 7: '5', 8: '5', 10: '7', 11: '7', 1: '9', 2: '9', 5: '9', 9: '9' };
+  function klDeg(pc, key) {
+    const sc = T.scale(T.parseKey(key), true).map(n => T.parseNote(n.name).pc), i = sc.indexOf(pc);
+    if (i >= 0) return String(i + 1);
+    const lo = sc.indexOf((pc + 11) % 12); if (lo >= 0) return '♯' + (lo + 1);
+    const hi = sc.indexOf((pc + 1) % 12); return hi >= 0 ? '♭' + (hi + 1) : '?';
+  }
+  function klHtml(s, sym) {
+    const cfg = klCfg(), c = T.parseChord(sym); if (!c) return '';
+    const K = T.parseKey(s.key), scale = T.scale(K, true).map(n => T.parseNote(n.name).pc), func = chordFunc(sym, s.key);
+    const b = c.bass || c.root; let bass = 36 + b.pc; if (bass < 40) bass += 12;
+    const tones = [bass].concat(T.voicing(c).map(n => n.midi)), root = c.root.pc;
+    // E2–G5：左手低音 + 右手和弦刚好装下，键不会太窄
+    const lo = 40, hi = 79, whites = []; for (let m = lo; m <= hi; m++) if (![1, 3, 6, 8, 10].includes(m % 12)) whites.push(m);
+    const ww = 100 / whites.length, nameOf = m => { const n = c.notes.find(x => x.pc === m % 12) || (c.bass && c.bass.pc === m % 12 ? c.bass : null); return n ? n.name : T.noteAt(0, m % 12).name; };
+    const lab = m => cfg.label === 'deg' ? klDeg(m % 12, s.key) : cfg.label === 'name' ? D(nameOf(m)) : INTV[((m - root) % 12 + 12) % 12];
+    let html = '';
+    const key = (m, x, w, black) => {
+      const inSc = scale.includes(m % 12), isT = tones.includes(m), grp = INT_GROUP[((m - root) % 12 + 12) % 12], vis = isT && cfg.tones && cfg.show[grp];
+      return `<div class="lk ${black ? 'b' : 'w'}${cfg.scale && inSc ? ' sc' : ''}" style="left:${x}%;width:${w}%" data-m="${m}">${m % 12 === 0 && !black ? `<small>C${m / 12 - 1}</small>` : ''}${vis ? `<i class="dot${cfg.feel ? ' f' + func : ''}${m === bass ? ' bass' : ''}">${lab(m)}</i>` : isT && cfg.tones ? '<i class="dot ghostdot"></i>' : ''}</div>`;
+    };
+    whites.forEach((m, i) => (html += key(m, i * ww, ww, false)));
+    whites.forEach((m, i) => { if (m + 1 <= hi && [1, 3, 6, 8, 10].includes((m + 1) % 12)) html += key(m + 1, i * ww + ww * 0.66, ww * 0.62, true); });
+    return `<div class="lkb">${html}</div>`;
+  }
+  function klPanel(s) {
+    const cfg = klCfg(), flat = songFlat(s), i = Math.min(KL.i, flat.length - 1), sym = flat[i], a = T.analyze(sym, s.key);
+    const chip = (k, v, n, on) => `<button class="chip sm${on ? ' on' : ''}" data-act="klset" data-k="${k}" data-v="${v}">${n}</button>`;
+    return `<section class="klpanel" id="klpanel">
+      <div class="klhead"><button class="ghost sm" data-act="klstep" data-v="-1">‹</button><div><b>${D(sym)}</b><small>${a ? degLabel(sym, s.key) + ' · ' + (FUNC_ZH[a.func] || '') : ''} · 第 ${i + 1}/${flat.length} 个和弦</small></div><button class="ghost sm" data-act="klstep" data-v="1">›</button></div>
+      ${klHtml(s, sym)}
+      <div class="klrow"><small>图层</small>${chip('scale', 1, '调内音', cfg.scale)}${chip('feel', 1, '感觉色', cfg.feel)}${chip('tones', 1, '和弦音', cfg.tones)}</div>
+      <div class="klrow"><small>圆点里写</small>${chip('label', 'int', 'R 3 5 7', cfg.label === 'int')}${chip('label', 'deg', '级数 1–7', cfg.label === 'deg')}${chip('label', 'name', '音名', cfg.label === 'name')}</div>
+      <div class="klrow"><small>只看</small>${['R', '3', '5', '7', '9'].map(g => chip('show', g, g, cfg.show[g])).join('')}</div>
+      <p class="fine">左边单独那个圆点（粗边）是左手低音，右边一组是右手和弦。只看 3 和 7：换和弦时这两个音通常只挪一点点，手跟着它们走就顺了。</p>
+    </section>`;
+  }
+  function klShow(i) {
+    const s = allSongs().find(x => x.id === route[1]); if (!s) return;
+    const n = songFlat(s).length; KL.i = Math.max(0, Math.min(n - 1, i));
+    const p = $('#klpanel'); if (p) p.outerHTML = klPanel(s);
+    document.querySelectorAll('#grid .cell').forEach(c => c.classList.toggle('sel', +c.dataset.i === KL.i));
+  }
   // 当前看的是哪一段（-1 = 全曲）：长曲子一次只看一段，不要从上滑到下
   function secRange(s, si) { const st = sectionStarts(s); if (si < 0) return null; return [st[si], st[si] + parseBars(s.sections[si].bars).length - 1]; }
   function songSheet(s, si = -1) {
@@ -1211,7 +1259,7 @@
       <div class="chips scroll"><button class="chip${v === 'sheet' ? ' on' : ''}" data-act="songview" data-v="sheet">谱 + 和弦</button><button class="chip${v === 'roll' ? ' on' : ''}" data-act="songview" data-v="roll">瀑布流</button><button class="chip${v === 'grid' ? ' on' : ''}" data-act="songview" data-v="grid">和弦格子</button>${hasFull(s.id) ? `<a class="chip linkchip" href="#cmp-${s.id}">原曲↔和弦 →</a>` : ''}<button class="pill info" data-act="info" data-k="how">ⓘ</button></div>
       ${secChips}
       ${route[2] ? `<p class="hitnote">从 <b>${D(route[3] || '')}</b> 和弦页过来：要找的是第 ${route[2].split('.').join('、')} 小节。</p>` : ''}
-      ${v === 'grid' ? `<div class="grid" id="grid">${songGrid(s, si)}</div><p class="explain" id="explain">点任意和弦：听声音，并看它是什么意思。</p>` : v === 'roll' ? rollEntry('song', hasFull(s.id) ? '整首按原谱落下：简单只弹和弦，中等加左手低音，困难是原曲两只手' : '整首落下：简单只弹和弦，中等加左手低音') : songSheet(s, si)}`;
+      ${v === 'grid' ? `<div class="grid" id="grid">${songGrid(s, si)}</div>${(() => { const first = view && si >= 0 ? songFlat({ sections: s.sections.slice(0, si) }).length : 0; if (KL.song !== s.id || KL.sec !== si) { KL.song = s.id; KL.sec = si; KL.i = first; } return klPanel(s); })()}<p class="explain" id="explain">点任意和弦：听声音，并看它是什么意思。</p>` : v === 'roll' ? rollEntry('song', hasFull(s.id) ? '整首按原谱落下：简单只弹和弦，中等加左手低音，困难是原曲两只手' : '整首落下：简单只弹和弦，中等加左手低音') : songSheet(s, si)}`;
     if (tab === 'shape') body = `
       ${harmonyStrip(s)}
       <section class="logic"><h3>谱面逻辑 <small>· 点下划线的词看解释</small></h3>${songLogic(s).map(l => `<p>${l}</p>`).join('')}</section>
@@ -2428,7 +2476,7 @@
 
   // ---------------- 文字里的和弦名：自动加下划线，点开浮窗解释 ----------------
   const CHORD_RE = /(^|[^A-Za-z0-9#♯♭\/])([A-G](?:#|♯|b|♭)?(?:maj7|m7b5|m7♭5|dim7|dim|aug|sus2|sus4|m7|m|7|°|ø)?(?:\/[A-G](?:#|♯|b|♭)?)?)(?![A-Za-z0-9#♯♭])/g;
-  const SKIP = 'button, a, svg, input, textarea, select, label, nav, h1, .chain, .hstrip, .cards, .slist, .variant small, .chordref, .kb, .tcard, .symbig, .jp, .grade, .now, .cell, .pc, .opt, .chip, .stat, .qbar, .cxname, .tc-title, .bars, .ring-t, .heat, .jpq, .src, code';
+  const SKIP = 'button, a, svg, input, textarea, select, label, nav, h1, .chain, .hstrip, .cards, .slist, .klpanel, .variant small, .chordref, .kb, .tcard, .symbig, .jp, .grade, .now, .cell, .pc, .opt, .chip, .stat, .qbar, .cxname, .tc-title, .bars, .ring-t, .heat, .jpq, .src, code';
   // 取文字节点前后（跨过 <b> 之类的标签）的几个字
   function sideText(n, dir) {
     let t = '', cur = n;
@@ -2602,7 +2650,7 @@
     }
     A.init();
     switch (act) {
-      case 'explain': { playChord(el.dataset.s); const s = allSongs().find(x => x.id === route[1]); const ex = $('#explain'); if (ex) ex.innerHTML = barEvidence(s, +el.dataset.n, el.dataset.s) + chordExplain(el.dataset.s, s && s.key); document.querySelectorAll('.cell').forEach(c => c.classList.toggle('sel', c === el)); break; }
+      case 'explain': { if ($('#klpanel')) klShow(+el.dataset.i); playChord(el.dataset.s); const s = allSongs().find(x => x.id === route[1]); const ex = $('#explain'); if (ex) ex.innerHTML = barEvidence(s, +el.dataset.n, el.dataset.s) + chordExplain(el.dataset.s, s && s.key); document.querySelectorAll('.cell').forEach(c => c.classList.toggle('sel', c === el)); break; }
       case 'scmode': SC.section = el.dataset.v === '1'; render(); break;
       case 'sglh': SG.lh = el.dataset.v; render(); break;
       case 'songview': S.songView = el.dataset.v; save(); render(); break;
@@ -2632,6 +2680,8 @@
       case 'tagtog': { const id = el.dataset.id, sg = allSongs().find(x => x.id === id); S.tags = S.tags || {}; let t = (S.tags[id] || autoTags(sg)).slice(); const v = el.dataset.v; if (el.dataset.type) t = t.filter(x => !TYPES.includes(x)).concat([v]); else t = t.includes(v) ? t.filter(x => x !== v) : t.concat([v]); S.tags[id] = t; save(); render(); tagPop(document.querySelector('.tagbtn[data-id="' + id + '"]') || document.body, id); break; }
       case 'tagadd': { const v = ($('#newtag').value || '').trim().slice(0, 8); if (!v) break; const id = el.dataset.id, sg = allSongs().find(x => x.id === id); S.tags = S.tags || {}; const t = (S.tags[id] || autoTags(sg)).slice(); if (!t.includes(v)) t.push(v); S.tags[id] = t; save(); render(); tagPop(document.querySelector('.tagbtn[data-id="' + id + '"]') || document.body, id); break; }
       case 'tagreset': e.preventDefault(); if (S.tags) delete S.tags[el.dataset.id]; save(); render(); document.querySelectorAll('.tpop').forEach(x => x.remove()); break;
+      case 'klstep': { const s = allSongs().find(x => x.id === route[1]); klShow(KL.i + +el.dataset.v); playChord(songFlat(s)[KL.i]); break; }
+      case 'klset': { const cfg = klCfg(), k = el.dataset.k, v = el.dataset.v; if (k === 'label') cfg.label = v; else if (k === 'show') cfg.show[v] = cfg.show[v] ? 0 : 1; else cfg[k] = !cfg[k]; save(); klShow(KL.i); break; }
       case 'dockplay': dockPlay(); break;
       case 'rlmode': RL.mode = el.dataset.v; Roll.stop(); drillStop(); if (document.querySelector('.rollfs')) rollOpen(); else render(); break;
       case 'rllvl': if (el.dataset.locked) { toast('先在「中等」用「等你弹」一遍弹对，困难才解锁'); break; } RL.lvl = +el.dataset.v; Roll.stop(); drillStop(); if (document.querySelector('.rollfs')) rollOpen(); else render(); break;
@@ -2712,7 +2762,7 @@
       case 'ademo': arpDemo(el.dataset.s); break;
       case 'ametro': { if (metro) { stopMetro(); el.classList.remove('on'); } else { startMetro(S.arp[route[1]].bpm); el.classList.add('on'); } break; }
       case 'splay': { const s = allSongs().find(x => x.id === el.dataset.id); const flat = songFlat(s); stopAll(); A.init(); const spc = 60 / (s.bpm || 76) * 2;
-        flat.forEach((sym, i) => { const p = T.parseChord(sym); A.note((p.bass ? p.bass.pc : p.root.pc) + 36, i * spc, spc, 0.6); A.chord(chordMidis(sym), i * spc, 0.01, spc); later(() => document.querySelectorAll('#grid .cell').forEach(c => c.classList.toggle('on-play', +c.dataset.i === i)), i * spc * 1000); });
+        flat.forEach((sym, i) => { const p = T.parseChord(sym); A.note((p.bass ? p.bass.pc : p.root.pc) + 36, i * spc, spc, 0.6); A.chord(chordMidis(sym), i * spc, 0.01, spc); later(() => { document.querySelectorAll('#grid .cell').forEach(c => c.classList.toggle('on-play', +c.dataset.i === i)); if ($('#klpanel')) klShow(i); }, i * spc * 1000); });
         later(() => document.querySelectorAll('#grid .cell').forEach(c => c.classList.remove('on-play')), flat.length * spc * 1000); break; }
       case 'sdel': S.custom = S.custom.filter(c => c.id !== el.dataset.id); save(); try { indexedDB.open('hexian-scores', 1).onsuccess = e => { const d = e.target.result; if (d.objectStoreNames.contains('pages')) d.transaction('pages', 'readwrite').objectStore('pages').delete(el.dataset.id); }; } catch (err) {} go('#songs'); break;
       case 'export': exportBackup(); break;
