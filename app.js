@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3;
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 56; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -1492,6 +1492,7 @@
       <h3 class="h3">云端同步</h3><div id="cloudbox" class="cloudbox"></div>
       ${(window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) ? '' : `<div class="installtip"><b>装到手机主屏幕</b><p class="fine">用 Safari 打开这个网址 → 点底部的分享按钮 <span class="kbd">⬆︎</span> → 「添加到主屏幕」。以后点图标直接打开，全屏、离线也能用。</p></div>`}
       <h3 class="h3">数据</h3><div id="storinfo" class="fine">正在检查存储状态…</div>
+      <p class="fine">版本 ${APPV} · 打开时会自动更新到最新版；看不到新功能就把 App 完全关掉再打开一次</p>
       <div class="row"><button class="ghost" data-act="export">导出备份</button><button class="ghost" data-act="import">导入备份</button><button class="ghost" data-act="reset">清空</button></div>
       <p class="fine">进度保存在这台 iPhone 上（两份 + 每日快照）。建议「添加到主屏幕」使用，iOS 不会清理主屏幕 App 的数据。换手机或重装前点「导出备份」，可以存到「文件」或 iCloud。<br>iPhone 静音键打开时可能听不到声音，请关闭静音。</p>`;
     storInfo(); cloudPaint();
@@ -2931,7 +2932,11 @@
       case 'rllvl': if (el.dataset.locked) { toast('先在「中等」用「等你弹」一遍弹对，困难才解锁'); break; } RL.lvl = +el.dataset.v; Roll.stop(); drillStop(); if (document.querySelector('.rollfs')) rollOpen(); else render(); break;
       case 'rollopen': rollOpen(el.dataset.k); break;
       case 'rollclose': rollClose(); break;
-      case 'rlgo': rollGo(); break;
+      case 'rlgo': {
+        // 横屏全屏里点开始：左边选项自动收起，整个屏幕给彩条和键盘（左上角「选项 ›」可以再打开）
+        const ov = document.querySelector('.rollfs');
+        if (ov && !RL.nopanel && (isLand() || ov.classList.contains('rot'))) { RL.nopanel = true; RL.autoHid = true; rollOpen(); setTimeout(rollGo, 60); break; }
+        rollGo(); break; }
       case 'rlstop': stopAll(); Roll.stop(); drillStop(); break;
       case 'rlrate': RL.rate = Math.max(0.4, Math.min(1.6, +(RL.rate + +el.dataset.v).toFixed(2))); $('#rlrate').textContent = Math.round(RL.rate * 100) + '%'; break;
       case 'hstrip': { const s = allSongs().find(x => x.id === route[1]); const r = el.getBoundingClientRect(); if (s) barPop(s, +el.dataset.n, r.left + r.width / 2, r.bottom); break; }
