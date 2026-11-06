@@ -33,13 +33,13 @@ const Staff = (() => {
   const LPC = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 };
   function vexMidi(k) { const m = /^([a-g])(#{1,2}|b{1,2})?\/(-?\d)$/.exec(k); if (!m) return null; const acc = !m[2] ? 0 : m[2][0] === '#' ? m[2].length : -m[2].length; return (+m[3] + 1) * 12 + LPC[m[1]] + acc; }
   // 记录每个音符的位置；点音符头 = 播放那个音，点在小节里别处 = 播放整列和弦
-  function collect(cols, n) {
+  function collect(cols, n, row) {
     const ks = n && (n.getKeys ? n.getKeys() : n.keys);
     if (!ks || !n.getYs || (n.isRest && n.isRest())) return;
     let x; try { x = n.getAbsoluteX(); } catch (e) { return; }
     const ys = n.getYs(), ms = ks.map(vexMidi);
-    let col = cols.find(c => Math.abs(c.x - x) < 6);
-    if (!col) { col = { x, heads: [] }; cols.push(col); }
+    let col = cols.find(c => Math.abs(c.x - x) < 6 && (row == null || (c.y0 === row[0])));
+    if (!col) { col = { x, heads: [], y0: row ? row[0] : -1e9, y1: row ? row[1] : 1e9 }; cols.push(col); }
     ys.forEach((y, i) => ms[i] != null && col.heads.push({ y, m: ms[i] }));
   }
   function clickable(el, cols, W, H) {
@@ -47,10 +47,12 @@ const Staff = (() => {
     svg.style.cursor = 'pointer';
     el.onclick = e => {
       const rc = svg.getBoundingClientRect(), sx = (e.clientX - rc.left) * W / rc.width, sy = (e.clientY - rc.top) * H / rc.height;
-      const col = cols.slice().sort((a, b) => Math.abs(a.x - sx) - Math.abs(b.x - sx))[0];
+      // 只在点到的那一行里找（不同行同一横坐标的音不混在一起）
+      const inRow = cols.filter(c => sy >= c.y0 && sy <= c.y1);
+      const col = (inRow.length ? inRow : cols).slice().sort((a, b) => Math.abs(a.x - sx) - Math.abs(b.x - sx))[0];
       if (!col || Math.abs(col.x - sx) > 40) return;
       const head = col.heads.slice().sort((a, b) => Math.abs(a.y - sy) - Math.abs(b.y - sy))[0];
-      const ms = head && Math.abs(head.y - sy) < 7 && Math.abs(col.x + 6 - sx) < 14 ? [head.m] : col.heads.map(h => h.m);
+      const ms = head && Math.abs(head.y - sy) < 9 && Math.abs(col.x + 8 - sx) < 24 ? [head.m] : col.heads.map(h => h.m);
       el.dispatchEvent(new CustomEvent('staffplay', { detail: ms, bubbles: true }));
     };
   }
@@ -150,7 +152,8 @@ const Staff = (() => {
         tr.setNoteStartX(ns); bs.setNoteStartX(ns);
         fmt.format([tv, bv], Math.max(40, x + w - ns - 14));
         tv.draw(ctx, tr); bv.draw(ctx, bs);
-        tn.forEach(n => collect(cols, n)); bn.forEach(n => { try { const ks = n.getKeys ? n.getKeys() : n.keys; const x = n.getAbsoluteX(); const col = cols.find(c => Math.abs(c.x - x) < 14); if (col && ks && n.getYs && !(n.isRest && n.isRest())) n.getYs().forEach((y, i) => { const m = vexMidi(ks[i]); if (m != null) col.heads.push({ y, m }); }); else collect(cols, n); } catch (e) {} });
+        const rowY = [y - TOP + 2, y - TOP + ROW_H];
+        tn.forEach(n => collect(cols, n, rowY)); bn.forEach(n => { try { const ks = n.getKeys ? n.getKeys() : n.keys; const x = n.getAbsoluteX(); const col = cols.find(c => Math.abs(c.x - x) < 14 && c.y0 === rowY[0]); if (col && ks && n.getYs && !(n.isRest && n.isRest())) n.getYs().forEach((yy, i) => { const m = vexMidi(ks[i]); if (m != null) col.heads.push({ y: yy, m }); }); else collect(cols, n, rowY); } catch (e) {} });
         x += w;
       });
     });

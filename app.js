@@ -386,7 +386,7 @@
     route = (location.hash.replace(/^#\/?/, '') || 'today').split(/[-\/]/).map(decodeURIComponent);
     const r = route[0];
     document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.dataset.r === r || (r === 'song' && a.dataset.r === 'songs') || (r === 'unit' && a.dataset.r === 'path')));
-    drillStop(); document.querySelectorAll('.giftov').forEach(x => x.remove());
+    drillStop(); document.querySelectorAll('.giftov, .cpop').forEach(x => x.remove());
     document.body.classList.toggle('focus', ['quiz', 'arp', 'mem', 'sing', 'acctest'].includes(r) || (['sym', 'inv', 'logic'].includes(r) && route[1]));
     document.querySelectorAll('nav a').forEach(x => { if ((r === 'sing' || r === 'acctest') && x.dataset.r === 'acc') x.classList.add('on'); if (['know', 'sym', 'inv', 'logic'].includes(r) && x.dataset.r === 'path') x.classList.add('on'); if ((r === 'score' || r === 'scan') && x.dataset.r === 'songs') x.classList.add('on'); });
     ({ today: vToday, path: vPath, unit: vUnit, chords: vChords, songs: vSongs, song: vSong, edit: vEdit, quiz: vQuiz, arp: vArp, mem: vMem, me: vMe, acc: vAcc, sing: vSing, acctest: vAccTest, know: vKnow, score: vScore, scan: vScan, sym: vSym, inv: vInv, cards: vCards, logic: vLogic }[r] || vToday)();
@@ -1412,7 +1412,8 @@
     const r = SY.reps[SY.i], el = $('#symtask');
     $('#symbar').style.width = (SY.i / SY.reps.length * 100) + '%';
     SY.tap = []; SY.locked = false;
-    const head = `<p class="symask">${r.review ? `<span class="tag">复习 ${r.review.big}</span>` : `<span class="tag">试一试 ${SY.i + (SY.reps[0].review ? 0 : 1)}/3</span>`}${r.ask}</p>`;
+    const k = SY.reps.slice(0, SY.i + 1).filter(x => !x.review && !x.extra).length;
+    const head = `<p class="symask">${r.review ? `<span class="tag">复习 ${r.review.big}</span>` : r.extra ? '<span class="tag">再练一次</span>' : `<span class="tag">试一试 ${k}/3</span>`}${r.ask}</p>`;
     const shown = (r.showStaff ? `<div class="symshow">${Staff.html({ bars: [[r.showStaff]], numerals: false, perRow: 1, exact: true, hideName: true })}</div>` : '') + (r.showKb && r.type !== 'tap' ? `<div class="symshow">${kb(r.showKb.map(x => ({ midi: x.m, f: x.f })), { lo: 48, hi: 83, trim: true })}</div>` : '') + (r.showKb && r.type === 'tap' ? `<p class="fine">刚才弹的：${r.showKb.map(x => x.f).join(' ')}</p>` : '');
     if (r.type === 'tap') el.innerHTML = head + shown + `<div id="symkb">${kb([], { lo: 48, hi: 83, tap: true })}</div><p class="fine" id="symhint">任意八度都可以。点错了再点一下取消。</p><div id="symfb"></div>`;
     else el.innerHTML = head + shown + `${r.play ? '<button class="ghost sm" data-act="symplay">▶ 听</button>' : ''}<div class="opts">${r.options.map(o => `<button class="opt" data-act="sympick" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div><div id="symfb"></div>`;
@@ -1439,15 +1440,37 @@
     const r = SY.reps[SY.i];
     logEv('sym', { c: (r.review || SY.card).id, ok: ok ? 1 : 0 });
     const fb = $('#symfb');
-    if (ok) { fb.innerHTML = '<p class="ok">对了</p>'; if (r.sym) A.chord(chordMidis(r.sym), 0.15, 0.01, 0.9); }
-    else {
+    if (ok) {
+      fb.innerHTML = '<p class="ok">对了</p>'; if (r.sym) A.chord(chordMidis(r.sym), 0.15, 0.01, 0.9);
+      // 前进用独立计时器：不会被演示播放（stopAll）打断
+      const me = SY; clearTimeout(SY.adv); SY.adv = setTimeout(() => { if (SY !== me || !$('#symtask')) return; symAdvance(); }, 800);
+    } else {
       SY.miss++;
       if (showAnswer) showAnswer();
-      fb.innerHTML = `<p class="no">还不对，正确的已经标出来了${r.answer ? '：' + esc(r.answer) : ''}</p>`;
+      fb.innerHTML = `<div class="whybox"><p class="no">还不对</p><p>${symWhy(r)}</p><button class="btn" data-act="symnext">明白了，${r.extra ? '继续' : '再练一次'} →</button></div>`;
+      if (r.play) symPlay(r);
       if (!r.extra) SY.reps.splice(SY.i + 1, 0, Object.assign(SY.card.task(SY.i + 3), { extra: 1 })); // 错了就多练一次
     }
-    // 前进用独立计时器：不会被演示播放（stopAll）打断
-    const me = SY; clearTimeout(SY.adv); SY.adv = setTimeout(() => { if (SY !== me || !$('#symtask')) return; SY.i++; if (SY.i >= SY.reps.length) symFinish(); else symRep(); }, ok ? 800 : 2200);
+  }
+  function symAdvance() { SY.i++; if (SY.i >= SY.reps.length) symFinish(); else symRep(); }
+  // 错题讲解：说清楚对的是什么、为什么
+  const nn = pc => D(T.noteAt([0, 0, 1, 2, 2, 3, 3, 4, 4, 5, 6, 6][pc], pc).name);
+  function symWhy(r) {
+    const card = r.review || SY.card;
+    if (r.why) return r.why;
+    if (r.type === 'tap') {
+      const want = r.sym ? T.parseChord(r.sym).notes.map(n => D(n.name)) : r.pcs.map(nn);
+      const got = SY.tap.slice().sort((x, y) => x - y).map(m => nn(m % 12));
+      let s = `正确的是 <b>${want.join('、')}</b>（绿色标出来了）。你点的是 ${got.join('、') || '—'}。`;
+      if (r.bass != null) {
+        const low = SY.tap.length ? nn(Math.min(...SY.tap) % 12) : '—';
+        s += `<br>这题还要看<b>最左边（最低）</b>的音：应该是 <b>${nn(r.bass)}</b>，你最左边弹的是 ${low}。${r.pcs.every(p => SY.tap.some(m => m % 12 === p)) ? '三个音都对了，只是最低音没放对：把它挪到最左边就行。' : ''}`;
+      } else if (r.sym) s += `<br>${chordExplain(r.sym)}`;
+      return s;
+    }
+    let s = `正确答案是 <b>${esc(r.answer)}</b>。`;
+    if (r.play) { const ps = [].concat(r.play); s += `<br>刚才弹的是 ${ps.map(x => `<b>${D(x)}</b>（${degLabel(x, 'C')}）`).join(' → ')}，再听一遍。`; }
+    return s + `<br><span class="fine">${card.say}</span>`;
   }
   function symFinish() {
     S.sym = S.sym || {}; S.sym[SY.card.id] = 1; S.xp += 15;
@@ -1571,6 +1594,68 @@
     el.innerHTML = `<b>${title}</b><p>练习 ${x.min} 分钟 · 今日 ${x.steps}/4 步${x.piece ? ' · 背下了一首曲子' : ''}</p>${x.grades.length ? `<p class="fine">评级：${x.grades.join(' ')}</p>` : ''}${x.cards.length ? `<p class="fine">得到卡：${x.cards.map(id => (cardSong(id) || { title: id }).title).join('、')}</p>` : ''}`;
   }
 
+
+  // ---------------- 文字里的和弦名：自动加下划线，点开浮窗解释 ----------------
+  const CHORD_RE = /(^|[^A-Za-z0-9#♯♭\/])([A-G](?:#|♯|b|♭)?(?:maj7|m7b5|m7♭5|dim7|dim|aug|sus2|sus4|m7|m|7|°|ø)?(?:\/[A-G](?:#|♯|b|♭)?)?)(?![A-Za-z0-9#♯♭])/g;
+  const SKIP = 'button, a, svg, input, textarea, select, label, nav, h1, .chordref, .kb, .tcard, .symbig, .jp, .grade, .now, .cell, .pc, .opt, .chip, .stat, .qbar, .cxname, .tc-title, .bars, .ring-t, .heat, .jpq, .src, code';
+  // 取文字节点前后（跨过 <b> 之类的标签）的几个字
+  function sideText(n, dir) {
+    let t = '', cur = n;
+    while (t.length < 8 && cur) {
+      const sib = dir < 0 ? cur.previousSibling : cur.nextSibling;
+      if (sib) { cur = sib; t = dir < 0 ? sib.textContent + t : t + sib.textContent; }
+      else { cur = cur.parentNode; if (!cur || (cur.matches && cur.matches('p, td, li, div, section'))) break; }
+    }
+    return dir < 0 ? t.slice(-8) : t.slice(0, 8);
+  }
+  function linkChords(root) {
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => (!n.nodeValue.trim() || !/[A-G]/.test(n.nodeValue) || (n.parentElement && n.parentElement.closest(SKIP))) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
+    const nodes = []; while (w.nextNode()) nodes.push(w.currentNode);
+    nodes.forEach(n => {
+      const txt = n.nodeValue; let m, last = 0, frag = null;
+      // 单个字母（C、F）可能只是音名或调名：同一句里有明确的和弦（Am、G/B、G7）或后面跟「和弦」时才当和弦
+      const ctx = (n.parentElement && n.parentElement.closest('p, td, li, .say, .symask, .tip, .explain')) || n.parentElement;
+      const ctxText = ctx ? ctx.textContent : txt;
+      const hasClear = /(^|[^A-Za-z0-9])[A-G](#|♯|b|♭)?(maj7|m7b5|m7♭5|dim7|dim|aug|sus2|sus4|m7|m|7|°|ø|\/[A-G])/.test(ctxText);
+      CHORD_RE.lastIndex = 0;
+      while ((m = CHORD_RE.exec(txt))) {
+        const sym = m[2], after = txt.slice(m.index + m[0].length, m.index + m[0].length + 3);
+        if (/^[A-G]$/.test(sym) && /^\s?[段站面]/.test(after)) continue; // 「A 段」「B 站」不是和弦
+        if (/^[A-G](#|♯|b|♭)?$/.test(sym) && !hasClear && !/^\s?(和弦|大三|级和弦)/.test(after)) continue; // 单独的音名 / 调名不当和弦
+        if (/^[A-G](#|♯|b|♭)?$/.test(sym)) {
+          const before = (sideText(n, -1) + txt.slice(0, m.index + m[1].length)).slice(-6);
+          const aft = (txt.slice(m.index + m[0].length) + sideText(n, 1)).slice(0, 3);
+          if (/(后面是|不是|音是|根音|弹|音|键)\s*$/.test(before) || /^\s[A-G]([\s,，、。]|$)/.test(aft) || /[A-G]\s$/.test(before)) continue; // 「最低音是 B」「C B A」是音名
+        }
+        const norm = sym.replace(/♯/g, '#').replace(/♭/g, 'b').replace(/°$/, 'dim').replace(/ø$/, 'm7b5');
+        if (!T.parseChord(norm)) continue;
+        frag = frag || document.createDocumentFragment();
+        const st = m.index + m[1].length;
+        frag.appendChild(document.createTextNode(txt.slice(last, st)));
+        const sp = document.createElement('span'); sp.className = 'chordref'; sp.dataset.act = 'chordpop'; sp.dataset.s = norm; sp.textContent = sym;
+        frag.appendChild(sp); last = st + sym.length;
+      }
+      if (frag) { frag.appendChild(document.createTextNode(txt.slice(last))); n.parentNode.replaceChild(frag, n); }
+    });
+  }
+  let linkT = null;
+  new MutationObserver(() => { clearTimeout(linkT); linkT = setTimeout(() => linkChords(view), 60); }).observe(view, { childList: true, subtree: true });
+  function chordPop(sym) {
+    document.querySelectorAll('.cpop').forEach(x => x.remove());
+    const c = T.parseChord(sym); if (!c) return;
+    const song = route[0] === 'song' || route[0] === 'mem' ? allSongs().find(x => x.id === route[1]) : null;
+    const v = T.voicing(c);
+    const el = document.createElement('div'); el.className = 'cpop';
+    el.innerHTML = `<div class="cpop-card" role="dialog" aria-label="${esc(D(sym))}">
+      <div class="cpop-h"><b>${D(sym)}</b><button class="ghost sm" data-act="play" data-s="${esc(sym)}">▶ 听</button><button class="x" data-act="cpopclose" aria-label="关闭">×</button></div>
+      <p>${chordExplain(sym, song && song.key)}</p>
+      <div class="cpop-v">${Staff.html({ bars: [[sym]], numerals: false, perRow: 1, exact: true, minBar: 60 })}${kb(v.map(n => ({ midi: n.midi, f: D(n.name) })), { trim: true })}</div>
+      <a class="fine" href="#know-k0">和弦名怎么读 →</a></div>`;
+    (document.getElementById('phone') || document.body).appendChild(el);
+    A.init(); A.chord(v.map(n => n.midi), 0, 0.02, 1.2);
+    requestAnimationFrame(() => el.classList.add('open'));
+  }
+
   // ---------------- 知识点 ----------------
   function vKnow() {
     const id = route[1];
@@ -1606,6 +1691,7 @@
       case 'symdemo': symDemo(SY.card); break;
       case 'sympick': { if (!SY || SY.locked) break; const r = SY.reps[SY.i]; const ok = el.dataset.v === r.answer; document.querySelectorAll('#symtask .opt').forEach(b => { if (b.dataset.v === r.answer) b.classList.add('right'); else if (b === el) b.classList.add('wrong'); b.disabled = true; }); symJudge(ok); break; }
       case 'symplay': symPlay(SY.reps[SY.i]); break;
+      case 'symnext': symAdvance(); break;
       case 'dlisten': drillListen(); break;
       case 'dstop': drillStop(); DR && (DR.mode = 'self'); $('#dctl') && ($('#dctl').innerHTML = drillControls()); break;
       case 'mhint': { if (!DR) break; DR.hinted = true; const t = DR.targets[DR.i]; if (t) { const ex = $('#explain'); if (ex) ex.innerHTML = '提示：' + chordExplain(t.label, (allSongs().find(x => x.id === route[1]) || {}).key); playChord(t.label); } break; }
@@ -1623,6 +1709,8 @@
       case 'play': playChord(el.dataset.s, !!el.dataset.arp); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 300); break;
       case 'prog': playProg(el, el.dataset.k, el.dataset.c.split(','), 84, 2); break;
       case 'flow': nextStep(); break;
+      case 'chordpop': e.preventDefault(); chordPop(el.dataset.s); break;
+      case 'cpopclose': { const p = el.closest('.cpop'); if (p) p.remove(); break; }
       case 'calmonth': { CAL.m += +el.dataset.v; if (CAL.m < 0) { CAL.m = 11; CAL.y--; } if (CAL.m > 11) { CAL.m = 0; CAL.y++; } vMe(); break; }
       case 'giftclose': { const ov = el.closest('.giftov'); if (ov) ov.remove(); break; }
       case 'demo': lessonDemo(); break;

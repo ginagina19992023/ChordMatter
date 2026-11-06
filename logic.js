@@ -40,6 +40,9 @@ const LOGICS = (() => {
       task: i => ({ type: 'pick', ask: pick(['4536 在 C 大调是？', '1564 在 C 大调是？', 'Always Online 主歌的进行是？'], i), options: ['F G Em Am', 'C G Am F', 'Dm G C'], answer: pick(['F G Em Am', 'C G Am F', 'F G Em Am'], i) }) },
     { id: 'l12', big: '低音线', title: '低音线 = 每个和弦最下面的音连起来', say: '谱面逻辑最后的「低音线」，就是左手最低的音排成一行。背谱时先把低音线哼出来，整首的骨架就有了。',
       demo: { keys: [{ m: 48, f: 'C' }, { m: 47, f: 'B' }, { m: 45, f: 'A' }, { m: 43, f: 'G' }], seq: [[48], [47], [45], [43]] },
-      task: i => ({ type: 'pick', ask: pick(['C → G/B → Am 的低音线是？', 'F → G → C 的低音线是？', 'C → C/E → F 的低音线是？'], i), options: ['C B A', 'F G C', 'C E F', 'C G A'], answer: pick(['C B A', 'F G C', 'C E F'], i) }) },
+      task: i => ({ type: 'pick', ask: pick(['C → G/B → Am 的低音线是？', 'F → G → C 的低音线是？', 'C → C/E → F 的低音线是？'], i), options: ['C B A', 'F G C', 'C E F', 'C G A'], answer: pick(['C B A', 'F G C', 'C E F'], i),
+        why: pick(['每个和弦只取最下面那个音：<b>C</b> 没有斜线，最低音就是根音 C；<b>G/B</b> 斜线后面是 B，所以最低音是 <b>B</b>（不是 G）；<b>Am</b> 最低音是根音 A。连起来就是 <b>C B A</b>，一步一步往下走。',
+          '三个都没有斜线，最低音就是各自的根音：F、G、C → <b>F G C</b>。',
+          '<b>C</b> 的最低音是 C；<b>C/E</b> 斜线后是 E，最低音是 <b>E</b>；<b>F</b> 的最低音是 F → <b>C E F</b>，一步一步往上走。'], i) }) },
   ];
 })();

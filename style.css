@@ -470,3 +470,22 @@ a.term { border-bottom: 1px dashed var(--acc); color: inherit; }
 .bar { position: relative; }
 .bn { position: absolute; top: 2px; left: 3px; font-size: 9.5px; color: var(--mute); font-variant-numeric: tabular-nums; }
 .score text.chordlab { fill: #c2410c; font-family: -apple-system, "PingFang SC", sans-serif; font-weight: 600; }
+
+/* 和弦名下划线 + 浮窗 */
+.chordref { border-bottom: 1.5px dotted var(--acc); cursor: pointer; padding: 0 1px; border-radius: 2px; }
+.chordref:active { background: var(--acc-soft); }
+.cpop { position: fixed; inset: 0; z-index: 15; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,0); transition: background .2s; }
+.cpop.open { background: rgba(0,0,0,.25); }
+.cpop-card { width: 100%; max-width: 560px; background: var(--bg); border-top: 1px solid var(--line); border-radius: 16px 16px 0 0; padding: 14px max(16px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 16px); transform: translateY(100%); transition: transform .25s cubic-bezier(.2, .9, .3, 1); box-shadow: 0 -10px 30px rgba(0,0,0,.12); }
+.cpop.open .cpop-card { transform: none; }
+.cpop-h { display: flex; align-items: center; gap: 10px; }
+.cpop-h b { font-size: 30px; font-weight: 500; flex: 1; }
+.cpop-h .x { font-size: 26px; color: var(--mute); width: 36px; height: 36px; }
+.cpop-card p { font-size: 14.5px; line-height: 1.65; margin: 6px 0 8px; }
+.cpop-v { display: grid; grid-template-columns: 36% 1fr; gap: 8px; align-items: center; margin-bottom: 6px; }
+.cpop-v > * { min-width: 0; }
+@media (prefers-reduced-motion: reduce) { .cpop, .cpop-card { transition: none; } }
+
+.whybox { border-left: 2px solid var(--bad); padding: 2px 0 2px 12px; margin-top: 10px; }
+.whybox p { margin: 0 0 8px; line-height: 1.65; }
+.whybox .btn { width: 100%; margin-top: 4px; }
