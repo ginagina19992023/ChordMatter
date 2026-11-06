@@ -12,9 +12,11 @@ const SCENES = (process.argv[2] || 'inversions,function,arpeggio,progression').s
   const b = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
   for (const s of SCENES) {
     const t0 = Date.now();
-    const ctx = await b.newContext({ viewport: { width: 390, height: 700 }, deviceScaleFactor: 2, recordVideo: { dir: TMP, size: { width: 780, height: 1400 } } });
+    // 录屏按 CSS 像素算，不吃 deviceScaleFactor：所以页面开 780×1400、整体放大 2 倍，录出来铺满画面又清楚
+    const ctx = await b.newContext({ viewport: { width: 780, height: 1400 }, recordVideo: { dir: TMP, size: { width: 780, height: 1400 } } });
     const p = await ctx.newPage();
     await p.goto('http://localhost:8765/tools/demo-video.html?s=' + s);
+    await p.addStyleTag({ content: 'body { transform: scale(2); transform-origin: 0 0; }' });
     await p.waitForTimeout(1200);
     const total = await p.evaluate(() => DEMO.total);
     const wav = await p.evaluate(() => DEMO.audio());
@@ -27,7 +29,7 @@ const SCENES = (process.argv[2] || 'inversions,function,arpeggio,progression').s
     fs.writeFileSync(wavPath, Buffer.from(wav, 'base64'));
     const out = path.join(OUT, 'demo-' + s + '.mp4');
     execFileSync('ffmpeg', ['-loglevel', 'error', '-y', '-ss', offset.toFixed(2), '-i', vpath, '-i', wavPath, '-t', String(total), '-map', '0:v', '-map', '1:a',
-      '-vf', 'scale=390:700', '-c:v', 'libx264', '-preset', 'slow', '-crf', '28', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-c:a', 'aac', '-b:a', '96k', out]);
+      '-vf', 'scale=540:970:flags=lanczos', '-c:v', 'libx264', '-preset', 'slow', '-crf', '28', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-c:a', 'aac', '-b:a', '96k', out]);
     execFileSync('ffmpeg', ['-loglevel', 'error', '-y', '-ss', '2', '-i', out, '-frames:v', '1', out.replace('.mp4', '.jpg')]);
     console.log(s, 'offset', offset.toFixed(2), '→', out, Math.round(fs.statSync(out).size / 1024) + 'KB');
   }
