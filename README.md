@@ -49,5 +49,6 @@ GitHub Pages 从 `gh-pages` 分支发布。更新时：`git push origin main && 
 - K.545 乐谱数据：Craig Stuart Sapp, mozart-piano-sonatas，CC BY-NC-SA 4.0，运行时加载
 - BWV 846 乐谱数据：CCARH / humdrum-tools，运行时从原站加载，仅供学习
 - `media/u2-minor-triads.mp4`：Mario Ajero《Back to Basics: Minor Triads》片段（3:16–4:52），CC BY 2.5，https://archive.org/details/MarioAjeroMinorTriadsandLastChristmas ；中文字幕为本项目所加
+- `media/demo-*.mp4`：本项目自己录制的演示视频（转位、稳走紧、C 琶音指法、4536 进行），用 `tools/record-demos.js` 生成
 - `media/bach-prelude-*.mp3`：Sam Tennison 演奏，公有领域，https://archive.org/details/BachWellTemperedKlavierBookI-PreludeInCMajor
 - 曲目和弦为学习用简化分析，请对照乐谱核对

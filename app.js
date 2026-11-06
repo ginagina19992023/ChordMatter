@@ -456,7 +456,7 @@
       if (b.t === 'tip') return `<p class="tip">${b.x}</p>`;
       if (b.t === 'chord') return chordCard(b.s);
       if (b.t === 'prog') return progRow(b.k, b.c);
-      if (b.t === 'video') return `<figure class="vclip"><video controls playsinline preload="metadata" poster="${b.poster}" src="${b.src}">${b.vtt ? `<track kind="subtitles" srclang="zh" label="中文" src="${b.vtt}" default>` : ''}</video><figcaption><b>${b.title}</b><small>${b.credit} · <a href="${b.url}" target="_blank" rel="noopener">原视频 ↗</a></small></figcaption></figure>`;
+      if (b.t === 'video') return `<figure class="vclip${b.tall ? ' tall' : ''}"><video controls playsinline preload="metadata" poster="${b.poster}" src="${b.src}">${b.vtt ? `<track kind="subtitles" srclang="zh" label="中文" src="${b.vtt}" default>` : ''}</video><figcaption><b>${b.title}</b><small>${b.credit}${b.url ? ` · <a href="${b.url}" target="_blank" rel="noopener">原视频 ↗</a>` : ''}</small></figcaption></figure>`;
       if (b.t === 'table') return `<table>${b.rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</table>`;
       return '';
     }).join('');
@@ -652,6 +652,7 @@
         <div id="dctl"></div>
 
         <p class="tip">每拍一个音。弹错一次就退回到慢速：准确比速度重要。拇指穿指时手腕保持水平，眼睛看下一个落点。</p>
+        ${sym === 'C' ? renderBlocks([{ t: 'video', tall: 1, src: 'media/demo-arpeggio.mp4', poster: 'media/demo-arpeggio.jpg', title: '演示视频：C 琶音，每个音用哪根手指（15 秒）', credit: '本应用录制的演示（原创）' }]) : ''}
       </section>`;
     const seq = a.up.concat(a.up.slice(0, -1).reverse());
     drillStart(seq.map(n => ({ kind: 'note', pcs: [n.midi % 12], midi: n.midi })), {
@@ -1383,6 +1384,15 @@
   }
   function vInv() { if (route[1]) { route = ['sym'].concat(route.slice(1)); return vSym(); } vSymIndex('inv'); }
   function vLogic() { if (route[1]) { route = ['sym'].concat(route.slice(1)); return vSym(); } vSymIndex('logic'); }
+  const DEMO_V = n => ({ src: `media/demo-${n}.mp4`, poster: `media/demo-${n}.jpg` });
+  const CARD_VIDEO = {
+    i4: Object.assign(DEMO_V('inversions'), { title: '演示视频：原位 → 一转 → 二转（15 秒）' }),
+    i5: Object.assign(DEMO_V('inversions'), { title: '演示视频：原位 → 一转 → 二转（15 秒）' }),
+    s16: Object.assign(DEMO_V('function'), { title: '演示视频：稳 → 走 → 紧 → 稳（13 秒）' }),
+    l1: Object.assign(DEMO_V('function'), { title: '演示视频：稳 → 走 → 紧 → 稳（13 秒）' }),
+    l5: Object.assign(DEMO_V('function'), { title: '演示视频：一句话的标准路线（13 秒）' }),
+    l11: Object.assign(DEMO_V('progression'), { title: '演示视频：4536 王道进行（15 秒）' }),
+  };
   function vSym() {
     const id = route[1];
     if (!id) return vSymIndex('sym');
@@ -1403,6 +1413,7 @@
         <p class="say">${card.say}</p>
         <div id="symdemo" class="symdemo">${card.demo.staff ? Staff.html({ bars: [[card.demo.staff]], numerals: false, perRow: 1, exact: true }) : ''}${card.demo.jp ? '<div class="jpdemo"><span class="jn u1"><em>5</em></span><small>半拍</small><span class="jn"><em>5</em></span><small>一拍</small><span class="jn"><em>5</em></span><span class="jd">–</span><small>两拍</small><span class="jn"><i class="dt up">•</i><em>5</em></span><small>高八度</small></div>' : ''}${kb(card.demo.keys.map(x => ({ midi: x.m, f: x.f })), { lo: 48, hi: 83, trim: true })}</div>
         <button class="ghost sm" data-act="symdemo">▶ 再看一遍演示</button>
+        ${CARD_VIDEO[card.id] ? renderBlocks([Object.assign({ t: 'video', tall: 1, credit: '本应用录制的演示（原创）' }, CARD_VIDEO[card.id])]) : ''}
         <div id="symtask"></div>
       </section>`;
     later(() => symDemo(card), 300);

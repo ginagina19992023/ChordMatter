@@ -34,6 +34,7 @@ const UNITS = [
     blocks: [
       { t: 'p', x: '最低的音决定转位。<b>原位</b>：根音在最低；<b>第一转位（⁶）</b>：三音在最低；<b>第二转位（⁶₄）</b>：五音在最低。' },
       { t: 'chord', s: 'C' }, { t: 'chord', s: 'C/E' }, { t: 'chord', s: 'C/G' },
+      { t: 'video', src: 'media/demo-inversions.mp4', poster: 'media/demo-inversions.jpg', title: '演示视频：C → C/E → C/G，只把最下面的音搬上去（15 秒）', credit: '本应用录制的演示（原创）', tall: 1 },
       { t: 'table', rows: [['', '右手', '左手'], ['原位', '1-3-5', '5-3-1'], ['第一转位', '1-2-5', '5-3-1'], ['第二转位', '1-3-5', '5-2-1']] },
       { t: 'p', x: '规律：<b>哪两个音之间是四度，就在那里留出更大的手指间隔</b>。别死记，看间距。' },
       { t: 'tip', x: 'K545 前四小节左手只有 I – V⁴₃ – I – IV⁶₄ – I – V⁶₅ – I。转位让左手几乎不用移动。背谱时记这 7 个符号，不要记 32 个音。' },
@@ -54,6 +55,7 @@ const UNITS = [
       { t: 'p', x: '每个和弦都有角色。<b>主功能 T</b>（I、vi，iii）：稳定、在家。<b>下属功能 S</b>（IV、ii）：离开。<b>属功能 D</b>（V、vii°）：紧张，想回家。' },
       { t: 'p', x: '最基本的和声逻辑是 <b>T → S → D → T</b>。绝大多数古典和流行乐句都是这条路的变体。' },
       { t: 'prog', k: 'C', c: ['C', 'F', 'G', 'C'] },
+      { t: 'video', src: 'media/demo-function.mp4', poster: 'media/demo-function.jpg', title: '演示视频：稳 → 走 → 紧 → 稳（13 秒）', credit: '本应用录制的演示（原创）', tall: 1 },
       { t: 'tip', x: '背谱卡壳时问自己：我现在是在家、出门还是回家路上？功能比具体的音更好记。' },
     ],
   },
@@ -91,6 +93,7 @@ const UNITS = [
       { t: 'p', x: '流行音乐反复使用少数几个「模板」，学会一个就等于学会几十首歌。' },
       { t: 'table', rows: [['卡农进行', 'I–V–vi–iii–IV–I–IV–V'], ['1564', 'I–V–vi–IV'], ['6415', 'vi–IV–I–V'], ['1645', 'I–vi–IV–V'], ['4536（王道）', 'IV–V–iii–vi']] },
       { t: 'prog', k: 'C', c: ['C', 'G', 'Am', 'F'] },
+      { t: 'video', src: 'media/demo-progression.mp4', poster: 'media/demo-progression.jpg', title: '演示视频：4536 王道进行，Always Online 的骨架（15 秒）', credit: '本应用录制的演示（原创）', tall: 1 },
       { t: 'tip', x: '你的 Always Online 主歌和副歌都是 4536（F G Em Am）。学新歌时先找模板，剩下的只是变化。' },
     ],
   },

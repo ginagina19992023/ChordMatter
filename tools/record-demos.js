@@ -1,0 +1,35 @@
+// 录制演示视频：画面用 Playwright 录屏，声音用同一套合成音色离线渲染，最后 ffmpeg 合成 mp4
+// 用法：先在 hexian 目录起一个静态服务（python3 -m http.server 8765），再 node tools/record-demos.js
+const { chromium } = require('playwright');
+const fs = require('fs');
+const { execFileSync } = require('child_process');
+const path = require('path');
+const OUT = path.join(__dirname, '..', 'media');
+const TMP = process.env.TMPDIR_DEMO || '/tmp';
+const SCENES = (process.argv[2] || 'inversions,function,arpeggio,progression').split(',');
+
+(async () => {
+  const b = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
+  for (const s of SCENES) {
+    const t0 = Date.now();
+    const ctx = await b.newContext({ viewport: { width: 390, height: 700 }, deviceScaleFactor: 2, recordVideo: { dir: TMP, size: { width: 780, height: 1400 } } });
+    const p = await ctx.newPage();
+    await p.goto('http://localhost:8765/tools/demo-video.html?s=' + s);
+    await p.waitForTimeout(1200);
+    const total = await p.evaluate(() => DEMO.total);
+    const wav = await p.evaluate(() => DEMO.audio());
+    const offset = (Date.now() - t0) / 1000;
+    await p.evaluate(() => DEMO.play());
+    await p.waitForTimeout(total * 1000 + 400);
+    const vpath = await p.video().path();
+    await ctx.close();
+    const wavPath = path.join(TMP, s + '.wav');
+    fs.writeFileSync(wavPath, Buffer.from(wav, 'base64'));
+    const out = path.join(OUT, 'demo-' + s + '.mp4');
+    execFileSync('ffmpeg', ['-loglevel', 'error', '-y', '-ss', offset.toFixed(2), '-i', vpath, '-i', wavPath, '-t', String(total), '-map', '0:v', '-map', '1:a',
+      '-vf', 'scale=390:700', '-c:v', 'libx264', '-preset', 'slow', '-crf', '28', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-c:a', 'aac', '-b:a', '96k', out]);
+    execFileSync('ffmpeg', ['-loglevel', 'error', '-y', '-ss', '2', '-i', out, '-frames:v', '1', out.replace('.mp4', '.jpg')]);
+    console.log(s, 'offset', offset.toFixed(2), '→', out, Math.round(fs.statSync(out).size / 1024) + 'KB');
+  }
+  await b.close();
+})();

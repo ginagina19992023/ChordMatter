@@ -489,3 +489,6 @@ a.term { border-bottom: 1px dashed var(--acc); color: inherit; }
 .whybox { border-left: 2px solid var(--bad); padding: 2px 0 2px 12px; margin-top: 10px; }
 .whybox p { margin: 0 0 8px; line-height: 1.65; }
 .whybox .btn { width: 100%; margin-top: 4px; }
+
+.vclip.tall video { aspect-ratio: 39 / 70; width: auto; max-width: 100%; height: min(460px, 70vh); margin: 0 auto; background: var(--soft); }
+.symcard .vclip { margin: 10px 0 4px; }

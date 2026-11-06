@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390">
+<title>演示视频录制</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  body { margin: 0; width: 390px; height: 700px; overflow: hidden; background: var(--bg); }
+  .stage { padding: 28px 18px; display: flex; flex-direction: column; gap: 14px; height: 700px; box-sizing: border-box; }
+  .ttl { font: 600 15px -apple-system, "PingFang SC", sans-serif; color: var(--mute); letter-spacing: .06em; }
+  .big { font: 500 64px/1 -apple-system, "PingFang SC", sans-serif; letter-spacing: -0.02em; min-height: 66px; }
+  .cap { font: 18px/1.6 -apple-system, "PingFang SC", sans-serif; min-height: 88px; }
+  .cap b { color: var(--acc); }
+  .mark { font: 12px -apple-system, sans-serif; color: var(--mute); margin-top: auto; }
+  .zoom { width: 200px; height: 330px; margin: 0 auto; }
+  .zoom div.staff { width: 200px; transform: scale(1.75); transform-origin: top center; }
+  #vis { display: flex; flex-direction: column; gap: 8px; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="ttl" id="ttl"></div>
+  <div class="big" id="big"></div>
+  <div class="cap" id="cap"></div>
+  <div id="vis"></div>
+  <div class="mark">ChordMatter · 演示</div>
+</div>
+<script src="../vendor/vexflow.js"></script>
+<script src="../theory.js"></script>
+<script src="../staff.js"></script>
+<script>
+// 每个场景：一串步骤 [时间(秒), 和弦或音, 大字, 说明, 键盘上的指法标签]
+const SCENES = {
+  inversions: { title: '转位 · 只把最下面的音搬上去', steps: [
+    [0.6, 'C', 'C', '原位：<b>根音 C</b> 在最下面。C – E – G'],
+    [4.2, 'C/E', 'C/E', '一转：把 C 搬到最上面。最低音变成 <b>三音 E</b>'],
+    [7.8, 'C/G', 'C/G', '二转：再把 E 搬上去。最低音变成 <b>五音 G</b>'],
+    [11.4, 'C', 'C', '三种排法，音都是 C、E、G。<b>看最低音</b>就知道是哪一种'],
+  ], end: 15 },
+  function: { title: '稳 · 走 · 紧 · 稳', steps: [
+    [0.6, 'C', 'C', '<b>稳</b>：一级和弦，像在家'],
+    [3.6, 'F', 'F', '<b>走</b>：四级和弦，出门了'],
+    [6.6, 'G7', 'G7', '<b>紧</b>：五级七和弦，急着回家'],
+    [9.6, 'C', 'C', '回到 <b>稳</b>：一句话说完了（正格终止）'],
+  ], end: 13 },
+  progression: { title: '4536 王道进行 · Always Online', steps: [
+    [0.6, 'F', 'F', '<b>4</b>：F（走）'],
+    [2.8, 'G', 'G', '<b>5</b>：G（紧）'],
+    [5.0, 'Em', 'Em', '<b>3m</b>：Em（稳，但不踏实）'],
+    [7.2, 'Am', 'Am', '<b>6m</b>：Am（稳，带点忧伤）'],
+    [9.6, 'F', 'F G Em Am', '主歌和副歌整段都是这四个和弦，<b>记住模板</b>就记住了骨架'],
+    [10.6, 'G', 'F G Em Am', '主歌和副歌整段都是这四个和弦，<b>记住模板</b>就记住了骨架'],
+    [11.6, 'Em', 'F G Em Am', '主歌和副歌整段都是这四个和弦，<b>记住模板</b>就记住了骨架'],
+    [12.6, 'Am', 'F G Em Am', '主歌和副歌整段都是这四个和弦，<b>记住模板</b>就记住了骨架'],
+  ], end: 15 },
+  arpeggio: { title: 'C 琶音 · 右手指法', arp: true, end: 15 },
+};
+const KEY = new URLSearchParams(location.search).get('s') || 'inversions';
+const SC = SCENES[KEY];
+const $ = s => document.querySelector(s);
+$('#ttl').textContent = SC.title;
+// 键盘（与应用里同样的画法，简化）
+function kb(notes, lo = 55, hi = 84) {
+  const BL = [1, 3, 6, 8, 10], W = 15, H = 70, BW = 9, BH = 44, map = {}; notes.forEach(n => (map[n.midi] = n));
+  let x = 0, xs = {}, wh = '', bl = '';
+  for (let m = lo; m <= hi; m++) if (!BL.includes(m % 12)) { xs[m] = x; x += W; }
+  for (let m = lo; m <= hi; m++) { const n = map[m];
+    if (!BL.includes(m % 12)) wh += `<rect class="k w${n ? ' on' : ''}" data-m="${m}" x="${xs[m] + .5}" y=".5" width="${W - 1}" height="${H}" rx="2"/>` + (n && n.f ? `<text class="fn" x="${xs[m] + W / 2}" y="${H - 6}">${n.f}</text>` : '') + (m % 12 === 0 && !n ? `<text class="cl" x="${xs[m] + W / 2}" y="${H - 6}">C${m / 12 - 1}</text>` : '');
+    else { const bx = xs[m - 1] + W - BW / 2; bl += `<rect class="k b${n ? ' on' : ''}" data-m="${m}" x="${bx}" y=".5" width="${BW}" height="${BH}" rx="1.5"/>` + (n && n.f ? `<text class="fn fb" x="${bx + BW / 2}" y="${BH - 6}">${n.f}</text>` : ''); }
+  }
+  return `<svg class="kb" viewBox="0 0 ${x + 1} ${H + 2}">${wh}${bl}</svg>`;
+}
+function show(sym, big, cap, notes) {
+  $('#big').textContent = big; $('#cap').innerHTML = cap;
+  const vs = notes || T.voicing(T.parseChord(sym)).map(n => ({ midi: n.midi, name: n.name, f: T.disp(n.name) }));
+  $('#vis').innerHTML = '<div class="zoom">' + Staff.html({ bars: [[sym]], numerals: false, perRow: 1, exact: true, minBar: 60, notes: vs.map(n => ({ name: n.name, midi: n.midi })) }) + '</div>' + kb(vs);
+  Staff.mount($('#vis'));
+}
+// 时间表：同时用于画面和声音（离线渲染）
+function timeline() {
+  const ev = []; // [t, midis[], dur]
+  if (SC.arp) {
+    const c = T.parseChord('C'), a = T.arpeggio(c, 'R');
+    const seq = a.up.concat(a.up.slice(0, -1).reverse()), f = a.fingers.concat(a.fingers.slice(0, -1).reverse());
+    seq.forEach((n, i) => ev.push({ t: 1.2 + i * 0.75, midis: [n.midi], dur: 1.1, vis: () => {
+      $('#big').textContent = '手指 ' + f[i];
+      $('#cap').innerHTML = i < 7 ? '上行：<b>1 2 3</b>，拇指从 3 指下面穿过去，再 <b>1 2 3 5</b>' : '下行：<b>5 3 2 1</b>，3 指从拇指上面跨过来，再 <b>3 2 1</b>';
+      $('#vis').innerHTML = '<div class="zoom">' + Staff.html({ bars: [['C']], numerals: false, perRow: 1, exact: true, minBar: 60, notes: [{ name: n.name, midi: n.midi }] }) + '</div>' + kb(seq.slice(0, 7).map((x, k) => ({ midi: x.midi, f: String(a.fingers[k]) })), 59, 85);
+      Staff.mount($('#vis'));
+      document.querySelectorAll('.kb .k').forEach(k => k.classList.toggle('on-play', +k.dataset.m === n.midi));
+    } }));
+    ev.unshift({ t: 0.2, midis: [], dur: 0, vis: () => { $('#big').textContent = 'C – E – G'; $('#cap').innerHTML = '两个八度的 C 琶音。看着亮起来的键和数字，<b>每个音用哪根手指</b>'; $('#vis').innerHTML = '<div class="zoom"></div>' + kb(seq.slice(0, 7).map((x, k) => ({ midi: x.midi, f: String(a.fingers[k]) })), 59, 85); } });
+  } else {
+    SC.steps.forEach(([t, sym, big, cap]) => ev.push({ t, midis: T.voicing(T.parseChord(sym)).map(n => n.midi), dur: 2.6, vis: () => show(sym, big, cap) }));
+  }
+  return ev;
+}
+// 与应用相同的合成钢琴音色，离线渲染成 WAV
+async function renderAudio(ev, total) {
+  const sr = 44100, ctx = new OfflineAudioContext(2, Math.ceil(sr * total), sr);
+  const comp = ctx.createDynamicsCompressor(); comp.connect(ctx.destination);
+  const note = (midi, st, dur, vel = 0.7) => {
+    const f = 440 * Math.pow(2, (midi - 69) / 12), g = ctx.createGain(), lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.setValueAtTime(Math.min(9000, f * 8), st); lp.frequency.exponentialRampToValueAtTime(Math.max(400, f * 2), st + dur);
+    g.gain.setValueAtTime(0.0001, st); g.gain.exponentialRampToValueAtTime(vel * 0.32, st + 0.006); g.gain.exponentialRampToValueAtTime(vel * 0.1, st + 0.35); g.gain.exponentialRampToValueAtTime(0.0001, st + dur);
+    [['triangle', 1, 1], ['sine', 2, 0.35], ['sine', 3, 0.08]].forEach(([type, m, amp]) => { const o = ctx.createOscillator(), og = ctx.createGain(); o.type = type; o.frequency.value = f * m; og.gain.value = amp; o.connect(og).connect(lp); o.start(st); o.stop(st + dur + 0.05); });
+    lp.connect(g).connect(comp);
+  };
+  ev.forEach(e => e.midis.forEach((m, i) => note(m, e.t + i * 0.012, e.dur)));
+  const buf = await ctx.startRendering();
+  // 编码 WAV
+  const len = buf.length, out = new DataView(new ArrayBuffer(44 + len * 4));
+  const ws = (o, s) => [...s].forEach((c, i) => out.setUint8(o + i, c.charCodeAt(0)));
+  ws(0, 'RIFF'); out.setUint32(4, 36 + len * 4, true); ws(8, 'WAVE'); ws(12, 'fmt '); out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, 2, true); out.setUint32(24, sr, true); out.setUint32(28, sr * 4, true); out.setUint16(32, 4, true); out.setUint16(34, 16, true); ws(36, 'data'); out.setUint32(40, len * 4, true);
+  const L = buf.getChannelData(0), R = buf.getChannelData(1);
+  for (let i = 0; i < len; i++) { out.setInt16(44 + i * 4, Math.max(-1, Math.min(1, L[i])) * 32767, true); out.setInt16(46 + i * 4, Math.max(-1, Math.min(1, R[i])) * 32767, true); }
+  let bin = ''; const u8 = new Uint8Array(out.buffer); for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+window.DEMO = {
+  total: SC.end,
+  audio: () => renderAudio(timeline(), SC.end),
+  // 画面：从调用这一刻开始按时间表播放
+  play: () => { const t0 = performance.now(); timeline().forEach(e => setTimeout(() => { e.vis(); if (e.midis.length) document.querySelectorAll('.kb .k').forEach(k => k.classList.toggle('on-play', e.midis.includes(+k.dataset.m))); setTimeout(() => document.querySelectorAll('.kb .k.on-play').forEach(k => k.classList.remove('on-play')), 900); }, e.t * 1000)); return t0; },
+};
+</script>
+</body>
+</html>
