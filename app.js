@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 60; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 61; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -494,6 +494,7 @@
     ({ today: vToday, path: vPath, unit: vUnit, chords: vChords, songs: vSongs, song: vSong, edit: vEdit, quiz: vQuiz, arp: vArp, mem: vMem, me: vMe, acc: vAcc, sing: vSing, acctest: vAccTest, know: vKnow, score: vScore, scan: vScan, pk: vPk, browse: vBrowse, along: vAlong, cmp: vCmp, combo: vCombo, sym: vSym, inv: vInv, cards: vCards, logic: vLogic }[r] || vToday)();
     try { linkChords(view); linkTerms(view); } catch (e) {} // 立即给文字加下划线，不等谱面画完
     document.body.classList.toggle('nolab', S.lab === false);
+    pbarPaint();
     if (['song', 'cmp', 'score'].includes(r) && !view.querySelector('.dock')) view.insertAdjacentHTML('beforeend', dockHtml());
     if (r === 'song') mountMyScore(route[1]);
     if (S.pendingGift && !document.body.classList.contains('focus')) setTimeout(flushGift, 400);
@@ -528,9 +529,15 @@
       <a class="ptsline" href="#cards"><span class="meter"><i style="width:${Math.min(100, (1 - ((S.ptsNext || PTS_STEP) - (S.pts || 0)) / PTS_STEP) * 100)}%"></i></span><small>${S.pts || 0} 分 · 再得 ${Math.max(0, (S.ptsNext || PTS_STEP) - (S.pts || 0))} 分抽一张曲谱卡 · 卡册 ${ownedCards().length}/${CARDS.length}</small></a>
       <section class="bonus${n === 4 ? ' ready' : ''}"><small>加练 · 即兴伴奏${d.acc ? ' · 今日已考 ✓' : ''}</small><div class="row"><a class="ghost" href="#acctest">考一段配和弦</a><a class="ghost" href="#sing-${SING[dayNum(today()) % SING.length].id}">跟弹 · 唱《${SING[dayNum(today()) % SING.length].title}》</a></div></section>`;
   }
-  function modeSwitch() {
-    return `<div class="modesw"><button class="${place() === 'piano' ? 'on' : ''}" data-act="place" data-v="piano"><b>有钢琴</b><small>收音听你弹，记为「琴上弹过」</small></button><button class="${place() === 'away' ? 'on' : ''}" data-act="place" data-v="away"><b>没钢琴</b><small>在屏幕上学，记为「已学 · 未上琴」</small></button></div>`;
+  // 有钢琴 / 没钢琴：只在页眉右上角切换（全局），页面里不再单独放选择
+  function modeSwitch() { return ''; }
+  function pbarPaint() {
+    let bar = document.getElementById('pbar');
+    if (!bar) { bar = document.createElement('div'); bar.id = 'pbar'; (document.getElementById('phone') || document.body).prepend(bar); }
+    const on = place() === 'piano';
+    bar.innerHTML = `<button class="pbadge${on ? ' on' : ''}" data-act="placetoggle" aria-label="切换有没有钢琴">${on ? '🎹 有钢琴' : '没钢琴'}</button>`;
   }
+
   function todoBox() {
     const td = pianoTodo();
     if (!td.length) return '';
@@ -1966,7 +1973,7 @@
       drillJudge(ok);
     }
   }
-  const placeChips = () => `<div class="chips place"><button class="chip${place() === 'piano' ? ' on' : ''}" data-act="place" data-v="piano">有钢琴</button><button class="chip${place() === 'away' ? ' on' : ''}" data-act="place" data-v="away">没钢琴</button></div>`;
+  const placeChips = () => ''; // 改到页眉右上角统一切换
   function drillControls() {
     if (!DR) return '';
     if (DR.mode === 'tap') return `<div id="tapkb">${kb([], { lo: 48, hi: 71, tap: true })}</div><p class="fine">在屏幕键盘上点出${DR.targets[0].kind === 'note' ? '下一个音' : '这个和弦的所有音（任意八度）'}。横屏键盘更大。</p>`;
@@ -2994,6 +3001,7 @@
       }
       case 'brq': BR.q = el.dataset.v; go('#browse'); render(); break;
       case 'place': S.place = el.dataset.v; save(); render(); break;
+      case 'placetoggle': S.place = place() === 'piano' ? 'away' : 'piano'; save(); render(); toast(place() === 'piano' ? '有钢琴：收音听你弹，记为「琴上弹过」' : '没钢琴：在屏幕上点，记为「已学 · 未上琴」'); break;
       case 'key': if (['sym', 'inv', 'logic'].includes(route[0])) symTap(+el.dataset.m); else drillTapKey(+el.dataset.m); break;
       case 'symdemo': symDemo(SY.card); break;
       case 'sympick': { if (!SY || SY.locked) break; const r = SY.reps[SY.i]; const ok = el.dataset.v === r.answer; document.querySelectorAll('#symtask .opt').forEach(b => { if (b.dataset.v === r.answer) b.classList.add('right'); else if (b === el) b.classList.add('wrong'); b.disabled = true; }); symJudge(ok); break; }

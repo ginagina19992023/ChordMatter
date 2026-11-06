@@ -927,3 +927,22 @@ body.land .rollfs.nopanel .fspanel, .rollfs.rot.nopanel .fspanel { margin-left: 
 .calcard .calweek { margin-top: 6px; border-top: 0; padding-top: 0; }
 .calcard .pills { margin: 4px 0 0; }
 .calh { scroll-margin-top: 12px; }
+/* 页眉：右上角「有钢琴 / 没钢琴」全局一键切换（有 = 橙色，没 = 灰色） */
+:root { --pbar: calc(env(safe-area-inset-top) + 40px); }
+#pbar { position: fixed; top: 0; left: 0; right: 0; z-index: 8; height: var(--pbar); padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) 0 16px; box-sizing: border-box; display: flex; align-items: center; justify-content: flex-end; background: color-mix(in srgb, var(--bg) 88%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); pointer-events: none; }
+#pbar .pbadge { pointer-events: auto; height: 28px; padding: 0 12px; border-radius: 14px; font-size: 13px; font-weight: 600; border: 1px solid var(--line); background: #f2f2f0; color: #8a8a86; cursor: pointer; }
+#pbar .pbadge.on { background: #e8541e; border-color: #e8541e; color: #fff; }
+main { padding-top: calc(var(--pbar) + 6px); }
+body.land main { padding-top: calc(var(--pbar) + 4px); }
+body.land #pbar { left: calc(env(safe-area-inset-left) + 62px); }
+.cxtop { top: var(--pbar); margin-top: -6px; padding-top: 8px; }
+.tabs { top: var(--pbar); }
+body.immersive #pbar { display: none; }
+@media (min-width: 760px) and (min-height: 600px) {
+  #phone #pbar { position: sticky; top: 0; margin-bottom: calc(-1 * var(--pbar)); }
+  #phone main { padding-top: calc(var(--pbar) + 6px); }
+  #phone .cxtop { margin-top: -6px; padding-top: 8px; }
+}
+/* Claude 预览（竖屏）：顶部约 70px 被 Claude 的工具条盖住，页眉整体往下让 */
+html.inart body:not(.land) { --pbar: calc(env(safe-area-inset-top) + 110px); }
+html.inart body:not(.land) #pbar { padding-top: calc(env(safe-area-inset-top) + 70px); }

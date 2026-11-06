@@ -283,3 +283,7 @@ bash tools/run-all.sh
 - 自动横屏：先试 `requestFullscreen + screen.orientation.lock('landscape')`（安卓）；iPhone 不支持，就给 `.rollfs` 加 `.rot`，整个画面 `rotate(90deg)`，触点坐标在 Roll 里换算回来。手机真的转过来后（isLand）自动取消旋转。
 - 横屏全屏：`RL.nopanel` 收起左边选项（`.rollfs.nopanel`），左上角只留 × ▶ ■「选项」。
 - 琴键真实大小（默认，`S.rlkbReal`）：白键 23.5 mm ≈ 143 CSS px（`KEY_REAL`）；`Roll` 的 `keyW` 让键盘比屏幕宽，`scrollTarget()` 每帧把当前 / 下一个和弦的音滑到屏幕中间；「一屏放下」= 旧的 10 键铺满。
+
+## 页眉：有钢琴 / 没钢琴
+- 全局固定的 `#pbar`（`pbarPaint()`，每次 render 刷新），右上角一个按钮 `placetoggle`：有钢琴 = 橙色实心「🎹 有钢琴」，没钢琴 = 灰色「没钢琴」。
+- 页面里原来的选择（`modeSwitch()` / `placeChips()`）都改成空，只在页眉切换。`--pbar` 是页眉高度，sticky 的 `.cxtop` / `.tabs` 贴在它下面。
