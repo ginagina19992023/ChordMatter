@@ -919,3 +919,11 @@ body.land .rollfs.nopanel .fshead b, body.land .rollfs.nopanel .fshead small, .r
 body.land .rollfs.nopanel .fsmini, .rollfs.rot.nopanel .fsmini { display: inline-flex; }
 body.land .rollfs.nopanel .fsx, .rollfs.rot.nopanel .fsx { width: 32px; height: 32px; font-size: 18px; }
 body.land .rollfs.nopanel .fspanel, .rollfs.rot.nopanel .fspanel { margin-left: 0; }
+/* 今天页：练琴日历卡片（放在 4 步上面，醒目一点） */
+.calcard { border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px 8px; margin: 14px 0 16px; }
+.calcard-h { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.calcard-h b { font-size: 16px; font-weight: 600; }
+.calcard-h small { color: var(--mute); font-size: 12px; flex: 1; }
+.calcard .calweek { margin-top: 6px; border-top: 0; padding-top: 0; }
+.calcard .pills { margin: 4px 0 0; }
+.calh { scroll-margin-top: 12px; }

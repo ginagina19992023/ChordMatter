@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 59; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 60; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -519,11 +519,12 @@
         <div class="ring-t"><b>${n}/4</b><small>${n === 4 ? '完成' : '约 12 分钟'}</small></div>
       </section>
       ${n < 4 ? `<div class="cta flow">${flowBtn(n === 0 ? '开始今天的练习' : '继续 · ' + steps.find(x => !d[x[0]])[1])}</div>` : '<p class="donemsg">今天的 4 步都完成了。想多练可以试试下面的即兴伴奏。</p>'}
-      <div class="pills todayshare"><button class="pill" data-act="shareday" data-v="${today()}">分享今天的卡片</button></div>
+      <section class="calcard"><div class="calcard-h"><b>练琴日历</b><small>一天一小节 · 越高练得越久</small><a class="pill" href="#me-cal">看整个月 →</a></div>
+        <a class="calweek" href="#me-cal">${calHtml(calWeeks(new Date().getFullYear(), new Date().getMonth(), today()), true)}</a>
+        <div class="pills"><button class="pill" data-act="shareday" data-v="${today()}">导出今天的音符 · 分享卡片</button></div></section>
       <ol class="steps">${steps.map(([k, t, s, h], i) => `<li><a href="${h}" class="${d[k] ? 'done' : ''}"><span class="dot">${d[k] ? '✓' : i + 1}</span><span><b>${t}</b><small>${esc(s)}${d[k] ? (d[k + 'M'] === 'away' ? ' · 今天在屏幕上完成' : d[k + 'M'] === 'piano' ? ' · 今天在琴上完成' : '') : ''}</small></span><span class="arr">→</span></a></li>`).join('')}</ol>
       ${todoBox()}
       <a class="unitbar" href="#unit-${cur.id}"><small>当前单元</small><b>${cur.n} ${cur.title}</b><span class="meter"><i style="width:${mastery(cur.id)}%"></i></span><small>${mastery(cur.id)}% · 达到 80% 自动解锁下一单元</small></a>
-      <a class="calweek" href="#me"><small>这一周 · 一天一小节，越高练得越久</small>${calHtml(calWeeks(new Date().getFullYear(), new Date().getMonth(), today()), true)}</a>
       <a class="ptsline" href="#cards"><span class="meter"><i style="width:${Math.min(100, (1 - ((S.ptsNext || PTS_STEP) - (S.pts || 0)) / PTS_STEP) * 100)}%"></i></span><small>${S.pts || 0} 分 · 再得 ${Math.max(0, (S.ptsNext || PTS_STEP) - (S.pts || 0))} 分抽一张曲谱卡 · 卡册 ${ownedCards().length}/${CARDS.length}</small></a>
       <section class="bonus${n === 4 ? ' ready' : ''}"><small>加练 · 即兴伴奏${d.acc ? ' · 今日已考 ✓' : ''}</small><div class="row"><a class="ghost" href="#acctest">考一段配和弦</a><a class="ghost" href="#sing-${SING[dayNum(today()) % SING.length].id}">跟弹 · 唱《${SING[dayNum(today()) % SING.length].title}》</a></div></section>`;
   }
@@ -1481,7 +1482,7 @@
     view.innerHTML = `<header class="top"><div><a class="back" href="#today">←</a><small>记录</small><h1>我</h1></div></header>
       <section class="stats"><div><b>${streak()}</b><small>连续天</small></div><div><b>${S.xp}</b><small>XP</small></div><div><b>${UNITS.filter(u => unitState(u.id).done).length}/${UNITS.length}</b><small>单元</small></div></section>
       ${pkSummary()}
-      <div class="calhead"><button class="ghost sm" data-act="calmonth" data-v="-1">‹</button><b>${CAL.y} 年 ${CAL.m + 1} 月</b><button class="ghost sm" data-act="calmonth" data-v="1">›</button></div>
+      <h3 class="h3 calh">练琴日历</h3><div class="calhead"><button class="ghost sm" data-act="calmonth" data-v="-1">‹</button><b>${CAL.y} 年 ${CAL.m + 1} 月</b><button class="ghost sm" data-act="calmonth" data-v="1">›</button></div>
       <div class="pills calshare"><button class="pill" data-act="sharemonth">分享这个月</button><button class="pill" data-act="shareday" data-v="${today()}">分享今天</button></div>
       <div id="calmonth">${calHtml(calWeeks(CAL.y, CAL.m))}</div>
       <p class="fine callegend">一天一小节：音符越高 = 练得越久，颜色越深 · 实心 = 当天 4 步都完成 · 空心 = 练了一部分 · 休止符 = 休息日 · 橙色双竖线 = 背下了一首曲子。点任意一天看详情。</p>
@@ -1496,6 +1497,7 @@
       <div class="row"><button class="ghost" data-act="export">导出备份</button><button class="ghost" data-act="import">导入备份</button><button class="ghost" data-act="reset">清空</button></div>
       <p class="fine">进度保存在这台 iPhone 上（两份 + 每日快照）。建议「添加到主屏幕」使用，iOS 不会清理主屏幕 App 的数据。换手机或重装前点「导出备份」，可以存到「文件」或 iCloud。<br>iPhone 静音键打开时可能听不到声音，请关闭静音。</p>`;
     storInfo(); cloudPaint();
+    if (route[1] === 'cal') { const h = document.querySelector('.calh'); if (h) setTimeout(() => h.scrollIntoView({ block: 'start' }), 30); }
   }
 
   function pkSummary() {
@@ -2608,8 +2610,8 @@
     return weeks;
   }
   let CAL = null;
-  function calHtml(weeks, compact) {
-    return Staff.html({ calendar: true, compact: !!compact, weeks: weeks.map(w => w.map(x => ({ ds: x.ds, label: x.label, other: x.other, today: x.today, future: x.future, active: x.active, min: x.min, full: x.full, piece: x.piece }))) });
+  function calHtml(weeks, compact, mark) {
+    return Staff.html({ calendar: true, compact: !!compact, weeks: weeks.map(w => w.map(x => ({ ds: x.ds, label: x.label, other: x.other, today: mark ? x.ds === mark : x.today, future: x.future, active: x.active, min: x.min, full: x.full, piece: x.piece }))) });
   }
   // ---------------- 分享：今日卡片（按内容自动排版）/ 这个月的五线谱日历 ----------------
   // 这一天练过哪些和弦：琶音、背谱的曲子、组合和弦、和弦页里弹过的和弦（如实从记录里取）
@@ -2626,7 +2628,23 @@
   }
   const FCOL = { T: '#464646', S: '#2f6fdb', D: '#e8541e', N: '#9a9a9a' };
   // 今日卡片：画在 canvas 上，宽 1080，高度按内容自己长
-  function dayCardCanvas(ds) {
+  // 这一天所在的那一周的五线谱日历（这一天标橙）→ 图片
+  async function weekImage(ds) {
+    const dt = new Date(ds + 'T12:00:00'), box = document.createElement('div');
+    box.style.cssText = 'position:fixed;left:-9999px;top:0;width:360px';
+    box.innerHTML = calHtml(calWeeks(dt.getFullYear(), dt.getMonth(), ds), true, ds);
+    document.body.appendChild(box);
+    try {
+      const el = box.querySelector('div.staff'); el.dataset.done = 1; Staff.draw(el);
+      const svg = el.querySelector('svg'); if (!svg) return null;
+      const vb = svg.viewBox.baseVal, xml = new XMLSerializer().serializeToString(svg).replace(/currentColor/g, '#1a1a1a');
+      const url = URL.createObjectURL(new Blob([xml], { type: 'image/svg+xml' })), img = new Image();
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+      URL.revokeObjectURL(url); return { img, w: vb.width, h: vb.height };
+    } catch (e) { return null; } finally { box.remove(); }
+  }
+  async function dayCardCanvas(ds) {
+    const wk = await weekImage(ds);
     const x = dayInfo(ds), dc = dayChords(ds), W = 1080, P = 72;
     const dt = new Date(ds + 'T12:00:00'), title = dt.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' });
     const cv = document.createElement('canvas'), g = cv.getContext('2d'), F = '-apple-system, "PingFang SC", "Helvetica Neue", sans-serif';
@@ -2636,7 +2654,8 @@
     const tmp = document.createElement('canvas').getContext('2d');
     const chipsH = layoutChips(tmp);
     const lines = [dc.songs.length ? '曲子：' + dc.songs.join('、') : '', dc.combos.length ? '组合和弦：' + dc.combos.join('、') : '', dc.arps.length ? '琶音：' + dc.arps.map(D).join(' ') : ''].filter(Boolean);
-    const H = P + 60 + 90 + 180 + (chipsH ? 70 + chipsH : 70) + lines.length * 62 + 150 + P;
+    const WKH = wk ? Math.round(wk.h * (W - 2 * P) / wk.w) + 70 : 0;
+    const H = P + 60 + 90 + 180 + WKH + (chipsH ? 70 + chipsH : 70) + lines.length * 62 + 150 + P;
     cv.width = W; cv.height = H;
     g.fillStyle = '#ffffff'; g.fillRect(0, 0, W, H);
     g.fillStyle = '#9a9a9a'; g.font = `500 34px ${F}`; g.fillText('ChordMatter · 和弦练习', P, P + 30);
@@ -2645,6 +2664,8 @@
     const stats = [[String(x.min || 0), '分钟'], [x.steps + '/4', '今日步数'], [String(streak()), '连续天']];
     stats.forEach(([v, l], i) => { const sx = P + i * 300; g.fillStyle = '#1a1a1a'; g.font = `600 84px ${F}`; g.fillText(v, sx, P + 270); g.fillStyle = '#9a9a9a'; g.font = `400 32px ${F}`; g.fillText(l, sx, P + 318); });
     let y = P + 410;
+    // 这一天的音符：所在那一周的五线谱日历，这一天标橙
+    if (wk) { g.fillStyle = '#1a1a1a'; g.font = `600 38px ${F}`; g.fillText('这一天的音符', P, y); g.fillStyle = '#9a9a9a'; g.font = `400 28px ${F}`; g.fillText('一天一小节 · 越高练得越久 · 实心 = 4 步都完成', P + 250, y); g.drawImage(wk.img, P, y + 20, W - 2 * P, WKH - 70); y += WKH + 30; }
     g.fillStyle = '#1a1a1a'; g.font = `600 38px ${F}`; g.fillText(dc.chords.length ? `今天练的和弦 · ${dc.chords.length} 个` : '今天还没有练和弦', P, y); y += 40;
     layoutChips(g);
     dc.chords.forEach(c => { const f = chordFunc(c.sym, c.key); g.fillStyle = FCOL[f] || FCOL.N; roundRectPath(g, c._x, y + c._y, c._w, chipH, 22); g.fill(); g.fillStyle = '#fff'; g.font = `600 40px ${F}`; g.fillText(D(c.sym), c._x + 28, y + c._y + 58); });
@@ -2916,7 +2937,7 @@
       case 'tagreset': e.preventDefault(); if (S.tags) delete S.tags[el.dataset.id]; save(); render(); document.querySelectorAll('.tpop').forEach(x => x.remove()); break;
       case 'klstep': { const s = allSongs().find(x => x.id === route[1]); klShow(KL.i + +el.dataset.v); playChord(songFlat(s)[KL.i]); break; }
       case 'klset': { const cfg = klCfg(), k = el.dataset.k, v = el.dataset.v; if (k === 'label') cfg.label = v; else if (k === 'show') cfg.show[v] = cfg.show[v] ? 0 : 1; else cfg[k] = !cfg[k]; save(); klShow(KL.i); if (k === 'feel') { const sg = allSongs().find(x => x.id === route[1]); document.querySelectorAll('#grid .cell').forEach(cl => { const old = cl.querySelector('.cshape'); if (old) old.outerHTML = chordShape(cl.dataset.s, sg.key); }); } break; }
-      case 'shareday': sharePreview(dayCardCanvas(el.dataset.v), 'ChordMatter-' + el.dataset.v + '.png', '今日卡片'); break;
+      case 'shareday': dayCardCanvas(el.dataset.v).then(cv => sharePreview(cv, 'ChordMatter-' + el.dataset.v + '.png', '今日卡片')).catch(() => toast('生成图片失败')); break;
       case 'sharemonth': monthCanvas().then(cv => cv ? sharePreview(cv, `ChordMatter-${CAL.y}-${CAL.m + 1}.png`, '这个月的练琴日历') : toast('日历还没画好')).catch(() => toast('生成图片失败')); break;
       case 'sharego': shareGo(false); break;
       case 'sharesave': shareGo(true); break;
