@@ -671,7 +671,7 @@
   // 一段 4 小节的乐句（小节号对齐原谱），命中的格子标橙；点一下整句播放
   // 原曲：公有领域的给旋律 + 伴奏；有版权的说明为什么没有旋律，并给「跟录音弹」
   function origBox(s) {
-    if (hasFull(s.id)) return `<a class="scorelink" href="#cmp-${s.id}"><b>原曲 ↔ 和弦伴奏 · 上下对比</b><small>按你的谱逐音扒下来的原曲 · 每小节三行：右手旋律 / 原曲左手 / 和弦左手 · 还有「右手原曲 + 左手和弦」练习版 · 可贴歌词</small><span>→</span></a>`;
+    if (hasFull(s.id)) return ''; // 已经在上面放了入口
     if (s.melody) return `<a class="scorelink" href="#sing-${s.melody}"><b>原曲旋律 + 伴奏一起听、一起弹</b><small>双手谱：右手是原曲旋律，左手是这些和弦 · 逐小节讲为什么配这个和弦</small><span>→</span></a>`;
     if (!s.copy) return '';
     return `<div class="origcopy"><p><b>原曲在哪？</b>这首歌有版权，App 里不能放它的旋律和录音，只放和弦。要把伴奏和原曲对上，用这两步：</p>
@@ -1002,7 +1002,7 @@
     const origLinks = s.orig ? `<div class="row origlinks">${s.orig.apple ? `<a class="ghost sm" href="${s.orig.apple}" target="_blank" rel="noopener">Apple Music 听录音 ↗</a>` : ''}${s.orig.imslp ? `<a class="ghost sm" href="${s.orig.imslp}" target="_blank" rel="noopener">IMSLP 原版乐谱 ↗</a>` : ''}</div>` : '';
     view.innerHTML = `<header class="top"><div><a class="back" href="#songs">←</a><small>${esc(s.sub || '')}</small><h1>${esc(s.title)}</h1></div><a class="stat" href="#edit-${s.id}"><b>✎</b><small>编辑</small></a></header>
       <section class="orig first"><h3>原谱</h3>
-        ${s.orig && s.orig.score ? (s.orig.score.made ? `<a class="scorelink" href="#score-${s.id}"><b>打开新造谱</b><small>按你上传的谱逐小节转写：左手是原谱左手，右手是这一小节的和弦 · 每小节标好和弦 · 可听、可点音、可分段 · 小节号对原谱</small><span>→</span></a>` : `<a class="scorelink" href="#score-${s.id}"><b>打开完整原谱</b><small>每小节上方标好了和弦和级数 · 学习段落高亮 · 点音符发声 · 可听全部</small><span>→</span></a>`) : ''}
+        ${hasFull(s.id) ? `<a class="scorelink" href="#cmp-${s.id}"><b>原曲 ↔ 和弦伴奏 · 上下对比</b><small>按你的谱逐音扒下来的原曲 · 每小节三行：右手旋律 / 原曲左手 / 和弦左手 · 还有「右手原曲 + 左手和弦」练习版 · 可贴歌词</small><span>→</span></a>` : s.orig && s.orig.score ? (s.orig.score.made ? `<a class="scorelink" href="#score-${s.id}"><b>打开新造谱</b><small>按你上传的谱逐小节转写：左手是原谱左手，右手是这一小节的和弦 · 每小节标好和弦 · 可听、可点音、可分段 · 小节号对原谱</small><span>→</span></a>` : `<a class="scorelink" href="#score-${s.id}"><b>打开完整原谱</b><small>每小节上方标好了和弦和级数 · 学习段落高亮 · 点音符发声 · 可听全部</small><span>→</span></a>`) : ''}
         ${s.orig && s.orig.score && s.orig.score.made ? `<details class="mine"><summary>对照你手上的原谱（图片只存在这台手机）</summary><div id="myscore"></div></details>` : '<div id="myscore"></div>'}
         ${origBox(s)}
         ${origLinks}
