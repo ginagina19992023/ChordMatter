@@ -13,7 +13,7 @@ if ! curl -s -o /dev/null http://localhost:8765/index.html; then (python3 -m htt
 step "题目生成器" node tools/test-generators.js
 step "点音符发声" bash -c 'out=$(node tools/test-notes.js); echo "$out"; ! echo "$out" | grep -qv "\"total\":\([0-9]*\),\"single\":\1"'
 step "一天的完整流程" bash -c 'out=$(node tools/test-flow.js); echo "$out"; echo "$out" | grep -q "today ring: 4/4" && echo "$out" | tail -1 | grep -q "no errors"'
-step "全页面体验审计" bash -c 'out=$(node tools/audit.js); echo "$out"; echo "$out" | grep -q "① 自评按钮： 无" && echo "$out" | grep -q "② 没有解释链接的术语： 无" && echo "$out" | grep -q "失效 0" && echo "$out" | grep -q "④ 页面错误： 无"'
+step "全页面体验审计" bash -c 'out=$(node tools/audit.js); echo "$out"; echo "$out" | grep -q "① 自评按钮： 无" && echo "$out" | grep -q "② 没有解释链接的术语： 无" && echo "$out" | grep -q "失效 0" && echo "$out" | grep -q "④ 页面错误： 无" && echo "$out" | grep -q "缺解释 0 · 和别的词重复 0"'
 
 echo; echo "════ 通过 $ok 项，失败 $bad 项"
 exit $bad

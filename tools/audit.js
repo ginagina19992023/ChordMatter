@@ -54,12 +54,18 @@ const { chromium, devices } = require('playwright');
     if (!ok) broken.push(t);
   }
   await p.click('#view .termref >> nth=0'); await p.waitForTimeout(400);
-  const popText = (await p.textContent('.cpop-card')).replace(/\s+/g, ' ').slice(0, 90);
+  const popText = (await p.textContent('.tpop-card')).replace(/\s+/g, ' ').slice(0, 90);
+  // ⑤ 每个术语都有自己的解释：不能有没写解释的词，也不能两个不同的词显示同一段话（一转 = 第一转位这类同义词除外）
+  const defs = await p.evaluate(words => words.map(w => { const d = termDef(w, 'C'); return [w, d ? d.mean : null]; }), [...new Set(terms.map(t => t.split('→')[0]))]);
+  const ALIAS = { '第一转位': '一转', '第二转位': '二转' };
+  const noDef = defs.filter(d => !d[1]).map(d => d[0]);
+  const same = defs.filter((d, i) => d[1] && defs.some((e, j) => j < i && e[1] === d[1] && ALIAS[d[0]] !== e[0] && ALIAS[e[0]] !== d[0])).map(d => d[0]);
   console.log('页面数', pages, '· 术语下划线总数', linkedTotal);
   console.log('① 自评按钮：', selfBtns.length ? selfBtns.join(' | ') : '无');
   console.log('② 没有解释链接的术语：', Object.keys(unlinked).length ? Object.entries(unlinked).map(([t, s]) => t + '@' + [...s].slice(0, 3).join(',')).join(' | ') : '无');
   console.log('③ 术语 → 课：', new Set(terms.map(t => t.split('→')[0])).size, '个不同的术语，都指向', new Set(terms.map(t => t.split('→')[1])).size, '节课，失效', broken.length, '· 浮窗示例：', popText);
   console.log('   对照：', [...new Set(terms)].sort().join('  '));
+  console.log('⑤ 术语解释：', defs.length, '个词，缺解释', noDef.length ? noDef.join('、') : '0', '· 和别的词重复', same.length ? same.join('、') : '0');
   console.log('④ 页面错误：', errs.length ? errs.slice(0, 5).join(' | ') : '无');
   await b.close();
 })();

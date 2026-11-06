@@ -538,3 +538,20 @@ a.more { display: block; text-align: right; font-size: 13px; color: var(--mute);
 .unitbar.todo { border-style: dashed; border-color: var(--acc); }
 .pkrun .ask { font-size: 20px; line-height: 1.5; margin: 18px 0; }
 .pkstats { margin-bottom: 12px; }
+
+/* 术语小气泡（贴着词出现，箭头指向它） */
+.tpop { position: fixed; inset: 0; z-index: 15; }
+.tpop-card { position: absolute; background: var(--bg); border: 1.5px solid var(--line); border-radius: 16px; padding: 12px 14px 12px; box-shadow: 0 8px 28px rgba(0,0,0,.10); opacity: 0; transform: translateY(4px) scale(.98); transition: opacity .16s, transform .16s; }
+.tpop.open .tpop-card { opacity: 1; transform: none; }
+.tpop-arrow { position: absolute; width: 14px; height: 14px; background: var(--bg); border: 1.5px solid var(--line); transform: translateX(-50%) rotate(45deg); }
+.tpop-card.down .tpop-arrow { top: -8.5px; border-right: 0; border-bottom: 0; }
+.tpop-card.up .tpop-arrow { bottom: -8.5px; border-left: 0; border-top: 0; }
+.tpop-h { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.tpop-h b { font-size: 18px; font-weight: 600; flex: 1; }
+.tpop-play { border: 1px solid var(--line); background: none; border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 13px; color: var(--S); cursor: pointer; }
+.tpop-play.on { background: var(--S); color: #fff; border-color: var(--S); }
+.tpop-mean { font-size: 14.5px; line-height: 1.6; margin: 0 0 6px; }
+.tpop-ex { font-size: 13.5px; line-height: 1.55; color: var(--mute); margin: 0 0 8px; padding-top: 6px; border-top: 1px solid var(--line); }
+.tpop-link { display: block; font-size: 13.5px; color: var(--S); font-weight: 500; }
+.termref.on { background: color-mix(in srgb, var(--S) 14%, transparent); border-radius: 3px; }
+@media (prefers-reduced-motion: reduce) { .tpop-card { transition: none; } }

@@ -415,7 +415,7 @@
     route = (location.hash.replace(/^#\/?/, '') || 'today').split(/[-\/]/).map(decodeURIComponent);
     const r = route[0];
     document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.dataset.r === r || (r === 'song' && a.dataset.r === 'songs') || (r === 'unit' && a.dataset.r === 'path')));
-    drillStop(); document.querySelectorAll('.giftov, .cpop').forEach(x => x.remove());
+    drillStop(); document.querySelectorAll('.giftov, .cpop, .tpop').forEach(x => x.remove());
     document.body.classList.toggle('focus', ['quiz', 'arp', 'mem', 'sing', 'acctest'].includes(r) || (['sym', 'inv', 'logic'].includes(r) && route[1]));
     document.querySelectorAll('nav a').forEach(x => { if ((r === 'sing' || r === 'acctest') && x.dataset.r === 'acc') x.classList.add('on'); if (['know', 'sym', 'inv', 'logic'].includes(r) && x.dataset.r === 'path') x.classList.add('on'); if ((r === 'score' || r === 'scan') && x.dataset.r === 'songs') x.classList.add('on'); });
     ({ today: vToday, path: vPath, unit: vUnit, chords: vChords, songs: vSongs, song: vSong, edit: vEdit, quiz: vQuiz, arp: vArp, mem: vMem, me: vMe, acc: vAcc, sing: vSing, acctest: vAccTest, know: vKnow, score: vScore, scan: vScan, pk: vPk, sym: vSym, inv: vInv, cards: vCards, logic: vLogic }[r] || vToday)();
@@ -1785,7 +1785,7 @@
     ['正格终止', 'l7'], ['变格终止', 'l6'], ['半终止', 'l8'], ['阻碍终止', 'l9'], ['终止式', 'l6'],
     ['王道进行', 'l11'], ['卡农进行', 'l11'], ['4536 进行', 'l11'], ['1564 进行', 'l11'], ['6415 进行', 'l11'], ['1645 进行', 'l11'], ['2–5–1', 'l10'],
     ['低音线', 'l12'], ['和声功能', 'l1'], ['功能', 'l1'],
-    ['副属和弦', 'k7'], ['借用和弦', 'k7'], ['和声小调', 'k1'], ['导音', 'k1'], ['属音', 'k1'], ['下属音', 'k1'],
+    ['副属和弦', 'k7'], ['借用和弦', 'k7'], ['和声小调', 'k1'], ['导音', 'k1'], ['属音', 'k1'], ['下属音', 'k1'], ['主音', 'k1'],
     ['大三和弦', 's5'], ['小三和弦', 's6'], ['属七和弦', 's7'], ['大七和弦', 's8'], ['减三和弦', 's9'], ['罗马数字', 's14'],
     ['第一转位', 'i4'], ['第二转位', 'i5'], ['一转', 'i4'], ['二转', 'i5'], ['原位', 'i3'], ['转位', 'i4'],
     ['根音', 'i2'], ['三音', 'i2'], ['五音', 'i2'], ['级数', 's11'], ['伴奏型', 's20'],
@@ -1819,20 +1819,49 @@
       if (frag) { frag.appendChild(document.createTextNode(txt.slice(last))); n.parentNode.replaceChild(frag, n); }
     });
   }
-  function termPop(id, word) {
-    document.querySelectorAll('.cpop').forEach(x => x.remove());
+  // 多邻国式小气泡：贴着点的那个词出现，箭头指着它；一句话解释 + 例子（跟着当前曲子的调）+ 听一听 + 去学这一课
+  let TP = null;
+  function termPlay() {
+    if (!TP || !TP.play) return; stopAll(); A.init();
+    const p = TP.play, el = document.querySelector('.tpop-play'); let t = 0;
+    if (Array.isArray(p)) p.forEach((s, i) => { A.chord(chordMidis(s), i * 0.8, 0.02, 0.9); t = (i + 1) * 0.8; });
+    else {
+      if (p.chordFirst) { A.chord(chordMidis(p.chordFirst), 0, 0.02, 0.9); t = 1; }
+      let prev = 59; p.notes.forEach((n, i) => { let m = 60 + T.parseNote(n).pc; if (p.chordFirst || i) while (m <= prev - 6) m += 12; prev = m; A.note(m, t + i * 0.45, 0.6, 0.6); }); t += p.notes.length * 0.45;
+    }
+    if (el) { el.classList.add('on'); later(() => el.classList.remove('on'), t * 1000); }
+  }
+  function termPop(id, word, anchor) {
+    document.querySelectorAll('.cpop, .tpop').forEach(x => x.remove());
     const c = glossCard(id); if (!c) return;
-    const isKnow = id.startsWith('k');
-    const say = isKnow ? (c.blocks.find(b => b.t === 'p') || {}).x || '' : c.say;
-    const done = !isKnow && symDone(id);
-    const el = document.createElement('div'); el.className = 'cpop';
-    el.innerHTML = `<div class="cpop-card" role="dialog" aria-label="${esc(word)}">
-      <div class="cpop-h"><b>${esc(word)}</b><button class="x" data-act="cpopclose" aria-label="关闭">×</button></div>
-      <p>${say}</p>
-      <a class="btn" href="${isKnow ? '#know-' + id : '#sym-' + id}">${isKnow ? '看完整的知识点' : done ? '再看一遍这一课（含演示）' : '去学这一课（看演示 + 试 3 次）'} →</a></div>`;
-    (document.getElementById('phone') || document.body).appendChild(el);
+    const isKnow = id.startsWith('k'), done = !isKnow && symDone(id);
+    const song = ['song', 'mem', 'score'].includes(route[0]) ? allSongs().find(x => x.id === route[1]) : null;
+    const d = termDef(word, song && song.key) || { mean: isKnow ? (c.blocks.find(b => b.t === 'p') || {}).x || '' : c.say };
+    TP = d;
+    const host = document.getElementById('phone') || document.body;
+    const el = document.createElement('div'); el.className = 'tpop'; el.dataset.act = 'tpopclose';
+    el.innerHTML = `<div class="tpop-card" data-act="tpopstay" role="dialog" aria-label="${esc(word)}"><i class="tpop-arrow"></i>
+      <div class="tpop-h"><b>${esc(word)}</b>${d.play ? '<button class="tpop-play" data-act="termplay" aria-label="听一听">▶ 听</button>' : ''}</div>
+      <p class="tpop-mean">${d.mean}</p>${d.ex ? `<p class="tpop-ex">${d.ex}</p>` : ''}
+      <a class="tpop-link" href="${isKnow ? '#know-' + id : '#sym-' + id}">${isKnow ? '看完整的知识点' : done ? '再看一遍这一课' : '去学这一课'} →</a></div>`;
+    host.appendChild(el);
+    const card = el.querySelector('.tpop-card'), arrow = el.querySelector('.tpop-arrow');
+    const hr = host === document.body ? { left: 0, top: 0, width: innerWidth, height: innerHeight } : host.getBoundingClientRect();
+    const r = (anchor || document.body).getBoundingClientRect();
+    const W = Math.min(320, hr.width - 24); card.style.width = W + 'px';
+    const cx = r.left - hr.left + r.width / 2;
+    const left = Math.max(12, Math.min(hr.width - W - 12, cx - W / 2));
+    const H = card.offsetHeight, below = r.bottom - hr.top + 10, above = r.top - hr.top - 10 - H;
+    const up = below + H > hr.height - 70 && above > 10;
+    card.style.left = left + 'px'; card.style.top = (up ? above : below) + 'px';
+    arrow.style.left = Math.max(14, Math.min(W - 14, cx - left)) + 'px'; card.classList.add(up ? 'up' : 'down');
+    if (anchor) anchor.classList.add('on');
+    tpopAt = Date.now();
     requestAnimationFrame(() => el.classList.add('open'));
   }
+  function tpopClose() { document.querySelectorAll('.tpop').forEach(x => x.remove()); document.querySelectorAll('.termref.on').forEach(x => x.classList.remove('on')); TP = null; }
+  let tpopAt = 0;
+  (document.getElementById('phone') || window).addEventListener('scroll', () => { if (document.querySelector('.tpop') && Date.now() - tpopAt > 500) tpopClose(); }, { passive: true });
 
   // ---------------- 知识点 ----------------
   function vKnow() {
@@ -1888,7 +1917,10 @@
       case 'prog': playProg(el, el.dataset.k, el.dataset.c.split(','), 84, 2); break;
       case 'flow': nextStep(); break;
       case 'chordpop': e.preventDefault(); chordPop(el.dataset.s); break;
-      case 'termpop': e.preventDefault(); termPop(el.dataset.id, el.textContent); break;
+      case 'termpop': e.preventDefault(); termPop(el.dataset.id, el.textContent, el); break;
+      case 'termplay': termPlay(); break;
+      case 'tpopclose': tpopClose(); break;
+      case 'tpopstay': break;
       case 'cpopclose': { const p = el.closest('.cpop'); if (p) p.remove(); break; }
       case 'calmonth': { CAL.m += +el.dataset.v; if (CAL.m < 0) { CAL.m = 11; CAL.y--; } if (CAL.m > 11) { CAL.m = 0; CAL.y++; } vMe(); break; }
       case 'giftclose': { const ov = el.closest('.giftov'); if (ov) ov.remove(); break; }
