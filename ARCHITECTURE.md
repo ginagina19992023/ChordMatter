@@ -276,3 +276,8 @@ bash tools/run-all.sh
 - 存档是用户账号里的一个私密 Gist，文件名 `chordmatter-state.json`，内容 = 整个 S。连接时先找已有的（换设备接上），没有就新建。
 - `save()` → 4 秒后 PATCH；打开 / 回到前台时拉取，云端 savedAt 更新就用云端（覆盖前本机那份存在 IndexedDB `before-cloud`）；切到后台立刻补传。
 - 「我的原谱」图片在 IndexedDB，不同步（太大）。sw.js 不缓存跨域请求。artifact 预览版里不同步。
+
+## 用手机弹（跟练里的屏幕键盘）
+- 全屏跟练里的「📱 用手机弹」：`RL.kb`（存 `S.rlkb`）。键盘占画面 42%，只放 C4–E5（`KB_LO/KB_HI`），所有音按八度折进这个音区。
+- `Roll.mount` 新参数：`real`（真钢琴比例：黑键宽 0.58、长 0.63，C♯D♯ / F♯G♯A♯ 按真实位置错开）、`lo/hi`、`keyFrac`、`rot`。多指：每个 pointerId 单独按下 / 抬起。
+- 自动横屏：先试 `requestFullscreen + screen.orientation.lock('landscape')`（安卓）；iPhone 不支持，就给 `.rollfs` 加 `.rot`，整个画面 `rotate(90deg)`，触点坐标在 Roll 里换算回来。手机真的转过来后（isLand）自动取消旋转。

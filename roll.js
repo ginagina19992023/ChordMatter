@@ -6,11 +6,16 @@ const Roll = (() => {
   const BLACK = [1, 3, 6, 8, 10];
   const isBlack = m => BLACK.includes(((m % 12) + 12) % 12);
   let cur = null;
-  function keyGeom(lo, hi, W) {
+  // real：按真钢琴的比例（黑键宽 ≈ 白键的 0.58，C♯D♯ 往两边分、F♯G♯A♯ 三个也错开）
+  const BC = { 1: 0.9, 3: 2.1, 6: 3.88, 8: 5.0, 10: 6.12 }, WI = { 0: 0, 2: 1, 4: 2, 5: 3, 7: 4, 9: 5, 11: 6 };
+  function keyGeom(lo, hi, W, real) {
     const whites = []; for (let m = lo; m <= hi; m++) if (!isBlack(m)) whites.push(m);
     const ww = W / whites.length, pos = {};
     whites.forEach((m, i) => (pos[m] = { x: i * ww, w: ww, black: false }));
-    for (let m = lo; m <= hi; m++) if (isBlack(m) && pos[m - 1]) pos[m] = { x: pos[m - 1].x + ww * 0.66, w: ww * 0.62, black: true };
+    for (let m = lo; m <= hi; m++) if (isBlack(m) && pos[m - 1]) {
+      if (real) { const pc = ((m % 12) + 12) % 12, c0 = pos[m - 1].x - WI[pc - 1] * ww, bw = ww * 0.58; pos[m] = { x: c0 + BC[pc] * ww - bw / 2, w: bw, black: true }; }
+      else pos[m] = { x: pos[m - 1].x + ww * 0.66, w: ww * 0.62, black: true };
+    }
     return { pos, ww };
   }
   function funcAt(chords, t) { const c = chords.find(c => t >= c.t - 1e-6 && t < c.t + c.d - 1e-6); return c ? c.func || 'N' : 'N'; }
@@ -19,25 +24,38 @@ const Roll = (() => {
     const ms = opt.events.map(e => e.midi);
     let lo = Math.min(...ms) - 2, hi = Math.max(...ms) + 2;
     while (isBlack(lo)) lo--; while (isBlack(hi)) hi++;
-    if (hi - lo < 24) { lo = Math.max(21, lo - Math.ceil((24 - (hi - lo)) / 2)); hi = lo + 24; while (isBlack(hi)) hi++; while (isBlack(lo)) lo--; }
+    if (opt.lo != null) { lo = opt.lo; hi = opt.hi; }
+    else if (hi - lo < 24) { lo = Math.max(21, lo - Math.ceil((24 - (hi - lo)) / 2)); hi = lo + 24; while (isBlack(hi)) hi++; while (isBlack(lo)) lo--; }
     el.innerHTML = '<canvas class="rollcv"></canvas>';
     const cv = el.querySelector('canvas'), dpr = window.devicePixelRatio || 1;
     const W = el.clientWidth || 340, H = opt.height || 380;
     cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px';
     const g = cv.getContext('2d'); g.scale(dpr, dpr);
     const total = Math.max(...opt.events.map(e => e.t + e.d), ...(opt.chords || []).map(c => c.t + c.d));
-    cur = { el, cv, g, W, H, lo, hi, geo: keyGeom(lo, hi, W), opt, chords: opt.chords || [], beat: -opt.lead || -2, total, raf: 0, waitIdx: 0, released: 0, tapped: new Set() };
-    cur.keyH = Math.min(70, H * 0.2); cur.hitY = H - cur.keyH; cur.ppb = opt.ppb || 46;
+    cur = { el, cv, g, W, H, lo, hi, geo: keyGeom(lo, hi, W, opt.real), opt, chords: opt.chords || [], beat: -opt.lead || -2, total, raf: 0, waitIdx: 0, released: 0, tapped: new Set() };
+    cur.keyH = opt.keyFrac ? Math.round(H * opt.keyFrac) : Math.min(70, H * 0.2); cur.hitY = H - cur.keyH; cur.ppb = opt.ppb || 46;
     draw();
-    cv.onpointerdown = e => { // 点画面上的键盘：发声，并告诉外面点了哪个键
-      const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top; if (y < cur.hitY) return;
-      const blackHit = y < cur.hitY + cur.keyH * 0.62;
+    // 多指同时按（和弦）：每根手指单独记，抬起才松开；rot = 画面被转了 90° 显示（竖着拿手机时模拟横屏）
+    const down = new Map();
+    const keyAt = e => {
+      const r = cv.getBoundingClientRect();
+      const x = opt.rot ? e.clientY - r.top : e.clientX - r.left, y = opt.rot ? r.right - e.clientX : e.clientY - r.top;
+      if (y < cur.hitY) return null;
+      const blackHit = y < cur.hitY + cur.keyH * 0.63;
       let m = null;
-      for (const [k, p] of Object.entries(cur.geo.pos)) if (p.black === blackHit && x >= p.x && x < p.x + p.w) m = +k;
+      if (blackHit) for (const [k, p] of Object.entries(cur.geo.pos)) if (p.black && x >= p.x && x < p.x + p.w) m = +k;
       if (m == null) for (const [k, p] of Object.entries(cur.geo.pos)) if (!p.black && x >= p.x && x < p.x + p.w) m = +k;
-      if (m != null && opt.onKey) opt.onKey(m);
-      if (m != null) { cur.tapped.add(m); draw(); setTimeout(() => { if (cur) { cur.tapped.delete(m); draw(); } }, 250); }
+      return m;
     };
+    cv.style.touchAction = 'none';
+    cv.onpointerdown = e => {
+      const m = keyAt(e); if (m == null) return;
+      e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (er) {}
+      down.set(e.pointerId, m); cur.tapped.add(m); draw();
+      if (opt.onKey) opt.onKey(m);
+    };
+    const up = e => { const m = down.get(e.pointerId); if (m == null) return; down.delete(e.pointerId); if (![...down.values()].includes(m)) cur.tapped.delete(m); draw(); };
+    cv.onpointerup = up; cv.onpointercancel = up;
     return cur;
   }
   function rgba(c, a) { return `rgba(${c[0]},${c[1]},${c[2]},${a})`; }
@@ -82,11 +100,12 @@ const Roll = (() => {
       const o = on[m], t = cur.tapped.has(+m);
       g.fillStyle = o ? rgba(o.col, o.wait ? 0.45 : 0.85) : t ? '#e9e9e9' : '#fff'; g.fillRect(p.x, hitY + 1, p.w - 1, kh - 1);
       g.strokeStyle = '#cfcfcf'; g.strokeRect(p.x + 0.5, hitY + 1.5, p.w - 1, kh - 2);
-      if (+m % 12 === 0) { g.fillStyle = 'rgba(0,0,0,0.4)'; g.font = '9px -apple-system, sans-serif'; g.fillText('C' + (Math.floor(+m / 12) - 1), p.x + 2, hitY + kh - 4); }
+      if (opt.real) { const nm = ['C', '', 'D', '', 'E', 'F', '', 'G', '', 'A', '', 'B'][+m % 12] + (+m % 12 === 0 ? Math.floor(+m / 12) - 1 : ''); g.fillStyle = 'rgba(0,0,0,0.38)'; g.font = '12px -apple-system, sans-serif'; g.fillText(nm, p.x + p.w / 2 - g.measureText(nm).width / 2, hitY + kh - 8); }
+      else if (+m % 12 === 0) { g.fillStyle = 'rgba(0,0,0,0.4)'; g.font = '9px -apple-system, sans-serif'; g.fillText('C' + (Math.floor(+m / 12) - 1), p.x + 2, hitY + kh - 4); }
     }
     for (const [m, p] of Object.entries(geo.pos)) if (p.black) {
       const o = on[m], t = cur.tapped.has(+m);
-      g.fillStyle = o ? rgba(o.col, 1) : t ? '#555' : '#1b1b1b'; roundRect(g, p.x, hitY + 1, p.w, kh * 0.62, 2); g.fill();
+      g.fillStyle = o ? rgba(o.col, 1) : t ? '#555' : '#1b1b1b'; roundRect(g, p.x, hitY + 1, p.w, kh * (opt.real ? 0.63 : 0.62), 2); g.fill();
     }
     if (cur.waiting) { g.fillStyle = 'rgba(0,0,0,0.55)'; g.font = '600 13px -apple-system, sans-serif'; const t = '等你弹：' + (cur.waitLabel || ''); g.fillText(t, 8, hitY - 10); }
   }

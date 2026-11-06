@@ -2058,7 +2058,9 @@
     later(() => { const b = $('#scbtn'); if (b) { b.textContent = '▶ 再听一遍'; b.dataset.act = 'scplay'; } el.querySelectorAll('text.chordlab.now').forEach(t => t.classList.remove('now')); dockReset(); }, end * 1000 + 300);
   }
   // ---------------- 瀑布流 + 和声色带 ----------------
-  const RL = { mode: 'play', rate: 1, lvl: 1 };
+  const RL = { mode: S.rlkb ? 'wait' : 'play', rate: 1, lvl: 1, kb: !!S.rlkb };
+  // 用手机弹：屏幕下半部分变成按真钢琴比例的键盘（只放 C4–E5 这 10 个白键），和弦都折进这个音区；竖着拿时整个画面转成横屏
+  const KB_LO = 60, KB_HI = 76;
   // 难度：1 简单（只有右手和弦）· 2 中等（左手低音 + 右手和弦）· 3 困难（原曲两只手 / 旋律 + 伴奏型）
   // 困难不一开始给：先在「中等」用「等你弹」一遍弹对才解锁（如实记在 S.rollPass）
   const rollKey = () => route[0] + ':' + route[1];
@@ -2107,7 +2109,7 @@
   function rollPanel(id) {
     const maxLv = RL.maxLv || 2, passed = rollPassed();
     const lvChips = `<div class="chips lvchips">${[1, 2, 3].slice(0, maxLv).map(l => { const locked = l === 3 && passed < 2; return `<button class="chip${RL.lvl === l ? ' on' : ''}${locked ? ' locked' : ''}" data-act="rllvl" data-v="${l}"${locked ? ' data-locked="1"' : ''}>${LV_NAME[l]}${locked ? ' · 未解锁' : ''}${l === 3 && RL.lvl3name ? '（' + RL.lvl3name + '）' : ''}</button>`; }).join('')}</div>${maxLv === 3 && passed < 2 ? '<p class="fine">困难（原曲）先锁着：在「中等」用「等你弹」一遍弹对，就解锁。先把和弦的手感练出来，再加细节。</p>' : ''}`;
-    return `<div class="rollbox">${lvChips}<div class="chips"><button class="chip${RL.mode === 'play' ? ' on' : ''}" data-act="rlmode" data-v="play">跟着落下（有声音）</button><button class="chip${RL.mode === 'wait' ? ' on' : ''}" data-act="rlmode" data-v="wait">等你弹（练手感）</button></div>
+    return `<div class="rollbox">${lvChips}<div class="chips"><button class="chip${RL.mode === 'play' ? ' on' : ''}" data-act="rlmode" data-v="play">跟着落下（有声音）</button><button class="chip${RL.mode === 'wait' ? ' on' : ''}" data-act="rlmode" data-v="wait">等你弹（练手感）</button><button class="chip${RL.kb ? ' on' : ''}" data-act="rlkb">📱 用手机弹</button></div>
       <div class="roll" id="${id}"></div>
       <div class="row"><button class="btn" data-act="rlgo">▶ 开始</button><button class="ghost sm" data-act="rlstop">■ 停</button><button class="ghost sm" data-act="rlrate" data-v="-0.15">慢</button><button class="ghost sm" data-act="rlrate" data-v="0.15">快</button><small class="fine" id="rlrate">${Math.round(RL.rate * 100)}%</small></div>
       <div id="rlctl"></div>
@@ -2131,22 +2133,29 @@
     let ov = document.querySelector('.rollfs');
     if (!ov) { ov = document.createElement('div'); ov.className = 'rollfs'; (document.getElementById('phone') || document.body).appendChild(ov); RL.scrollY = (document.getElementById('phone') && getComputedStyle(document.getElementById('phone')).overflowY === 'auto') ? document.getElementById('phone').scrollTop : scrollY; }
     document.body.classList.add('immersive');
-    ov.innerHTML = `<div class="fshead"><button class="fsx" data-act="rollclose" aria-label="关闭">×</button><b>${esc(b.title)}</b><small>${isLand() ? '' : '横过来更宽'}</small></div>${rollPanel('fsroll')}`;
+    const rot = RL.kb && !isLand();
+    ov.classList.toggle('rot', rot);
+    if (rot) { ov.style.width = innerHeight + 'px'; ov.style.height = innerWidth + 'px'; } else { ov.style.width = ov.style.height = ''; }
+    ov.innerHTML = `<div class="fshead"><button class="fsx" data-act="rollclose" aria-label="关闭">×</button><b>${esc(b.title)}</b><small>${isLand() ? '' : rot ? '把手机横过来拿' : '横过来更宽'}</small></div>${rollPanel('fsroll')}`;
     const H = ov.clientHeight, used = [...ov.children].reduce((a, e) => a + (e.querySelector && e.querySelector('#fsroll') ? 0 : e.offsetHeight), 0);
     const other = [...ov.querySelectorAll('.rollbox > :not(#fsroll)')].reduce((a, e) => a + e.offsetHeight + 8, 0);
-    RL.fsH = isLand() ? Math.max(200, H - 22) : Math.max(200, H - ov.querySelector('.fshead').offsetHeight - other - 24);
+    RL.fsH = isLand() || rot ? Math.max(200, H - 22) : Math.max(200, H - ov.querySelector('.fshead').offsetHeight - other - 24);
     rollMount('fsroll', b.data, b.bpm);
   }
   function rollClose() {
     stopAll(); Roll.stop(); drillStop();
     const ov = document.querySelector('.rollfs'); if (ov) ov.remove();
+    try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {}
     document.body.classList.remove('immersive');
   }
   function rollMount(id, data, bpm) {
     const el = document.getElementById(id); if (!el) return;
     RL.data = data;
-    Roll.mount(el, { events: data.events, chords: data.chords, beats: data.beats, bpm, barNo: data.barNo, lead: 2, height: id === 'fsroll' && RL.fsH ? RL.fsH : isLand() ? Math.max(220, (document.getElementById('phone') && getComputedStyle(document.getElementById('phone')).overflowY === 'auto' ? document.getElementById('phone').clientHeight : innerHeight) - 80) : Math.min(420, Math.round(innerHeight * 0.5)), onKey: m => { A.init(); A.note(m, 0, 0.8, 0.6); if (RL.mode === 'wait' && DR) drillTapKey(m); } });
-    $('#rlctl').innerHTML = RL.mode === 'wait' ? (place() === 'away' ? '<p class="fine">没钢琴模式：点画面里的键盘。</p>' : '<div class="row"><button class="ghost sm" data-act="dlisten">开始收音 · 弹给它听</button></div>') : '';
+    const fs = id === 'fsroll', kb = fs && RL.kb, rot = kb && !!document.querySelector('.rollfs.rot');
+    let evs = data.events;
+    if (kb) { const seen = new Set(); evs = data.events.map(e => { let m = e.midi; while (m < KB_LO) m += 12; while (m > KB_HI) m -= 12; return Object.assign({}, e, { midi: m }); }).filter(e => { const k = e.t.toFixed(3) + ':' + e.midi; if (seen.has(k)) return false; seen.add(k); return true; }); }
+    Roll.mount(el, { events: evs, real: kb, rot, lo: kb ? KB_LO : undefined, hi: kb ? KB_HI : undefined, keyFrac: kb ? 0.42 : 0, chords: data.chords, beats: data.beats, bpm, barNo: data.barNo, lead: 2, height: id === 'fsroll' && RL.fsH ? RL.fsH : isLand() ? Math.max(220, (document.getElementById('phone') && getComputedStyle(document.getElementById('phone')).overflowY === 'auto' ? document.getElementById('phone').clientHeight : innerHeight) - 80) : Math.min(420, Math.round(innerHeight * 0.5)), onKey: m => { A.init(); if (RL.mode === 'wait' && DR) drillTapKey(m); else A.note(m, 0, 0.8, 0.6); } });
+    $('#rlctl').innerHTML = kb ? `<p class="fine">${RL.mode === 'wait' ? '彩条停住时，在下面的键盘上把这个和弦按出来（几根手指一起按，或一个一个点都行）。' : '跟着彩条在下面的键盘上按。'}</p>` : RL.mode === 'wait' ? (place() === 'away' ? '<p class="fine">没钢琴模式：点画面里的键盘。</p>' : '<div class="row"><button class="ghost sm" data-act="dlisten">开始收音 · 弹给它听</button></div>') : '';
   }
   function rollGo() {
     const d = RL.data; if (!d) return;
@@ -2900,6 +2909,11 @@
       case 'sharesave': shareGo(true); break;
       case 'shareclose': document.querySelectorAll('.sharepop').forEach(x => x.remove()); break;
       case 'dockplay': dockPlay(); break;
+      case 'rlkb': RL.kb = !RL.kb; S.rlkb = RL.kb; save(); Roll.stop(); drillStop();
+        if (RL.kb && RL.mode === 'play') RL.mode = 'wait';
+        // 能锁横屏的（安卓 Chrome 全屏时）就锁；iPhone 不支持，就把画面转 90° 显示
+        if (RL.kb && !isLand()) { try { const d = document.documentElement; (d.requestFullscreen ? d.requestFullscreen() : Promise.reject()).then(() => screen.orientation.lock('landscape')).then(() => setTimeout(rollOpen, 300)).catch(() => {}); } catch (e) {} }
+        rollOpen(); break;
       case 'rlmode': RL.mode = el.dataset.v; Roll.stop(); drillStop(); if (document.querySelector('.rollfs')) rollOpen(); else render(); break;
       case 'rllvl': if (el.dataset.locked) { toast('先在「中等」用「等你弹」一遍弹对，困难才解锁'); break; } RL.lvl = +el.dataset.v; Roll.stop(); drillStop(); if (document.querySelector('.rollfs')) rollOpen(); else render(); break;
       case 'rollopen': rollOpen(el.dataset.k); break;
