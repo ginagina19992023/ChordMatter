@@ -122,6 +122,7 @@
         this.out = this.ctx.createDynamicsCompressor();
         this.vol = this.ctx.createGain(); this.vol.gain.value = 0.9;
         this.out.connect(this.vol).connect(this.ctx.destination);
+        this.bus = this.ctx.createGain(); this.bus.connect(this.out);
       }
       if (this.ctx.state !== 'running') this.ctx.resume();
     },
@@ -139,7 +140,15 @@
         o.type = type; o.frequency.value = f * m; og.gain.value = a;
         o.connect(og).connect(lp); o.start(st); o.stop(st + dur + 0.05);
       });
-      lp.connect(g).connect(this.out);
+      lp.connect(g).connect(this.bus);
+    },
+    // 停掉所有已经排好的音：把旧的总线快速淡出后断开，换一条新的
+    cut() {
+      if (!this.ctx || !this.bus) return;
+      const old = this.bus, now = this.ctx.currentTime;
+      old.gain.cancelScheduledValues(now); old.gain.setValueAtTime(old.gain.value, now); old.gain.linearRampToValueAtTime(0, now + 0.04);
+      setTimeout(() => { try { old.disconnect(); } catch (e) {} }, 80);
+      this.bus = this.ctx.createGain(); this.bus.connect(this.out);
     },
     chord(midis, t = 0, spread = 0, dur) { midis.forEach((m, i) => this.note(m, t + i * spread, dur)); },
     tone(midi, t = 0, dur = 0.5) {
@@ -149,7 +158,7 @@
       o.type = 'sine'; o.frequency.value = f; o2.type = 'triangle'; o2.frequency.value = f; g2.gain.value = 0.25;
       const vib = c.createOscillator(), vg = c.createGain(); vib.frequency.value = 5.2; vg.gain.value = f * 0.006; vib.connect(vg); vg.connect(o.frequency);
       g.gain.setValueAtTime(0.0001, st); g.gain.exponentialRampToValueAtTime(0.22, st + 0.04); g.gain.setValueAtTime(0.2, st + Math.max(0.05, dur - 0.06)); g.gain.exponentialRampToValueAtTime(0.0001, st + dur + 0.05);
-      o.connect(g); o2.connect(g2).connect(g); g.connect(this.out);
+      o.connect(g); o2.connect(g2).connect(g); g.connect(this.bus);
       [o, o2, vib].forEach(x => { x.start(st); x.stop(st + dur + 0.1); });
     },
     click(t, accent) {
@@ -157,13 +166,13 @@
       const c = this.ctx, st = c.currentTime + t, o = c.createOscillator(), g = c.createGain();
       o.frequency.value = accent ? 1760 : 1180; o.type = 'sine';
       g.gain.setValueAtTime(0.0001, st); g.gain.exponentialRampToValueAtTime(accent ? 0.5 : 0.3, st + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, st + 0.05);
-      o.connect(g).connect(this.out); o.start(st); o.stop(st + 0.06);
+      o.connect(g).connect(this.bus); o.start(st); o.stop(st + 0.06);
     },
   };
   let timers = [];
   const later = (fn, ms) => timers.push(setTimeout(fn, ms));
   let metro = null;
-  function stopAll() { timers.forEach(clearTimeout); timers = []; if (metro) { clearInterval(metro.id); metro = null; } document.querySelectorAll('.k.on-play,.bar.on-play').forEach(e => e.classList.remove('on-play')); }
+  function stopAll() { A.cut(); timers.forEach(clearTimeout); timers = []; if (metro) { clearInterval(metro.id); metro = null; } document.querySelectorAll('.k.on-play,.bar.on-play').forEach(e => e.classList.remove('on-play')); }
   function startMetro(bpm, onBeat) {
     A.init(); stopMetro();
     const spb = 60 / bpm; let next = A.ctx.currentTime + 0.1, beat = 0;
@@ -415,10 +424,10 @@
     route = (location.hash.replace(/^#\/?/, '') || 'today').split(/[-\/]/).map(decodeURIComponent);
     const r = route[0];
     document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.dataset.r === r || (r === 'song' && a.dataset.r === 'songs') || (r === 'unit' && a.dataset.r === 'path')));
-    drillStop(); alStop(); document.querySelectorAll('.giftov, .cpop, .tpop').forEach(x => x.remove());
+    drillStop(); alStop(); stopAll(); document.querySelectorAll('.giftov, .cpop, .tpop').forEach(x => x.remove());
     document.body.classList.toggle('focus', ['quiz', 'arp', 'mem', 'sing', 'acctest'].includes(r) || (['sym', 'inv', 'logic'].includes(r) && route[1]));
     document.querySelectorAll('nav a').forEach(x => { if ((r === 'sing' || r === 'acctest') && x.dataset.r === 'acc') x.classList.add('on'); if (['know', 'sym', 'inv', 'logic'].includes(r) && x.dataset.r === 'path') x.classList.add('on'); if ((r === 'score' || r === 'scan') && x.dataset.r === 'songs') x.classList.add('on'); });
-    ({ today: vToday, path: vPath, unit: vUnit, chords: vChords, songs: vSongs, song: vSong, edit: vEdit, quiz: vQuiz, arp: vArp, mem: vMem, me: vMe, acc: vAcc, sing: vSing, acctest: vAccTest, know: vKnow, score: vScore, scan: vScan, pk: vPk, browse: vBrowse, along: vAlong, cmp: vCmp, sym: vSym, inv: vInv, cards: vCards, logic: vLogic }[r] || vToday)();
+    ({ today: vToday, path: vPath, unit: vUnit, chords: vChords, songs: vSongs, song: vSong, edit: vEdit, quiz: vQuiz, arp: vArp, mem: vMem, me: vMe, acc: vAcc, sing: vSing, acctest: vAccTest, know: vKnow, score: vScore, scan: vScan, pk: vPk, browse: vBrowse, along: vAlong, cmp: vCmp, combo: vCombo, sym: vSym, inv: vInv, cards: vCards, logic: vLogic }[r] || vToday)();
     try { linkChords(view); linkTerms(view); } catch (e) {} // 立即给文字加下划线，不等谱面画完
     if (r === 'song') mountMyScore(route[1]);
     if (S.pendingGift && !document.body.classList.contains('focus')) setTimeout(flushGift, 400);
@@ -483,6 +492,7 @@
       <a class="unitbar sym1" href="#sym"><small>先学这个 · ${SYMS.filter(x => symDone(x.id)).length}/${SYMS.length}</small><b>符号入门：一次学一个符号</b><span class="meter"><i style="width:${SYMS.filter(x => symDone(x.id)).length / SYMS.length * 100}%"></i></span><small>C、♯、m、7、/、级数、罗马数字……逐个看演示、在键盘上试</small></a>
       <a class="unitbar sym1" href="#inv"><small>${symAllDone() ? '接着学' : '学完符号入门后'} · ${INVS.filter(x => symDone(x.id)).length}/${INVS.length}</small><b>转位十课：先找最低音，不背形状</b><span class="meter"><i style="width:${INVS.filter(x => symDone(x.id)).length / INVS.length * 100}%"></i></span><small>最低音 → 根三五 → 原位 / 一转 / 二转 → 五线谱 → 写法 → 指法 → 手少移动</small></a>
       <a class="unitbar sym1" href="#logic"><small>第三门 · ${LOGICS.filter(x => symDone(x.id)).length}/${LOGICS.length}</small><b>读懂谱面逻辑：稳、走、紧、结尾、2–5–1……</b><span class="meter"><i style="width:${LOGICS.filter(x => symDone(x.id)).length / LOGICS.length * 100}%"></i></span><small>曲目页里看到的每个词，各有一课</small></a>
+      <a class="unitbar sym1" href="#combo"><small>一串一串记</small><b>组合和弦：4536、1564、2–5–1……</b><small>把常用的一串和弦当成一个词记 · 抠掉一个换成「稳 / 走 / 紧」，变出新的进行</small></a>
       <a class="unitbar" href="#know"><small>看不懂符号？</small><b>知识点：从「C、G7 是什么」到「一级二级三级」</b></a>
       <ol class="path">${UNITS.map(u => {
         const st = unitState(u.id).done ? 'done' : u === cur ? 'cur' : unlocked(u) ? '' : 'lock';
@@ -634,7 +644,7 @@
       <p class="explain"><b>${D(c.sym)}</b>：以 ${D(c.root.name)} 为根音的${c.quality.zh}，${qi[2]}，听起来${qi[1]}。${invi ? `${INV[invi][0]}：最下面弹 ${D(bottom.name)}（${INV[invi][1]}），所以写成 ${D(c.sym)}，斜线后面就是最低音。` : '原位：根音 ' + D(c.root.name) + ' 在最下面。'}键盘上的数字是手指（1 = 拇指，5 = 小指）${CX.hand === 'B' ? '，蓝色是左手（低八度），橙色是右手' : CX.hand === 'L' ? '，左手在低八度' : ''}。<a href="#know-k0">看不懂？</a></p>
       ${arp.white && T.Q[CX.q].ints.length === 3 && !CX.q.startsWith('sus') ? `<a class="link" href="#arp-${CX.root + CX.q}"><small>练这个和弦</small><b>${D(CX.root + CX.q)} 琶音 · 带指法和收音</b><span>→</span></a>` : ''}
       ${(() => { const ctx = chordContext(c); return ctx ? `<section class="cxblock"><h3>先在小进行里听它</h3><p class="fine">${ctx[1]} · 点一下听，跟着弹</p>${progRow(c.root.name, ctx[0])}</section>` : ''; })()}
-      <section class="cxblock"><h3>在曲子里找到它</h3>${chordFinds(c)}<a class="link" href="#browse-${encodeURIComponent(c.root.name + c.q)}"><small>浏览</small><b>曲库里所有和弦 · 有的和没有的</b><span>→</span></a></section>
+      <section class="cxblock"><h3>在曲子里找到它</h3>${chordFinds(c)}<a class="link" href="#browse-${encodeURIComponent(c.root.name + c.q)}"><small>浏览</small><b>曲库里所有和弦 · 有的和没有的</b><span>→</span></a><a class="link" href="#combo"><small>连起来记</small><b>组合和弦：一串一串记</b><span>→</span></a></section>
       <p class="pageend">— 到底了 —</p>`;
   }
 
@@ -743,6 +753,100 @@
     Object.keys(bm).forEach(n => (lab[n] = barLabel(s, +n)));
     const kern = FullScore.build(FULL[s.id].kern, { mode: M, barChords: bm, kp, title: s.title + ' · ' + { compare: '上下对比', practice: '练习版', orig: '原曲' }[M], lyrics: lyr, from: sec && CMP.sec >= 0 ? sec[1] : null, to: sec && CMP.sec >= 0 ? sec[2] : null });
     Score.render($('#cmpscore'), { kern }, { section: false, labels: lab, barAct: true }).catch(e => ($('#cmpscore').innerHTML = '<p class="no">谱面生成失败：' + esc(String(e && e.message || e)) + '</p>'));
+  }
+  // ---------------- 组合和弦：一串和弦当成一个「词组」记 ----------------
+  const CB = { key: 'C', mkey: 'Am', hide: null, q: null };
+  const FAMD = { 1: 'T', 3: 'T', 6: 'T', 2: 'S', 4: 'S', 5: 'D', 7: 'D' };
+  const cbKey = cb => (cb.minor ? CB.mkey : CB.key);
+  const cbChords = (cb, key = cbKey(cb)) => cb.deg.map(d => T.degreeChord(T.parseKey(key), d - 1, !!cb.sev));
+  const famWord = d => FUNC_ZH[FAMD[d]];
+  // 和这个位置同一家（稳 / 走 / 紧）的和弦都能填进去：每填一个就是一个变体
+  function cbCands(cb, pos, key = cbKey(cb)) {
+    const K = T.parseKey(key), d = cb.deg[pos], fam = FAMD[d];
+    const out = [1, 2, 3, 4, 5, 6, 7].filter(x => FAMD[x] === fam).map(x => ({ d: x, sym: T.degreeChord(K, x - 1, !!cb.sev) }));
+    if (fam === 'D' && !cb.sev) out.push({ d: 5, sym: T.degreeChord(K, 4, true), sev: 1 });
+    return out.filter((x, i, a) => a.findIndex(y => y.sym === x.sym) === i).map(x => ({ ...x, orig: x.sym === cbChords(cb, key)[pos] }));
+  }
+  function cbShared(a, b) { const pa = T.parseChord(a).notes.map(n => n.pc); return T.parseChord(b).notes.filter(n => pa.includes(n.pc)).map(n => D(n.name)); }
+  // 曲库里哪里出现了这一串（按级数比，换了调也算；连着重复的和弦算一个）
+  function cbFind(cb) {
+    const out = [];
+    allSongs().forEach(s => {
+      if (!s.key || /m$/.test(s.key) !== !!cb.minor) return;
+      const K = T.parseKey(s.key), sc = T.scale(K, true).map(x => T.parseNote(x.name).pc), seq = [];
+      Object.entries(songBarMap(s)).sort((a, b) => a[0] - b[0]).forEach(([n, bar]) => bar.forEach(x => { const c = T.parseChord(x); if (!c) return; const d = sc.indexOf(c.root.pc) + 1; if (!d) { seq.push({ d: 0, n: +n }); return; } if (!seq.length || seq[seq.length - 1].d !== d) seq.push({ d, n: +n }); }));
+      const hits = [];
+      for (let i = 0; i + cb.deg.length <= seq.length; i++) if (cb.deg.every((d, k) => seq[i + k].d === d)) hits.push(seq.slice(i, i + cb.deg.length).map(x => x.n));
+      if (hits.length) out.push({ s, hits });
+    });
+    return out;
+  }
+  function vCombo() {
+    const id = route[1];
+    const keyChips = minor => `<div class="chips">${(minor ? ['Am', 'Em', 'Dm'] : ['C', 'G', 'F', 'D']).map(k => `<button class="chip${(minor ? CB.mkey : CB.key) === k ? ' on' : ''}" data-act="cbkey" data-v="${k}">${kz(k)}</button>`).join('')}</div>`;
+    if (!id) {
+      view.innerHTML = `<header class="top"><div><a class="back" href="#path">←</a><small>一串一串记，不是一个一个记</small><h1>组合和弦</h1></div></header>
+        <p class="fine">就像背单词要背词组：最常用的和弦顺序只有十来种。把 4 个和弦当成<b>一个词</b>记住（比如「4536」），看到谱就能一眼认出一整串。每一串都写成级数，所以<b>换调也一样</b>。</p>
+        <p class="fine">每一串里还能<b>抠掉一个和弦，换成它的「字」</b>（稳 / 走 / 紧）：同一个字的和弦都能填回去，就变出新的进行。</p>
+        ${keyChips(false)}
+        <ul class="list combos">${COMBOS.map(cb => { const ch = cbChords(cb), f = cbFind(cb); return `<li><a href="#combo-${cb.id}"><span><b>${cb.name}<small class="alias"> · ${cb.alias}</small></b><small>${ch.map(D).join(' – ')}　${cb.deg.map(famWord).join(' ')}${f.length ? ` · 曲库里 ${f.reduce((a, x) => a + x.hits.length, 0)} 处` : ''}</small></span><span class="arr">→</span></a></li>`; }).join('')}</ul>
+        <p class="pageend">— 到底了 —</p>`;
+      return;
+    }
+    const cb = COMBOS.find(x => x.id === id); if (!cb) return go('#combo');
+    if (CB.id !== id) { CB.id = id; CB.hide = null; CB.q = null; }
+    const key = cbKey(cb), ch = cbChords(cb), finds = cbFind(cb), st = S.combo && S.combo[id];
+    const pos = CB.hide;
+    view.innerHTML = `<header class="top"><div><a class="back" href="#combo">←</a><small>组合和弦 · ${cb.alias}</small><h1>${cb.name}</h1></div></header>
+      ${keyChips(cb.minor)}
+      <section class="cxblock"><h3>这一串</h3>${progRow(key, ch)}
+        <p class="chain">${cb.deg.map((d, i) => `<span><b>${cb.show ? cb.show[i] : d}</b><i>${famWord(d)}</i></span>`).join('<em>→</em>')}</p>
+        <p class="fine">${cb.say}${cb.where ? ' · 你在 ' + cb.where + ' 里见过它。' : ''}</p>
+        ${Staff.html({ key, bars: ch.map(x => [x]), end: true, time: true, start: 1 })}</section>
+      <section class="cxblock"><h3>抠掉一个，换成它的「字」</h3>
+        <p class="fine">选一个位置抠掉。它变成一个字（稳 / 走 / 紧）：<b>同一个字的和弦都能填进去</b>，每填一个就是一个新变体。点每一行听。</p>
+        <div class="chips">${ch.map((x, i) => `<button class="chip${pos === i ? ' on' : ''}" data-act="cbhide" data-v="${i}">抠掉第 ${i + 1} 个（${D(x)}）</button>`).join('')}</div>
+        ${pos == null ? '' : `<p class="chain holed">${ch.map((x, i) => i === pos ? `<span class="hole"><b>？</b><i>${famWord(cb.deg[i])}</i></span>` : `<span><b>${D(x)}</b><i>${famWord(cb.deg[i])}</i></span>`).join('<em>→</em>')}</p>
+          ${cbCands(cb, pos).map(c => { const row = ch.slice(); row[pos] = c.sym; const sh = cbShared(ch[pos], c.sym);
+            return `<div class="variant${c.orig ? ' isorig' : ''}"><small>${c.orig ? '原版' : '变体'} · 填 <b>${D(c.sym)}</b>（${c.d} 级${c.sev ? '七和弦' : ''}）${c.orig ? '' : sh.length ? ` · 和 ${D(ch[pos])} 共用 ${sh.join('、')}，所以都是「${famWord(cb.deg[pos])}」` : ` · 同样是「${famWord(cb.deg[pos])}」`}</small>${progRow(key, row)}</div>`; }).join('')}`}
+      </section>
+      <section class="cxblock"><h3>填空 <small>${st ? `· 做过 ${st.n} 题，原版答对 ${st.r} 题` : ''}</small></h3>${cbQuizHtml(cb)}</section>
+      <section class="cxblock"><h3>在曲子里</h3>${finds.length ? finds.map(f => `<a class="link" href="#song-${f.s.id}-${f.hits.flat().join('.')}-${encodeURIComponent(cbChords(cb, f.s.key)[0])}"><small>${esc(f.s.title)}</small><b>第 ${f.hits.map(h => h[0] + '–' + h[h.length - 1]).slice(0, 4).join('、')}${f.hits.length > 4 ? ' 等' : ''} 小节 · ${cbChords(cb, f.s.key).map(D).join(' ')}</b><span>→</span></a>`).join('') : '<p class="fine">曲库里还没有完整出现这一串。</p>'}</section>
+      <section class="cxblock"><h3>在琴上弹这一串</h3><p class="fine">一个和弦弹对了才往下走。</p>${placeChips()}<div id="cbtarget" class="chain">${ch.map((x, i) => `<span data-i="${i}"><b>${D(x)}</b></span>`).join('<em>→</em>')}</div><div id="dctl"></div></section>
+      <p class="pageend">— 到底了 —</p>`;
+    drillStart(ch.map(x => ({ kind: 'chord', pcs: T.parseChord(x).notes.map(n => n.pc), label: x })), {
+      onAdvance: i => document.querySelectorAll('#cbtarget span').forEach((e, k) => { e.classList.toggle('now', k === i); e.classList.toggle('done', k < i); }),
+      onMiss: () => toast('不对，再试一次'),
+      onMode: () => ($('#dctl').innerHTML = drillControls()),
+      onDone: r => { const mic = DR && DR.mode === 'mic'; logEv('combo', { id, miss: r.miss, m: DR ? DR.mode : '' }); if (!r.miss) PK.mark('combo:' + id, mic); document.querySelectorAll('#cbtarget span').forEach(e => e.classList.add('done')); $('#dctl').innerHTML = `<p class="${r.miss ? 'no' : 'ok'}">${r.miss ? '弹完了，错了 ' + r.miss + ' 次 · 再来一遍' : mic ? '在琴上一遍弹对 · 记为「琴上弹过」' : '屏幕上一遍点对 · 记为「已学 · 未上琴」'}</p><button class="ghost sm" data-act="cbredo">再来一遍</button>`; },
+    });
+    DR.cands = ch.map(x => T.parseChord(x).notes.map(n => n.pc));
+    $('#dctl').innerHTML = drillControls();
+    if ((relisten || S.micOK) && place() === 'piano') { relisten = false; drillListen(); }
+  }
+  // 填空：先听原版，再从选项里选被抠掉的那个。同一个「字」的别的和弦算「也成立的变体」，但不算答对原版
+  const cbDeg = (sym, key, sev) => [1, 2, 3, 4, 5, 6, 7].find(d => T.degreeChord(T.parseKey(key), d - 1, !!sev) === sym) || (T.parseChord(sym) && T.parseChord(sym).q === '7' ? 5 : 0);
+  function cbQuizHtml(cb) {
+    const ch = cbChords(cb), key = cbKey(cb);
+    if (!CB.q) {
+      const pos = Math.floor(Math.random() * ch.length), same = cbCands(cb, pos).filter(c => !c.orig).map(c => c.sym);
+      const others = [1, 2, 3, 4, 5, 6].map(d => T.degreeChord(T.parseKey(key), d - 1, !!cb.sev)).filter(x => x !== ch[pos] && !same.includes(x));
+      const opts = [ch[pos]].concat(same.slice(0, 1), others.sort(() => Math.random() - 0.5).slice(0, 2)).sort(() => Math.random() - 0.5);
+      CB.q = { pos, opts, ans: null };
+    }
+    const q = CB.q, right = ch[q.pos], fw = o => famWord(cbDeg(o, key, cb.sev)) || '';
+    const slot = (x, i) => i === q.pos ? `<span class="hole"><b>${q.ans ? D(x) : '？'}</b><i>${famWord(cb.deg[i])}</i></span>` : `<span><b>${D(x)}</b><i>${famWord(cb.deg[i])}</i></span>`;
+    let why = '';
+    if (q.ans) {
+      if (q.ans === right) why = `<span class="ok">对，原版就是 ${D(right)}。</span>`;
+      else if (fw(q.ans) === famWord(cb.deg[q.pos])) why = `<span class="ok">也成立：</span>${D(q.ans)} 和 ${D(right)} 都是「${fw(q.ans)}」，填进去是一个<b>变体</b>。不过原版是 <b>${D(right)}</b>，听听两个的区别。`;
+      else why = `<span class="no">不对。</span>这个位置是「${famWord(cb.deg[q.pos])}」，${D(q.ans)} 是「${fw(q.ans) || '?'}」，放进去这一串的方向就变了。原版是 <b>${D(right)}</b>。`;
+    }
+    return `<p class="fine">先听一遍原版，再选被抠掉的那个和弦。</p>
+      <p class="chain holed">${ch.map(slot).join('<em>→</em>')}</p>
+      <div class="row"><button class="ghost sm" data-act="cbqplay">▶ 听原版</button></div>
+      <div class="opts">${q.opts.map(o => `<button class="opt${q.ans ? (o === right ? ' right' : o === q.ans ? ' wrong' : '') : ''}" data-act="cbans" data-v="${esc(o)}"${q.ans ? ' disabled' : ''}><b>${D(o)}</b><small>${q.ans ? fw(o) : ''}</small></button>`).join('')}</div>
+      ${q.ans ? `<p class="why">${why}</p><div class="row"><button class="ghost sm" data-act="cbqyours">▶ 听你选的</button><button class="btn" data-act="cbnext">下一题 →</button></div>` : ''}`;
   }
   function srcBox(s) {
     const src = s.src || 'simplified', ev = s.ev ? Object.values(s.ev) : [];
@@ -1989,7 +2093,7 @@
 
   // ---------------- 文字里的和弦名：自动加下划线，点开浮窗解释 ----------------
   const CHORD_RE = /(^|[^A-Za-z0-9#♯♭\/])([A-G](?:#|♯|b|♭)?(?:maj7|m7b5|m7♭5|dim7|dim|aug|sus2|sus4|m7|m|7|°|ø)?(?:\/[A-G](?:#|♯|b|♭)?)?)(?![A-Za-z0-9#♯♭])/g;
-  const SKIP = 'button, a, svg, input, textarea, select, label, nav, h1, .chordref, .kb, .tcard, .symbig, .jp, .grade, .now, .cell, .pc, .opt, .chip, .stat, .qbar, .cxname, .tc-title, .bars, .ring-t, .heat, .jpq, .src, code';
+  const SKIP = 'button, a, svg, input, textarea, select, label, nav, h1, .chain, .variant small, .chordref, .kb, .tcard, .symbig, .jp, .grade, .now, .cell, .pc, .opt, .chip, .stat, .qbar, .cxname, .tc-title, .bars, .ring-t, .heat, .jpq, .src, code';
   // 取文字节点前后（跨过 <b> 之类的标签）的几个字
   function sideText(n, dir) {
     let t = '', cur = n;
@@ -2156,6 +2260,11 @@
   document.addEventListener('click', e => {
     const el = e.target.closest('[data-act]'); if (!el) return;
     const act = el.dataset.act;
+    // 任何「播放」都先停掉正在响的（不然两次播放会叠在一起），并把别的「■ 停止」按钮还原
+    if (/play$/.test(act) || act === 'prog' || act === 'symdemo') {
+      stopAll();
+      document.querySelectorAll('[data-act="scstop"],[data-act="sgstop"]').forEach(b => { if (b === el) return; b.dataset.act = b.dataset.act === 'scstop' ? 'scplay' : 'sgplay'; if (b.dataset.lab) b.textContent = b.dataset.lab; });
+    }
     A.init();
     switch (act) {
       case 'explain': { playChord(el.dataset.s); const s = allSongs().find(x => x.id === route[1]); const ex = $('#explain'); if (ex) ex.innerHTML = barEvidence(s, +el.dataset.n, el.dataset.s) + chordExplain(el.dataset.s, s && s.key); document.querySelectorAll('.cell').forEach(c => c.classList.toggle('sel', c === el)); break; }
@@ -2168,9 +2277,15 @@
       case 'cmpplay': scorePlay(CMP.mode === 'orig' ? null : el.dataset.v === 'orig' ? [0, 1] : CMP.mode === 'practice' ? null : [0, 2]); break;
       case 'lyrsave': S.lyrics = S.lyrics || {}; S.lyrics[route[1]] = $('#lyrtext').value.trim(); save(); render(); toast('歌词已贴到谱上（只存在这台手机）'); break;
       case 'lyrclear': if (S.lyrics) delete S.lyrics[route[1]]; save(); render(); break;
+      case 'cbkey': if (/m$/.test(el.dataset.v)) CB.mkey = el.dataset.v; else CB.key = el.dataset.v; CB.q = null; render(); break;
+      case 'cbhide': CB.hide = CB.hide === +el.dataset.v ? null : +el.dataset.v; render(); break;
+      case 'cbnext': CB.q = null; render(); setTimeout(() => { const e = view.querySelectorAll('.cxblock')[2]; if (e) e.scrollIntoView({ block: 'start' }); }, 30); break;
+      case 'cbredo': render(); break;
+      case 'cbqplay': case 'cbqyours': { const cb = COMBOS.find(x => x.id === route[1]); const ch = cbChords(cb); if (act === 'cbqyours') ch[CB.q.pos] = CB.q.ans; A.init(); ch.forEach((x, i) => A.chord(chordMidis(x), i * 0.9, 0.01, 1)); break; }
+      case 'cbans': { const cb = COMBOS.find(x => x.id === route[1]); const ch = cbChords(cb); CB.q.ans = el.dataset.v; const ok = CB.q.ans === ch[CB.q.pos]; S.combo = S.combo || {}; const r = (S.combo[cb.id] = S.combo[cb.id] || { n: 0, r: 0 }); r.n++; if (ok) r.r++; logEv('cbq', { id: cb.id, ok: ok ? 1 : 0, pick: CB.q.ans }); save(); render(); setTimeout(() => { const e = view.querySelectorAll('.cxblock')[2]; if (e) e.scrollIntoView({ block: 'start' }); }, 30); break; }
       case 'scrange': SC.range = el.dataset.v; render(); break;
-      case 'scplay': scorePlay(); el.textContent = '■ 停止'; el.dataset.act = 'scstop'; break;
-      case 'scstop': stopAll(); el.textContent = '▶ 播放'; el.dataset.act = 'scplay'; break;
+      case 'scplay': scorePlay(); el.dataset.lab = el.textContent; el.textContent = '■ 停止'; el.dataset.act = 'scstop'; break;
+      case 'scstop': stopAll(); el.textContent = el.dataset.lab || '▶ 播放'; el.dataset.act = 'scplay'; break;
       case 'screte': SC.rate = Math.max(0.5, Math.min(1.3, Math.round((SC.rate + +el.dataset.v) * 10) / 10)); render(); break;
       case 'pro': S.pro = el.dataset.v === '1'; save(); render(); break;
       case 'altap': alTap(); break;
@@ -2199,7 +2314,7 @@
       case 'mhint': { if (!DR) break; DR.hinted = true; const t = DR.targets[DR.i]; if (t) { const ex = $('#explain'); if (ex) ex.innerHTML = '提示：' + chordExplain(t.label, (allSongs().find(x => x.id === route[1]) || {}).key); playChord(t.label); } break; }
       case 'mredo': render(); break;
       case 'sgpat': { SG.pat[route[1]] = el.dataset.v; vSing(); const song = SING.find(x => x.id === route[1]); const pat = PATTERNS[song.beats].find(p => p.id === el.dataset.v); playPattern(songTimeline(song).slots[0].sym, pat, song.beats, song.bpm * SG.rate); break; }
-      case 'sgplay': singPlay(SING.find(s => s.id === el.dataset.id)); el.textContent = '■ 停止'; el.dataset.act = 'sgstop'; break;
+      case 'sgplay': singPlay(SING.find(s => s.id === el.dataset.id)); el.dataset.lab = el.textContent; el.textContent = '■ 停止'; el.dataset.act = 'sgstop'; break;
       case 'sgstop': stopAll(); vSing(); break;
       case 'patplay': { const song = SING.find(x => x.id === el.dataset.id); const pats = PATTERNS[song.beats]; const pat = pats.find(p => p.id === SG.pat[song.id]) || pats[1]; playPattern(songTimeline(song).slots[0].sym, pat, song.beats, song.bpm * SG.rate); break; }
       case 'sgtog': SG[el.dataset.k] = !SG[el.dataset.k]; vSing(); break;
