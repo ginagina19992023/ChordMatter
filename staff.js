@@ -75,7 +75,8 @@ const Staff = (() => {
     const keySig = vexKeySig(cfg.key);
     const ksCount = Math.abs(VF.keySignature(keySig).length);
     const head = 58 + ksCount * 9;
-    const perRow = cfg.perRow || Math.max(1, Math.min(4, Math.floor((W - head) / (cfg.minBar || 140))));
+    // 每行几小节：谱面自己指定 > 用户手调（全局，2 / 3 / 4）> 按宽度自动
+    const perRow = cfg.perRow || (typeof window !== 'undefined' && window.HX_PERROW) || Math.max(1, Math.min(4, Math.floor((W - head) / (cfg.minBar || 140))));
     const rows = [];
     for (let i = 0; i < cfg.bars.length; i += perRow) rows.push(cfg.bars.slice(i, i + perRow));
     const ROW_H = cfg.numerals === false ? 190 : 205, TOP = 34;

@@ -946,3 +946,11 @@ body.immersive #pbar { display: none; }
 /* Claude 预览（竖屏）：顶部约 70px 被 Claude 的工具条盖住，页眉整体往下让 */
 html.inart body:not(.land) { --pbar: calc(env(safe-area-inset-top) + 110px); }
 html.inart body:not(.land) #pbar { padding-top: calc(env(safe-area-inset-top) + 70px); }
+/* 组合和弦顶部：右上角「格子 / 谱」一键切换；谱面每行几小节 */
+.viewsw { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin: -4px 0 6px; }
+.seg { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 15px; overflow: hidden; }
+.seg button { border: 0; background: none; height: 28px; padding: 0 11px; font-size: 13px; color: var(--mute); cursor: pointer; }
+.seg button.on { background: var(--ink); color: var(--bg); }
+.seg small { padding: 0 4px 0 10px; font-size: 12px; }
+.seg.perrow button { padding: 0 9px; }
+.cbstaff { margin: 0 -6px; }

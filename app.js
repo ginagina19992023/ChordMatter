@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 61; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 62; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -531,6 +531,9 @@
   }
   // 有钢琴 / 没钢琴：只在页眉右上角切换（全局），页面里不再单独放选择
   function modeSwitch() { return ''; }
+  // 五线谱每行几小节（手调，全局记住）
+  const perRowChips = () => `<span class="seg perrow"><small>每行</small>${[2, 3, 4].map(n => `<button class="${(S.perRow || 4) === n ? 'on' : ''}" data-act="perrow" data-v="${n}">${n}</button>`).join('')}</span>`;
+  if (typeof window !== 'undefined') window.HX_PERROW = S.perRow || 0;
   function pbarPaint() {
     let bar = document.getElementById('pbar');
     if (!bar) { bar = document.createElement('div'); bar.id = 'pbar'; (document.getElementById('phone') || document.body).prepend(bar); }
@@ -901,8 +904,9 @@
     const pos = CB.hide;
     view.innerHTML = `<header class="top"><div><a class="back" href="#combo">←</a><small>组合和弦 · ${cb.alias}</small><h1>${cb.name}</h1></div></header>
       ${keyChips(cb.minor)}
-      <section class="cbtop">${progRow(key, ch)}
-        <div class="shaperow">${ch.map(x => `<span>${chordShape(x, key, 56, 60)}</span>`).join('')}</div>
+      <section class="cbtop"><div class="viewsw">${S.cbView === 'staff' ? perRowChips() : ''}<span class="seg"><button class="${S.cbView !== 'staff' ? 'on' : ''}" data-act="cbview" data-v="grid">格子</button><button class="${S.cbView === 'staff' ? 'on' : ''}" data-act="cbview" data-v="staff">谱</button></span></div>
+        ${S.cbView === 'staff' ? `<div class="cbstaff">${Staff.html({ key, bars: ch.map(x => [x]), end: true, time: true, start: 1, perRow: S.perRow || 4 })}</div>` : `${progRow(key, ch)}
+        <div class="shaperow">${ch.map(x => `<span>${chordShape(x, key, 56, 60)}</span>`).join('')}</div>`}
         <p class="fine">${cb.say}${cb.where ? ' · 你在 ' + cb.where + ' 里见过它。' : ''}</p></section>
       ${pager('combo', [
         ['变体', `<h3>抠掉一个，换成它的「字」</h3>        <p class="fine">选一个位置抠掉。它变成一个字（稳 / 走 / 紧）：<b>同一个字的和弦都能填进去</b>，每填一个就是一个新变体。点每一行听。</p>
@@ -915,7 +919,6 @@
         ['曲子里', `<h3>在曲子里</h3>${finds.length ? finds.map(f => `<a class="link" href="#song-${f.s.id}-${f.hits.flat().join('.')}-${encodeURIComponent(cbChords(cb, f.s.key)[0])}"><small>${esc(f.s.title)}</small><b>第 ${f.hits.map(h => h[0] + '–' + h[h.length - 1]).slice(0, 4).join('、')}${f.hits.length > 4 ? ' 等' : ''} 小节 · ${cbChords(cb, f.s.key).map(D).join(' ')}</b><span>→</span></a>`).join('') : '<p class="fine">曲库里还没有完整出现这一串。</p>'}`],
         ['跟练', `<h3>看着彩条弹</h3>${rollEntry('combo', '把这一串连着落两遍，左右手跟着彩条弹')}`],
         ['琴上', `<h3>在琴上弹这一串</h3><p class="fine">一个和弦弹对了才往下走。</p>${placeChips()}<div id="cbtarget" class="chain">${ch.map((x, i) => `<span data-i="${i}"><b>${D(x)}</b></span>`).join('<em>→</em>')}</div><div id="dctl"></div>`],
-        ['谱', `<h3>五线谱</h3>${Staff.html({ key, bars: ch.map(x => [x]), end: true, time: true, start: 1 })}`],
       ])}`;
     pagerInit();
     drillStart(ch.map(x => ({ kind: 'chord', pcs: T.parseChord(x).notes.map(n => n.pc), label: x })), {
@@ -3001,6 +3004,8 @@
       }
       case 'brq': BR.q = el.dataset.v; go('#browse'); render(); break;
       case 'place': S.place = el.dataset.v; save(); render(); break;
+      case 'cbview': S.cbView = el.dataset.v; save(); render(); break;
+      case 'perrow': S.perRow = +el.dataset.v; window.HX_PERROW = S.perRow; save(); render(); break;
       case 'placetoggle': S.place = place() === 'piano' ? 'away' : 'piano'; save(); render(); toast(place() === 'piano' ? '有钢琴：收音听你弹，记为「琴上弹过」' : '没钢琴：在屏幕上点，记为「已学 · 未上琴」'); break;
       case 'key': if (['sym', 'inv', 'logic'].includes(route[0])) symTap(+el.dataset.m); else drillTapKey(+el.dataset.m); break;
       case 'symdemo': symDemo(SY.card); break;
