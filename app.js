@@ -392,7 +392,7 @@
     ({ today: vToday, path: vPath, unit: vUnit, chords: vChords, songs: vSongs, song: vSong, edit: vEdit, quiz: vQuiz, arp: vArp, mem: vMem, me: vMe, acc: vAcc, sing: vSing, acctest: vAccTest, know: vKnow, score: vScore, scan: vScan, sym: vSym, inv: vInv, cards: vCards, logic: vLogic }[r] || vToday)();
     if (r === 'song') mountMyScore(route[1]);
     if (S.pendingGift && !document.body.classList.contains('focus')) setTimeout(flushGift, 400);
-    window.scrollTo(0, 0);
+    window.scrollTo(0, 0); const ph = document.getElementById('phone'); if (ph) ph.scrollTop = 0;
   }
 
   function vToday() {
@@ -738,10 +738,12 @@
     });
     return out.replace(/\u0000([^\u0001]+)\u0001([^\u0002]+)\u0002/g, (m, w, href) => `<a class="term" href="${href}">${w}</a>`);
   }
+  function sectionStarts(s) { let n = 1; return s.sections.map(sec => { const m = /(\d+)/.exec(sec.name); const st = m ? +m[1] : n; n = st + parseBars(sec.bars).length; return st; }); }
+  function songBarMap(s) { const map = {}, st = sectionStarts(s); s.sections.forEach((sec, i) => parseBars(sec.bars).forEach((b, k) => (map[st[i] + k] = b))); return map; }
   function songGrid(s, hideFn, showFn) {
-    const key = s.key;
+    const key = s.key, starts = sectionStarts(s);
     let idx = 0;
-    return s.sections.map(sec => `<div class="sec"><small>${esc(sec.name)}</small><div class="bars">${parseBars(sec.bars).map(bar => `<div class="bar">${bar.map(sym => {
+    return s.sections.map((sec, si) => `<div class="sec"><small>${esc(sec.name)}</small><div class="bars">${parseBars(sec.bars).map((bar, bi) => `<div class="bar"><span class="bn">${starts[si] + bi}</span>${bar.map(sym => {
       const a = T.analyze(sym, key), i = idx++, hid = hideFn ? hideFn(i) : false;
       return `<div class="cell${hid ? ' hid' : ''}" data-i="${i}" data-act="${hid ? 'reveal' : 'explain'}" data-s="${esc(sym)}"><b>${hid ? '?' : D(sym)}</b><i>${hid && !(showFn && showFn()) ? '' : a ? degLabel(sym, key) : '?'}</i>${funcTag(a && a.func)}</div>`;
     }).join('')}</div>`).join('')}</div></div>`).join('');
@@ -752,20 +754,25 @@
     if (!s) return go('#songs');
     if (!s.sections.length || !s.key) return go('#edit-' + s.id);
     const lv = (S.songs[s.id] || { level: 0 }).level;
+    const origLinks = s.orig ? `<div class="row origlinks">${s.orig.apple ? `<a class="ghost sm" href="${s.orig.apple}" target="_blank" rel="noopener">Apple Music 听录音 ↗</a>` : ''}${s.orig.imslp ? `<a class="ghost sm" href="${s.orig.imslp}" target="_blank" rel="noopener">IMSLP 原版乐谱 ↗</a>` : ''}</div>` : '';
     view.innerHTML = `<header class="top"><div><a class="back" href="#songs">←</a><small>${esc(s.sub || '')}</small><h1>${esc(s.title)}</h1></div><a class="stat" href="#edit-${s.id}"><b>✎</b><small>编辑</small></a></header>
-      ${s.scanned || String(s.id).startsWith('my') ? `<section class="orig" id="myscore"></section>` : ''}
-      ${s.rec ? `<section class="orig"><h3>真人演奏录音</h3><p class="fine">学习段落 ${s.rec.clipName}</p><audio controls preload="none" src="${s.rec.clip}"></audio><p class="fine">完整版</p><audio controls preload="none" src="${s.rec.full}"></audio><p class="fine">${s.rec.credit} · <a href="${s.rec.url}" target="_blank" rel="noopener">来源 ↗</a></p></section>` : ''}
-      ${s.orig ? `<section class="orig"><h3>原曲</h3><div class="row">${s.orig.score ? `<a class="btn" href="#score-${s.id}">看完整原谱 · 听原曲</a>` : ''}${s.orig.apple ? `<a class="ghost" href="${s.orig.apple}" target="_blank" rel="noopener">Apple Music 听录音 ↗</a>` : ''}${s.orig.imslp ? `<a class="ghost" href="${s.orig.imslp}" target="_blank" rel="noopener">IMSLP 原版乐谱 ↗</a>` : ''}</div>${s.orig.score ? '' : '<p class="fine">' + (s.orig.imslp ? '这首的完整原谱请在 IMSLP（公有领域乐谱库）查看。' : '这首仍受版权保护，不能内置原谱和录音，只能链接到正版平台。') + '</p>'}</section>` : ''}
+      <section class="orig first"><h3>原谱</h3>
+        ${s.orig && s.orig.score ? `<a class="scorelink" href="#score-${s.id}"><b>打开完整原谱</b><small>每小节上方标好了和弦和级数 · 学习段落高亮 · 点音符发声 · 可听全部</small><span>→</span></a>` : ''}
+        <div id="myscore"></div>
+        ${origLinks}
+      </section>
+      <section class="songmain">
+        <div class="chips"><button class="chip${S.pro ? '' : ' on'}" data-act="pro" data-v="0">简单写法</button><button class="chip${S.pro ? ' on' : ''}" data-act="pro" data-v="1">专业写法</button><a class="chip" href="#logic">这些字是什么意思？</a></div>
+        <p class="fine legend">每格左上角的小数字 = 原谱的小节号，对着原谱看。${S.pro ? 'I IV V = 大三和弦，ii vi = 小三和弦，T 主 · S 下属 · D 属' : '6m = 六级小和弦 · 5⁷/2 = 五级七和弦、低音弹 2 · 稳 = 在家 · 走 = 出门 · 紧 = 想回家'}</p>
+        <div class="grid" id="grid">${songGrid(s)}</div>
+        <p class="explain" id="explain">点任意和弦：听声音，并看它是什么意思。</p>
+        <div class="row"><button class="ghost" data-act="splay" data-id="${s.id}">▶ 播放进行</button><a class="btn" href="#mem-${s.id}">弹下来 · 第 ${Math.min(4, lv + 1)} 层 →</a></div>
+        <p class="fine">${esc(s.note || '')}</p>
+      </section>
       <section class="logic"><h3>谱面逻辑 <small>· 点下划线的词看解释</small></h3>${songLogic(s).map(l => `<p>${termLinks(l)}</p>`).join('')}</section>
-      <h3 class="h3">五线谱 · 和声骨架</h3>
+      <h3 class="h3">五线谱 · 和声骨架（左手低音 + 右手和弦）</h3>
       ${s.sections.map(sec => `<div class="stf"><small>${esc(sec.name)}</small>${Staff.html({ key: s.key, bars: parseBars(sec.bars), end: true, time: true })}</div>`).join('')}
-      <h3 class="h3">级数与功能</h3>
-      <div class="chips"><button class="chip${S.pro ? '' : ' on'}" data-act="pro" data-v="0">简单写法</button><button class="chip${S.pro ? ' on' : ''}" data-act="pro" data-v="1">专业写法</button><a class="chip" href="#know-k3">符号说明</a></div>
-      <p class="fine legend">${S.pro ? 'I IV V = 大三和弦，ii vi = 小三和弦，T 主 · S 下属 · D 属' : '数字 = 简谱级数（6m = 六级小和弦，5⁷/2 = 五级七和弦、低音弹 2）· 稳 = 在家 · 走 = 出门 · 紧 = 想回家'}</p>
-      <div class="grid" id="grid">${songGrid(s)}</div>
-      <p class="explain" id="explain">点任意和弦：听声音，并看它是什么意思。</p>
-      <div class="row"><button class="ghost" data-act="splay" data-id="${s.id}">▶ 播放进行</button><a class="btn" href="#mem-${s.id}">弹下来 · 第 ${Math.min(4, lv + 1)} 层 →</a></div>
-      <p class="fine">${esc(s.note || '')}</p>
+      ${s.rec ? `<section class="orig"><h3>真人演奏录音</h3><p class="fine">学习段落 ${s.rec.clipName}</p><audio controls preload="none" src="${s.rec.clip}"></audio><p class="fine">完整版</p><audio controls preload="none" src="${s.rec.full}"></audio><p class="fine">${s.rec.credit} · <a href="${s.rec.url}" target="_blank" rel="noopener">来源 ↗</a></p></section>` : ''}
       <section class="logic"><h3>背谱方法</h3>
         <p>1. <b>先分析后记忆</b>：每一段先说出「调、功能、怎么结束」。</p>
         <p>2. <b>分块</b>：按乐句（通常 2 或 4 小节）记，不按单个音记。</p>
@@ -1260,7 +1267,9 @@
       <div class="score" id="score"><p class="fine">正在加载乐谱…（第一次需要下载约 13MB 的乐谱引擎，之后会快很多）</p></div>
       ${s.orig.apple ? `<a class="link" href="${s.orig.apple}" target="_blank" rel="noopener"><small>真人演奏</small><b>在 Apple Music 听录音</b><span>↗</span></a>` : ''}
       <p class="fine">乐谱：${esc(sc.credit)}</p>`;
-    Score.render($('#score'), sc, { section: SC.section }).catch(() => { const e = $('#score'); if (e) e.innerHTML = '<p class="no">乐谱加载失败：需要联网。可以先用下面的链接。</p>'; });
+    const bm = songBarMap(s), lab = {};
+    Object.keys(bm).forEach(n => (lab[n] = bm[n].map(x => D(x) + ' ' + degLabel(x, s.key)).join('  ')));
+    Score.render($('#score'), sc, { section: SC.section, labels: lab }).catch(() => { const e = $('#score'); if (e) e.innerHTML = '<p class="no">乐谱加载失败：需要联网。可以先用下面的链接。</p>'; });
   }
   function scorePlay() {
     const c = Score.get(); if (!c || !c.notes.length) return toast('乐谱还没加载好');
@@ -1273,7 +1282,7 @@
         const g = el.querySelector('[data-id="' + n.id + '"]') || el.querySelector('[id="' + n.id + '"]'); if (!g) return;
         g.classList.add('playing'); setTimeout(() => g.classList.remove('playing'), Math.max(120, n.dur * r * 1000));
         const y = g.getBoundingClientRect().top;
-        if (Math.abs(y - lastY) > 40 && (y < 80 || y > innerHeight - 120)) { window.scrollBy({ top: y - innerHeight * 0.35, behavior: 'smooth' }); }
+        if (Math.abs(y - lastY) > 40) { const box = (document.getElementById('phone') && getComputedStyle(document.getElementById('phone')).overflowY === 'auto') ? document.getElementById('phone').getBoundingClientRect() : { top: 0, bottom: innerHeight }; if (y < box.top + 60 || y > box.bottom - 140) g.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
         lastY = y;
       }, (n.t * r + 0.05) * 1000);
     });
@@ -1329,9 +1338,18 @@
   }
   async function mountMyScore(id) {
     const el = $('#myscore'); if (!el) return;
-    const pages = await OCR.loadPages(id);
-    if (!pages || !pages.length) { el.remove(); return; }
-    el.innerHTML = `<h3>我的原谱</h3><div class="myscore">${pages.map(p => `<img src="${p}" alt="原谱">`).join('')}</div><p class="fine">双指放大查看。和弦有认错的地方，点右上角「编辑」改。</p>`;
+    let pages = await OCR.loadPages(id);
+    if ((!pages || !pages.length) && window.HX_PRESEED && HX_PRESEED[id]) pages = HX_PRESEED[id];
+    if (!pages || !pages.length) {
+      el.innerHTML = `<label class="drop small" for="addscore"><b>添加你手上的原谱</b><small>截图、照片或 PDF · 只存在这台手机上 · 下面每格的小节号对着它看</small></label><input type="file" id="addscore" accept="image/*,application/pdf,.pdf" hidden>`;
+      $('#addscore').addEventListener('change', async e => {
+        const f = e.target.files[0]; if (!f) return;
+        el.innerHTML = '<p class="fine">正在读取…</p>';
+        try { const cs = await OCR.toCanvases(f); await OCR.savePages(id, cs.map(c => c.toDataURL('image/jpeg', 0.8))); mountMyScore(id); } catch (err) { el.innerHTML = '<p class="no">没能读取这个文件</p>'; }
+      });
+      return;
+    }
+    el.innerHTML = `<div class="myscore">${pages.map(p => `<img src="${p}" alt="原谱">`).join('')}</div><p class="fine">双指放大查看。下面和弦格子里的小数字就是这份谱的小节号。</p>`;
   }
 
   // ---------------- 符号入门：一次一个符号 ----------------

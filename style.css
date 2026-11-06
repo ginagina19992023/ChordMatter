@@ -442,16 +442,31 @@ dl.stor { margin: 0 0 6px; font-size: 13px; }
 .lhc { color: var(--S); }
 .cxpractice { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 12px; }
 
-/* 宽屏（电脑预览）时用手机外框模拟 iPhone */
-@media (min-width: 760px) and (min-height: 700px) {
-  html { background: color-mix(in srgb, var(--ink) 6%, var(--bg)); height: 100%; }
-  body { width: 390px; height: min(844px, calc(100vh - 48px)); margin: 24px auto; border: 10px solid #1b1b1b; border-radius: 48px; overflow-y: auto; overflow-x: hidden; transform: translateZ(0); box-shadow: 0 30px 60px rgba(0,0,0,.18); scrollbar-width: none; position: relative; }
-  body::-webkit-scrollbar { display: none; }
-  body main { padding-top: 34px; }
-  .cxtop { margin-top: -34px; padding-top: 40px; }
+/* 宽屏（电脑预览）时用手机外框模拟 iPhone：外框是一个固定大小、自己滚动的容器 */
+@media (min-width: 760px) {
+  html, body { background: color-mix(in srgb, var(--ink) 6%, var(--bg)); }
+  body { padding: 24px 0; }
+  #phone { width: 390px; height: 800px; margin: 0 auto; border: 10px solid #1b1b1b; border-radius: 48px; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; transform: translateZ(0); box-shadow: 0 30px 60px rgba(0,0,0,.18); scrollbar-width: none; background: var(--bg); position: relative; }
+  #phone::-webkit-scrollbar { display: none; }
+  #phone main { padding-top: 34px; }
+  #phone .cxtop { margin-top: -34px; padding-top: 40px; }
   #toast { bottom: 90px; }
+}
 }
 
 a.term { border-bottom: 1px dashed var(--acc); color: inherit; }
 .logic h3 small { font-weight: 400; }
 .score g.note { cursor: pointer; }
+
+/* 曲目页：原谱在最上面，格子带小节号 */
+.orig.first h3 { margin-bottom: 8px; }
+.scorelink { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--ink); border-radius: var(--r); margin-bottom: 8px; }
+.scorelink b { font-weight: 500; }
+.scorelink small { display: block; }
+.scorelink > :first-child { flex: 1; }
+.origlinks { margin: 8px 0 0; }
+.drop.small { padding: 16px; }
+.songmain { margin-bottom: 18px; }
+.bar { position: relative; }
+.bn { position: absolute; top: 2px; left: 3px; font-size: 9.5px; color: var(--mute); font-variant-numeric: tabular-nums; }
+.score text.chordlab { fill: #c2410c; font-family: -apple-system, "PingFang SC", sans-serif; font-weight: 600; }

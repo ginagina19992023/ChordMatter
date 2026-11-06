@@ -43,6 +43,21 @@ const Score = (() => {
         if (n >= a && n <= b) g.classList.add('learn');
       });
     }
+    // 每小节上方写上和弦与级数（来自曲目的和声分析）
+    if (opt.labels) {
+      el.querySelectorAll('g.measure').forEach((g, i) => {
+        let n = NaN; try { n = parseInt(tk.getElementAttr(g.dataset.id || g.id).n, 10); } catch (e) {}
+        if (isNaN(n)) n = i + 1;
+        const txt = opt.labels[n]; if (!txt) return;
+        const bb = g.getBBox(), svg = g.ownerSVGElement;
+        const fs = Math.max(bb.height * 0.075, 1);
+        const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        t.setAttribute('x', bb.x + fs * 0.3); t.setAttribute('y', bb.y - fs * 0.15);
+        t.setAttribute('font-size', fs); t.setAttribute('class', 'chordlab');
+        t.textContent = txt;
+        (g.parentNode || svg).appendChild(t);
+      });
+    }
     // 时间表 → 播放用的音符
     const tm = tk.renderToTimemap({ includeMeasures: true });
     const notes = [];
