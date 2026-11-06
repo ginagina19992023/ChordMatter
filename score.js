@@ -50,7 +50,7 @@ const Score = (() => {
         if (isNaN(n)) n = i + 1;
         const txt = opt.labels[n]; if (!txt) return;
         const bb = g.getBBox(), svg = g.ownerSVGElement;
-        const fs = Math.max(bb.height * 0.075, 1);
+        const fs = Math.max(bb.height * 0.1, 1);
         const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         t.setAttribute('x', bb.x + fs * 0.3); t.setAttribute('y', bb.y - fs * 0.15);
         t.setAttribute('font-size', fs); t.setAttribute('class', 'chordlab'); t.dataset.n = n;
