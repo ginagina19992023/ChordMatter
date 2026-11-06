@@ -1046,20 +1046,28 @@
     if (sel) setTimeout(() => { const r = view.querySelector('.cxblock:last-of-type h3'); if (r && route[2] !== 'top') r.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 60);
   }
   function chordFinds(c) {
-    const LV = ['', '同类型（换了根音）', '同一个和弦（换了转位）', '原样出现'];
+    // 三种「找到」，每种都写清楚是什么关系
+    const LV = { 3: ['原样', `就是 ${D(c.sym)}，一模一样`], 2: ['转位', `还是 ${D(c.root.name)}${c.q ? D(c.q) : ''} 这几个音，只是最低音换了（斜线后面是最低音）`], 1: ['同类型', `也是${(T.Q[c.q] || {}).zh || '这类和弦'}，只是换了根音：形状一样，整体平移`] };
+    // 每首曲子的和弦是从哪来的
+    const SRC = s => s.src === 'printed' ? ['谱上印的', '和弦名就印在原谱上，照抄的'] : s.src === 'analyzed' ? ['我读原谱判断的', s.ev ? '原谱上没印和弦名：我逐小节看左手低音和右手的音判断出来的，点小节号能看每小节的依据' : '原谱上没印和弦名：我按谱上的音判断出来的'] : ['学习用简化', '不是原谱上的和弦：为了好学，简化成了常用和弦，和原曲听起来会不一样'];
     const rows = allSongs().map(s => { const h = chordHits(s, c); return h.length ? { s, h, best: Math.max(...h.map(x => x.lv)) } : null; }).filter(Boolean)
       .sort((x, y) => y.best - x.best || y.h.filter(z => z.lv === y.best).length - x.h.filter(z => z.lv === x.best).length);
     if (!rows.length) return '<p class="fine">曲库里还没有用到这种和弦的曲子，先用上面的小进行练。</p>';
-    return rows.slice(0, 6).map(({ s, h, best }) => {
-      const use = h.filter(x => x.lv === best), st = sectionStarts(s);
-      const names = [...new Set(use.map(x => x.sym))].map(D).join('、');
+    const legend = `<p class="fine findlegend">找到的分三种：<b>原样</b> = 一模一样的 ${D(c.sym)}；<b>转位</b> = 同样的音，换了最低音；<b>同类型</b> = 同一种和弦换了根音。每首还标了和弦<b>从哪来</b>。</p>`;
+    return legend + rows.slice(0, 6).map(({ s, h, best }) => {
+      const use = h.filter(x => x.lv === best), src = SRC(s);
       const nums = [...new Set(use.map(x => x.n))];
-      // 乐句：以命中小节所在的 4 小节为一组（按段落起点对齐），最多显示 3 组
       const phr = []; use.forEach(x => { const p0 = Math.floor(x.k / 4) * 4; const id = x.si + ':' + p0; if (!phr.some(p => p.id === id)) phr.push({ id, si: x.si, p0 }); });
       const blocks = phr.slice(0, 3).map(p => phraseHtml(s, p.si, p.p0, (n, x) => use.some(u => u.n === n && u.sym === x))).join('');
       const more = phr.length > 3 ? `<p class="fine">还有 ${phr.length - 3} 处，在曲目页里都高亮了。</p>` : '';
-      return `<details class="find"><summary><span><b>${esc(s.title)}</b><small>${LV[best]}：${names} · 第 ${nums.slice(0, 6).join('、')}${nums.length > 6 ? ' 等' : ''}小节</small></span><span class="arr">⌄</span></summary>
-        <div class="findbody">${blocks}${more}<a class="ghost sm" href="#song-${s.id}-${nums.join('.')}-${encodeURIComponent(c.sym)}">到曲目页看这一段 →</a></div></details>`;
+      // 这首里三种各有哪些
+      const kinds = [3, 2, 1].map(lv => { const xs = h.filter(x => x.lv === lv); if (!xs.length) return ''; const ns = [...new Set(xs.map(x => x.n))], syms = [...new Set(xs.map(x => D(x.sym)))];
+        return `<li><b class="lvtag lv${lv}">${LV[lv][0]}</b> ${syms.join('、')} · 第 ${ns.slice(0, 8).join('、')}${ns.length > 8 ? ' 等' : ''} 小节<br><small>${LV[lv][1]}</small></li>`; }).join('');
+      // 每个命中小节的依据（有逐小节证据的才列）
+      const nn = t => esc(String(t || '').replace(/\b([A-G])(#|b)?(\d)\b/g, (m, l, a) => l + (a === '#' ? '♯' : a === 'b' ? '♭' : '')));
+      const ev = s.ev ? nums.slice(0, 4).map(n => { const e = s.ev[n]; if (!e) return ''; return `<li>第 ${n} 小节（原谱第 ${e.page} 页第 ${e.sys} 行）：${e.printed ? '谱上印着 ' + esc(e.printed) : '谱上没印，按 左手 ' + nn(e.lh) + ' + 右手 ' + nn(e.rh) + ' 判断'}</li>`; }).join('') : '';
+      return `<details class="find"><summary><span><b>${esc(s.title)}</b><small><b class="lvtag lv${best}">${LV[best][0]}</b> ${[...new Set(use.map(x => D(x.sym)))].join('、')} · 第 ${nums.slice(0, 6).join('、')}${nums.length > 6 ? ' 等' : ''}小节 · <span class="srctag s-${s.src || 'simplified'}">${src[0]}</span></small></span><span class="arr">⌄</span></summary>
+        <div class="findbody"><p class="fine findsrc"><b>和弦从哪来：${src[0]}</b> · ${src[1]}</p><ul class="findkinds">${kinds}</ul>${blocks}${more}${ev ? `<details class="findev"><summary>这几小节为什么是这个和弦</summary><ul>${ev}</ul></details>` : ''}<a class="ghost sm" href="#song-${s.id}-${nums.join('.')}-${encodeURIComponent(c.sym)}">到曲目页看这一段 →</a></div></details>`;
     }).join('');
   }
   function chordSongs(c) {

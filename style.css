@@ -891,3 +891,18 @@ html.inart .rollfs.rot { padding-top: 8px; padding-left: 76px; }
 .rollfs.rot .rollbox .row > * { flex: 1 1 40%; min-height: 36px; padding: 0 8px; font-size: 13px; }
 .rollfs.rot .fshead b { font-size: 14px; }
 body.land .rollfs #rlctl p, .rollfs.rot #rlctl p { display: none; }
+/* 曲子里：三种找到的标签 + 和弦来源 */
+.lvtag { display: inline-block; font-size: 11px; font-weight: 600; padding: 0 6px; border-radius: 5px; margin-right: 2px; line-height: 17px; }
+.lvtag.lv3 { background: #fde3d7; color: #b4441a; }
+.lvtag.lv2 { background: #e3ecfb; color: #2f5fb3; }
+.lvtag.lv1 { background: #eee; color: #555; }
+.srctag { font-size: 11px; padding: 0 5px; border-radius: 5px; border: 1px solid var(--line); white-space: nowrap; }
+.srctag.s-simplified { color: #b4441a; border-color: #f2c2ad; }
+.findlegend { margin: 0 0 8px; }
+.findsrc { margin: 4px 0 6px; }
+.findkinds { list-style: none; padding: 0; margin: 0 0 8px; font-size: 13px; }
+.findkinds li { margin-bottom: 5px; }
+.findkinds small { color: var(--mute); }
+.findev { margin: 4px 0 8px; font-size: 12.5px; }
+.findev summary { color: var(--S); cursor: pointer; }
+.findev ul { padding-left: 18px; margin: 4px 0; color: var(--mute); }
