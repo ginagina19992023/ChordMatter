@@ -270,3 +270,9 @@ bash tools/run-all.sh
 - **原谱引擎首次加载约 13 MB**；只有 K.545、BWV 846 有数字原谱，其他曲目靠用户上传截图。
 - **曲目和声是学习用简化分析**（Always Online 由谱面左手推断），页面上注明了请对照原谱核对。
 - **没有云同步**：换设备靠导出 / 导入备份。
+
+## 云端同步（GitHub Gist）
+- 「我」页 → 云端同步：用户粘贴一个只有 gist 权限的 GitHub 令牌；令牌只存本机 `localStorage['hexian.cloud']`，不进 S、不进备份。
+- 存档是用户账号里的一个私密 Gist，文件名 `chordmatter-state.json`，内容 = 整个 S。连接时先找已有的（换设备接上），没有就新建。
+- `save()` → 4 秒后 PATCH；打开 / 回到前台时拉取，云端 savedAt 更新就用云端（覆盖前本机那份存在 IndexedDB `before-cloud`）；切到后台立刻补传。
+- 「我的原谱」图片在 IndexedDB，不同步（太大）。sw.js 不缓存跨域请求。artifact 预览版里不同步。

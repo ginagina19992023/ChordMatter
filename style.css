@@ -848,3 +848,15 @@ body.land .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .sharecard .row { margin: 8px 0 0; }
 .todayshare { margin: -6px 0 10px; justify-content: flex-end; }
 .calshare { margin: 4px 0 8px; justify-content: center; }
+/* 云端同步 / 装到主屏幕 */
+.cloudbox { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; }
+.cloudbox p { margin: 4px 0; }
+.cloudbox .row { display: flex; gap: 8px; margin-top: 6px; }
+.cloudbox input { flex: 1; min-width: 0; font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }
+.cloudsteps { margin: 6px 0; padding-left: 20px; }
+.cloudsteps a { color: var(--acc); }
+.installtip { border: 1px dashed var(--line); border-radius: 12px; padding: 8px 12px; margin-bottom: 12px; }
+.installtip p { margin: 4px 0 0; }
+.kbd { display: inline-block; border: 1px solid var(--line); border-radius: 5px; padding: 0 4px; font-size: 12px; }
+.cloudbox .row .btn { flex: 0 0 auto; width: auto; padding: 8px 18px; }
+.cloudbox input { font-size: 16px; } /* iOS 小于 16px 会自动放大页面 */

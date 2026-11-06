@@ -51,7 +51,70 @@
       } catch (e) {}
     }, 400);
   }
-  const save = () => { S.v = SCHEMA; S.savedAt = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} mirror(); };
+  const save = () => { S.v = SCHEMA; S.savedAt = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} mirror(); cloudQueue(); };
+  // 云端同步：存到你自己 GitHub 账号里的一个私密 Gist（不需要服务器）
+  // 令牌只存在这台手机（hexian.cloud），不进备份、不进分享
+  const CK = 'hexian.cloud', GFILE = 'chordmatter-state.json';
+  const cloudCfg = () => { try { return JSON.parse(localStorage.getItem(CK) || 'null'); } catch (e) { return null; } };
+  const cloudSet = o => { try { if (o) localStorage.setItem(CK, JSON.stringify(o)); else localStorage.removeItem(CK); } catch (e) {} };
+  const CL = { timer: null, busy: false, msg: '' };
+  async function gh(path, opt = {}, token) {
+    const r = await fetch('https://api.github.com' + path, Object.assign({}, opt, { headers: Object.assign({ Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }, opt.body ? { 'Content-Type': 'application/json' } : {}) }));
+    if (!r.ok) { const e = new Error('github ' + r.status); e.status = r.status; throw e; }
+    return r.status === 204 ? null : r.json();
+  }
+  async function gistRead(cfg) {
+    const g = await gh('/gists/' + cfg.gist, {}, cfg.token), f = g.files && g.files[GFILE]; if (!f) return null;
+    const txt = f.truncated ? await (await fetch(f.raw_url)).text() : f.content;
+    return JSON.parse(txt);
+  }
+  async function cloudConnect(token) {
+    token = String(token || '').trim(); if (!token) throw new Error('empty'); CL.msg = '';
+    const me = await gh('/user', {}, token);
+    // 找已有的那个 Gist（换手机 / 重装时接上原来的记录），没有就新建一个私密的
+    let gist = null;
+    for (let page = 1; page <= 5 && !gist; page++) {
+      const list = await gh('/gists?per_page=100&page=' + page, {}, token); if (!list.length) break;
+      const hit = list.find(g => g.files && g.files[GFILE]); if (hit) gist = hit.id;
+    }
+    const cfg = { token, gist, login: me.login };
+    if (!gist) { const g = await gh('/gists', { method: 'POST', body: JSON.stringify({ description: 'ChordMatter 练琴记录（自动同步）', public: false, files: { [GFILE]: { content: JSON.stringify(S) } } }) }, token); cfg.gist = g.id; cfg.at = Date.now(); cloudSet(cfg); return 'new'; }
+    cloudSet(cfg); return (await cloudPull(true)) || 'linked';
+  }
+  // 拉：云端比本机新就用云端（覆盖前在 IndexedDB 留一份本机的）
+  async function cloudPull(first) {
+    const cfg = cloudCfg(); if (!cfg || !cfg.gist || CL.busy) return null;
+    CL.busy = true;
+    try {
+      const o = await gistRead(cfg); cfg.at = Date.now(); cloudSet(cfg); CL.msg = '';
+      if (o && typeof o === 'object' && 'xp' in o && (o.savedAt || 0) > (S.savedAt || 0)) {
+        await IDB.put('before-cloud', JSON.stringify(S)).catch(() => {});
+        S = migrate(o); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} mirror();
+        if (typeof render === 'function') render(); return 'pulled';
+      }
+      if (first || !o || (S.savedAt || 0) > (o.savedAt || 0)) { CL.busy = false; await cloudPush(); }
+      return 'same';
+    } catch (e) { CL.msg = e.status === 401 ? '令牌失效了，请重新连接' : '暂时连不上，稍后会再试'; return null; }
+    finally { CL.busy = false; cloudPaint(); }
+  }
+  async function cloudPush() {
+    const cfg = cloudCfg(); if (!cfg || !cfg.gist || CL.busy) return;
+    CL.busy = true;
+    try { await gh('/gists/' + cfg.gist, { method: 'PATCH', body: JSON.stringify({ files: { [GFILE]: { content: JSON.stringify(S) } } }) }, cfg.token); cfg.at = Date.now(); cloudSet(cfg); CL.msg = ''; }
+    catch (e) { CL.msg = e.status === 401 ? '令牌失效了，请重新连接' : '暂时连不上，联网后会自动补传'; }
+    finally { CL.busy = false; cloudPaint(); }
+  }
+  function cloudQueue() { if (!cloudCfg() || 'HX_PRESEED' in window) return; clearTimeout(CL.timer); CL.timer = setTimeout(cloudPush, 4000); }
+  // 打开 App、切回前台时拉一次；切到后台时把没传的立刻传上去
+  setTimeout(() => cloudPull(), 800);
+  document.addEventListener('visibilitychange', () => { if (!cloudCfg()) return; if (document.visibilityState === 'visible') cloudPull(); else if (CL.timer) { clearTimeout(CL.timer); CL.timer = null; cloudPush(); } });
+  function cloudPaint() {
+    const el = document.getElementById('cloudbox'); if (!el) return;
+    if ('HX_PRESEED' in window) { el.innerHTML = '<p class="fine">这里是预览版，连不了 GitHub。云端同步请在网站版用：<a href="https://ginagina19992023.github.io/ChordMatter/#me" target="_blank" rel="noopener">ginagina19992023.github.io/ChordMatter</a></p>'; return; }
+    const c = cloudCfg();
+    el.innerHTML = c ? `<p>已连接 GitHub：<b>${c.login || ''}</b> · ${CL.busy ? '同步中…' : c.at ? '上次同步 ' + new Date(c.at).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '还没同步'}</p>${CL.msg ? `<p class="no">${CL.msg}</p>` : ''}<div class="pills"><button class="pill" data-act="cloudsync">现在同步</button><button class="pill" data-act="cloudoff">断开</button></div><p class="fine">练习一结束就自动传上去；在别的手机 / 电脑打开这个网址，用同一个令牌连接，记录会自动接上。</p>`
+      : `<p class="fine">把练习记录存到你自己 GitHub 账号里的一个私密 Gist：换手机、清缓存都不会丢，几台设备之间自动同步。</p><ol class="fine cloudsteps"><li><a href="https://github.com/settings/tokens/new?scopes=gist&description=ChordMatter%20%E5%90%8C%E6%AD%A5" target="_blank" rel="noopener">点这里生成令牌</a>（只勾 gist 这一项，过期时间可以选 No expiration）</li><li>复制生成的 ghp_… 令牌，粘到下面</li></ol><div class="row"><input id="cloudtoken" type="password" autocomplete="off" placeholder="ghp_…"><button class="btn" data-act="cloudconnect">连接</button></div>${CL.msg ? `<p class="no">${CL.msg}</p>` : ''}`;
+  }
   // 启动时：如果 localStorage 被清掉或比 IndexedDB 旧，用 IndexedDB 那份恢复
   (async () => {
     try {
@@ -1395,7 +1458,7 @@
     try { if (navigator.storage && navigator.storage.estimate) { const e = await navigator.storage.estimate(); used = (e.usage / 1048576).toFixed(1) + ' MB'; } } catch (e) {}
     const snaps = (await IDB.keys().catch(() => [])).filter(k => String(k).startsWith('snap-')).sort();
     const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-    el.innerHTML = `<dl class="stor"><dt>保存方式</dt><dd>本机两份（localStorage + IndexedDB）</dd><dt>持久保存</dt><dd>${persisted ? '已开启，不会被系统自动清理' : standalone ? '主屏幕 App，iOS 不会自动清理' : '未开启 · 建议添加到主屏幕'}</dd><dt>每日快照</dt><dd>${snaps.length ? snaps.length + ' 份，最近 ' + snaps[snaps.length - 1].slice(5) : '还没有'}</dd><dt>最近备份</dt><dd>${S.backupAt ? new Date(S.backupAt).toLocaleDateString('zh-CN') : '还没导出过'}</dd>${used ? `<dt>占用空间</dt><dd>${used}</dd>` : ''}</dl>`;
+    el.innerHTML = `<dl class="stor"><dt>保存方式</dt><dd>本机两份（localStorage + IndexedDB）${cloudCfg() ? ' + GitHub 云端' : ''}</dd><dt>持久保存</dt><dd>${persisted ? '已开启，不会被系统自动清理' : standalone ? '主屏幕 App，iOS 不会自动清理' : '未开启 · 建议添加到主屏幕'}</dd><dt>每日快照</dt><dd>${snaps.length ? snaps.length + ' 份，最近 ' + snaps[snaps.length - 1].slice(5) : '还没有'}</dd><dt>最近备份</dt><dd>${S.backupAt ? new Date(S.backupAt).toLocaleDateString('zh-CN') : '还没导出过'}</dd>${used ? `<dt>占用空间</dt><dd>${used}</dd>` : ''}</dl>`;
   }
   async function exportBackup() {
     S.backupAt = Date.now(); save();
@@ -1417,10 +1480,12 @@
       <a class="unitbar" href="#cards"><small>卡册 · ${ownedCards().length}/${CARDS.length}</small><b>${S.pts || 0} 分 · 再得 ${Math.max(0, (S.ptsNext || PTS_STEP) - (S.pts || 0))} 分抽一张曲谱卡</b></a>
       <h3 class="h3">最近的真实记录</h3>${logTable()}
       <h3 class="h3">琶音速度</h3><ul class="list">${Object.entries(S.arp).map(([k, v]) => `<li><a href="#arp-${k}"><span><b>${D(k)}</b></span><span>${v.bpm} BPM</span></a></li>`).join('') || '<li class="fine">还没有记录</li>'}</ul>
+      <h3 class="h3">云端同步</h3><div id="cloudbox" class="cloudbox"></div>
+      ${(window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) ? '' : `<div class="installtip"><b>装到手机主屏幕</b><p class="fine">用 Safari 打开这个网址 → 点底部的分享按钮 <span class="kbd">⬆︎</span> → 「添加到主屏幕」。以后点图标直接打开，全屏、离线也能用。</p></div>`}
       <h3 class="h3">数据</h3><div id="storinfo" class="fine">正在检查存储状态…</div>
       <div class="row"><button class="ghost" data-act="export">导出备份</button><button class="ghost" data-act="import">导入备份</button><button class="ghost" data-act="reset">清空</button></div>
       <p class="fine">进度保存在这台 iPhone 上（两份 + 每日快照）。建议「添加到主屏幕」使用，iOS 不会清理主屏幕 App 的数据。换手机或重装前点「导出备份」，可以存到「文件」或 iCloud。<br>iPhone 静音键打开时可能听不到声音，请关闭静音。</p>`;
-    storInfo();
+    storInfo(); cloudPaint();
   }
 
   function pkSummary() {
@@ -2915,6 +2980,9 @@
       case 'splay': { const sg = allSongs().find(x => x.id === el.dataset.id); playChords(sg, songRange(sg)); const bt = document.querySelector('.dock .play'); if (bt) { bt.textContent = '■ 停止'; bt.dataset.act = 'dockstop'; } break; }
       case 'sdel': S.custom = S.custom.filter(c => c.id !== el.dataset.id); save(); try { indexedDB.open('hexian-scores', 1).onsuccess = e => { const d = e.target.result; if (d.objectStoreNames.contains('pages')) d.transaction('pages', 'readwrite').objectStore('pages').delete(el.dataset.id); }; } catch (err) {} go('#songs'); break;
       case 'export': exportBackup(); break;
+      case 'cloudconnect': { const v = ($('#cloudtoken') || {}).value; if (!v) { toast('先粘贴令牌'); break; } el.disabled = true; el.textContent = '连接中…'; cloudConnect(v).then(r => { toast(r === 'new' ? '已连接 · 在你的 GitHub 里新建了私密存档' : r === 'pulled' ? '已连接 · 已接上云端的记录' : '已连接 · 已同步'); cloudPaint(); storInfo(); }).catch(e => { CL.msg = e.status === 401 ? '令牌不对：确认复制完整，并且勾了 gist' : '连不上 GitHub，检查一下网络'; cloudPaint(); }); break; }
+      case 'cloudsync': cloudPull(true); cloudPaint(); break;
+      case 'cloudoff': if (confirm('断开后这台设备不再同步（本机和云端的记录都还在）。确定？')) { cloudSet(null); CL.msg = ''; cloudPaint(); storInfo(); } break;
       case 'import': { const i = document.createElement('input'); i.type = 'file'; i.accept = 'application/json,.json'; i.onchange = () => { const r = new FileReader(); r.onload = () => { try { const o = JSON.parse(r.result); if (!o || typeof o !== 'object' || !('xp' in o)) throw 0; S = migrate(o); save(); toast('已导入备份'); render(); } catch (err) { toast('这不是 ChordMatter 的备份文件'); } }; r.readAsText(i.files[0]); }; i.click(); break; }
       case 'reset': if (el.dataset.armed) { S = JSON.parse(JSON.stringify(DEF)); save(); render(); toast('已清空'); } else { el.dataset.armed = 1; el.textContent = '再点一次确认清空'; } break;
     }
