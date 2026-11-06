@@ -54,16 +54,19 @@ const Score = (() => {
         if (lastOf[n] !== g) return;
         const bb = g.getBBox(), svg = g.ownerSVGElement;
         const fs = Math.max(bb.height * 0.1, 1);
-        // 小节线上方的小 ▶：点它从这一小节一直播放到结尾
+        // 小节线上方的小三角：点它从这一小节一直播放到结尾（画成图形，不用 ▶ 字符：iPhone 会把字符画成图标）
         if (opt.barAct) {
-          const mk = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-          mk.setAttribute('x', bb.x - fs * 0.35); mk.setAttribute('y', bb.y - fs * 1.35); mk.setAttribute('font-size', fs * 0.95);
-          mk.setAttribute('class', 'playfrom'); mk.dataset.act = 'playfrom'; mk.dataset.n = n; mk.textContent = '▶';
-          (g.parentNode || svg).appendChild(mk);
+          const NS = 'http://www.w3.org/2000/svg', st = g.querySelector(':scope > g.staff'), sb = st ? st.getBBox() : bb;
+          const top = (() => { const ln = st && st.querySelector(':scope > path'); return ln ? ln.getBBox().y : sb.y; })();
+          const sz = fs * 0.52, x0 = bb.x - sz * 0.3, y0 = top - sz * 1.45;
+          const mk = document.createElementNS(NS, 'g'); mk.setAttribute('class', 'pfm'); mk.dataset.act = 'playfrom'; mk.dataset.n = n;
+          const hit = document.createElementNS(NS, 'rect'); hit.setAttribute('x', x0 - sz); hit.setAttribute('y', y0 - sz * 1.2); hit.setAttribute('width', sz * 3.2); hit.setAttribute('height', sz * 3.2); hit.setAttribute('class', 'pfm-hit');
+          const tri = document.createElementNS(NS, 'path'); tri.setAttribute('d', `M${x0} ${y0}L${x0} ${y0 + sz}L${x0 + sz * 0.9} ${y0 + sz / 2}Z`); tri.setAttribute('class', 'pfm-tri');
+          mk.appendChild(hit); mk.appendChild(tri); (g.parentNode || svg).appendChild(mk);
         }
         const txt = opt.labels[n]; if (!txt) return;
         const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        t.setAttribute('x', bb.x + fs * 0.3); t.setAttribute('y', bb.y - fs * 0.15);
+        t.setAttribute('x', bb.x + fs * (opt.barAct ? 0.85 : 0.3)); t.setAttribute('y', bb.y - fs * 0.15);
         t.setAttribute('font-size', fs); t.setAttribute('class', 'chordlab'); t.dataset.n = n;
         if (opt.barAct) { t.dataset.act = 'barev'; t.style.cursor = 'pointer'; }
         t.textContent = txt;

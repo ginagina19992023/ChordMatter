@@ -667,7 +667,12 @@ details.patdetail summary { font-size: 14px; color: var(--mute); cursor: pointer
 .hstrip p .fT { color: #464646; } .hstrip p .fS { color: #2f6fdb; } .hstrip p .fD { color: #e8541e; }
 
 /* 点小节播放 / 多选 / 从这里播放 */
-text.playfrom { fill: var(--S); cursor: pointer; opacity: .75; }
+/* 小节线上的小三角：从这里播放 */
+g.pfm { cursor: pointer; }
+.pfm-hit { fill: transparent; }
+.pfm-tri { fill: var(--mute); opacity: .45; transition: opacity .15s, fill .15s; }
+body.nolab .pfm-tri { opacity: .7; }
+g.pfm:hover .pfm-tri, g.pfm:active .pfm-tri { fill: var(--S); opacity: 1; }
 .score g.measure.sel g.staff > path, .score g.measure.sel g.note *, .score g.measure.sel g.rest * { fill: var(--S) !important; stroke: var(--S); }
 .selbox { position: absolute; background: color-mix(in srgb, var(--S) 13%, transparent); border: 1.5px solid var(--S); border-radius: 6px; pointer-events: none; }
 .selbar { position: fixed; left: 12px; right: 12px; top: calc(env(safe-area-inset-top) + 10px); z-index: 7; display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 14px; background: var(--bg); border: 1px solid var(--S); border-radius: 999px; box-shadow: 0 6px 20px rgba(0,0,0,.12); font-size: 13.5px; }

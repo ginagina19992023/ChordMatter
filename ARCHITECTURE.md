@@ -157,7 +157,7 @@ flowchart TD
 ### 在谱上点小节播放
 - 点小节空白处（不是音符）= 播放这一小节；点音符 = 听这个音；点和弦标注 = 看这一小节的依据。
 - 长按一个小节（480ms）进入多选，再点别的小节扩大范围，顶部出现「▶ 播放第 a–b 小节」。
-- 每条小节线上方的小 ▶（Verovio：`text.playfrom`；和声骨架：`staffplayfrom` 事件）= 从这一小节播放到结尾。
+- 每条小节线上方的小 ▶（Verovio：`g.pfm`；和声骨架：`staffplayfrom` 事件）= 从这一小节播放到结尾。
 - `scorePlay(staffs, [a, b])` / `playSkeleton(s, [a, b])` 按小节范围过滤音符并从 0 开始计时。
 
 ### 瀑布流难度

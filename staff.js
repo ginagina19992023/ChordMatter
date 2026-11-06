@@ -107,7 +107,10 @@ const Staff = (() => {
           const n = cfg.start + barNo; const bx = bi === 0 ? x + head - 8 : x + 3;
           ctx.save(); ctx.setFont('sans-serif', 10, 'normal'); ctx.setFillStyle(mute); ctx.fillText(String(n), bx, y + 8);
           // 小 ▶：从这一小节播放到结尾
-          const mx = bx - 13; ctx.setFont('sans-serif', 10, 'normal'); ctx.setFillStyle(css('--S') || '#2f6fdb'); ctx.fillText('▶', mx, y + 8); ctx.restore();
+          // 小三角（画出来的，不用 ▶ 字符）：从这一小节播放到结尾
+          const mx = bx - 11, ty = y + 1.5, sz = 6.5;
+          ctx.setFillStyle(mute); ctx.save(); if (ctx.setGlobalAlpha) ctx.setGlobalAlpha(document.body.classList.contains('nolab') ? 0.7 : 0.45);
+          ctx.beginPath(); ctx.moveTo(mx, ty); ctx.lineTo(mx, ty + sz); ctx.lineTo(mx + sz * 0.9, ty + sz / 2); ctx.closePath(); ctx.fill(); ctx.restore(); ctx.restore();
           boxes.push({ n, x: bi === 0 ? x + head - 10 : x, y: y - 20, w: bi === 0 ? w - head + 10 : w, h: 170, mx, my: y + 4 });
         }
         barNo++;
