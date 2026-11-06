@@ -94,8 +94,8 @@
   const songLv = (id, m = place()) => { const st = S.songs[id] || {}; return (m === 'away' ? st.away : st.level) || 0; };
   // 符号/转位/逻辑课里，有「在键盘上点出来」的课，才需要上琴；纯看懂的课不需要
   const needsPiano = card => [0, 1, 2].some(i => { try { return card.task(i).type === 'tap'; } catch (e) { return false; } });
-  const symSt = card => !symDone(card.id) ? 0 : !needsPiano(card) ? 3 : PK.state('sym:' + card.id) === 2 ? 2 : 1;
-  const symTag = card => { const st = symSt(card); return st === 3 ? '<span class="pk pk2">已学 · 不用上琴</span>' : pkTag(st); };
+  const symSt = card => !symDone(card.id) || (S.sym && S.sym[card.id] === 'skip') ? 0 : !needsPiano(card) ? 3 : PK.state('sym:' + card.id) === 2 ? 2 : 1;
+  const symTag = card => { if (S.sym && S.sym[card.id] === 'skip') return '<span class="pk">已跳过 · 没学</span>'; const st = symSt(card); return st === 3 ? '<span class="pk pk2">已学 · 不用上琴</span>' : pkTag(st); };
   function pianoTodo() {
     const out = [];
     COURSE_ORDER.forEach(ck => COURSES[ck].cards.forEach(c => { if (symSt(c) === 1) out.push({ k: 'sym', t: `${c.big} · ${c.title}`, sub: COURSES[ck].title + ' · 在琴上弹出 3 题', href: '#pk-' + c.id, d: (PK.rec('sym:' + c.id) || {}).a }); }));
@@ -418,7 +418,7 @@
     drillStop(); alStop(); document.querySelectorAll('.giftov, .cpop, .tpop').forEach(x => x.remove());
     document.body.classList.toggle('focus', ['quiz', 'arp', 'mem', 'sing', 'acctest'].includes(r) || (['sym', 'inv', 'logic'].includes(r) && route[1]));
     document.querySelectorAll('nav a').forEach(x => { if ((r === 'sing' || r === 'acctest') && x.dataset.r === 'acc') x.classList.add('on'); if (['know', 'sym', 'inv', 'logic'].includes(r) && x.dataset.r === 'path') x.classList.add('on'); if ((r === 'score' || r === 'scan') && x.dataset.r === 'songs') x.classList.add('on'); });
-    ({ today: vToday, path: vPath, unit: vUnit, chords: vChords, songs: vSongs, song: vSong, edit: vEdit, quiz: vQuiz, arp: vArp, mem: vMem, me: vMe, acc: vAcc, sing: vSing, acctest: vAccTest, know: vKnow, score: vScore, scan: vScan, pk: vPk, browse: vBrowse, along: vAlong, sym: vSym, inv: vInv, cards: vCards, logic: vLogic }[r] || vToday)();
+    ({ today: vToday, path: vPath, unit: vUnit, chords: vChords, songs: vSongs, song: vSong, edit: vEdit, quiz: vQuiz, arp: vArp, mem: vMem, me: vMe, acc: vAcc, sing: vSing, acctest: vAccTest, know: vKnow, score: vScore, scan: vScan, pk: vPk, browse: vBrowse, along: vAlong, cmp: vCmp, sym: vSym, inv: vInv, cards: vCards, logic: vLogic }[r] || vToday)();
     try { linkChords(view); linkTerms(view); } catch (e) {} // 立即给文字加下划线，不等谱面画完
     if (r === 'song') mountMyScore(route[1]);
     if (S.pendingGift && !document.body.classList.contains('focus')) setTimeout(flushGift, 400);
@@ -486,7 +486,7 @@
       <a class="unitbar" href="#know"><small>看不懂符号？</small><b>知识点：从「C、G7 是什么」到「一级二级三级」</b></a>
       <ol class="path">${UNITS.map(u => {
         const st = unitState(u.id).done ? 'done' : u === cur ? 'cur' : unlocked(u) ? '' : 'lock';
-        return `<li class="${st}"><a href="${st === 'lock' ? '#path' : '#unit-' + u.id}"><span class="node">${st === 'done' ? '✓' : u.n}</span><span><b>${u.title}</b><small>${u.en}${st === 'lock' ? ' · 未解锁' : ' · ' + mastery(u.id) + '%'}</small></span></a></li>`;
+        return `<li class="${st}"><a href="${st === 'lock' ? '#path' : '#unit-' + u.id}"><span class="node">${st === 'done' ? '✓' : u.n}</span><span><b>${u.title}</b><small>${u.en}${st === 'lock' ? ' · 未解锁' : unitState(u.id).skipped ? ' · 已跳过' : ' · ' + mastery(u.id) + '%'}</small></span></a></li>`;
       }).join('')}</ol>
       <p class="fine">规则：单元最近 10 题以上、正确率 ≥ 80% 即掌握，自动解锁下一单元。已掌握的单元会在每日练习里按薄弱程度自动复习。</p>`;
   }
@@ -510,7 +510,8 @@
       <article class="lesson">${renderBlocks(u.blocks)}</article>
       ${videoBox(u.vid || u.title + ' 钢琴 乐理')}
       ${song ? `<a class="link" href="#song-${song.id}"><small>联系曲目</small><b>${song.title}</b><span>→</span></a>` : ''}
-      <div class="cta"><button class="btn" data-act="lesson-done" data-u="${u.id}">${fromToday ? '继续 · 做题 →' : '练这个单元 8 题'}</button></div>`;
+      <div class="cta"><button class="btn" data-act="lesson-done" data-u="${u.id}">${fromToday ? '继续 · 做题 →' : '练这个单元 8 题'}</button></div>
+      ${unitState(u.id).done ? '' : `<button class="skipbtn" data-act="unitskip" data-u="${u.id}">这个单元我已经会了，跳过 →</button>`}`;
   }
 
   // 参考视频：应用内演示（自动播放本课所有和弦并高亮）+ 外部免费视频搜索
@@ -670,6 +671,7 @@
   // 一段 4 小节的乐句（小节号对齐原谱），命中的格子标橙；点一下整句播放
   // 原曲：公有领域的给旋律 + 伴奏；有版权的说明为什么没有旋律，并给「跟录音弹」
   function origBox(s) {
+    if (hasFull(s.id)) return `<a class="scorelink" href="#cmp-${s.id}"><b>原曲 ↔ 和弦伴奏 · 上下对比</b><small>按你的谱逐音扒下来的原曲 · 每小节三行：右手旋律 / 原曲左手 / 和弦左手 · 还有「右手原曲 + 左手和弦」练习版 · 可贴歌词</small><span>→</span></a>`;
     if (s.melody) return `<a class="scorelink" href="#sing-${s.melody}"><b>原曲旋律 + 伴奏一起听、一起弹</b><small>双手谱：右手是原曲旋律，左手是这些和弦 · 逐小节讲为什么配这个和弦</small><span>→</span></a>`;
     if (!s.copy) return '';
     return `<div class="origcopy"><p><b>原曲在哪？</b>这首歌有版权，App 里不能放它的旋律和录音，只放和弦。要把伴奏和原曲对上，用这两步：</p>
@@ -714,6 +716,33 @@
       const sym = ch[ci], nxt = ci + 1 < ch.length ? ch[ci + 1] : bars[(barI + 1) % bars.length][0];
       if (el.dataset.k !== barI + ':' + ci) { el.dataset.k = barI + ':' + ci; el.textContent = D(sym); $('#ald').textContent = degLabel(sym, s.key); $('#alx').textContent = D(nxt); $('#aln').textContent = n0 + barI; $('#albar').style.width = ((barI + 1) / bars.length * 100) + '%'; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); if (AL.sound) A.chord(chordMidis(sym), 0, 0.01, 0.35); }
     }, 25);
+  }
+  // ---- 原曲 ↔ 和弦伴奏：上下对比 / 练习版 / 原曲（完整扒谱只在私人版本里）----
+  const CMP = { mode: 'compare', sec: 0 };
+  const hasFull = id => !!(window.FULL && FULL[id]);
+  function vCmp() {
+    const s = allSongs().find(x => x.id === route[1]); if (!s) return go('#songs');
+    if (CMP.id !== s.id) { CMP.id = s.id; CMP.sec = 0; }
+    const st = sectionStarts(s), secs = s.sections.map((x, i) => [x.name, st[i], st[i] + parseBars(x.bars).length - 1]);
+    const head = `<header class="top"><div><a class="back" href="#song-${s.id}">←</a><small>${esc(s.title)}</small><h1>原曲 ↔ 和弦伴奏</h1></div></header>`;
+    if (!hasFull(s.id)) { view.innerHTML = head + `<p class="no">这首的完整扒谱只放在你的私人版本（artifact）里：原谱有版权，不能放到公开网站。请在 artifact 里打开这一页。</p>`; return; }
+    const M = CMP.mode, sec = secs[CMP.sec] || null;
+    const lyr = (S.lyrics || {})[s.id] || '';
+    view.innerHTML = head + `
+      <div class="chips">${[['compare', '上下对比'], ['practice', '练习版：右手原曲 + 左手和弦'], ['orig', '原曲']].map(([k, n]) => `<button class="chip${M === k ? ' on' : ''}" data-act="cmpmode" data-v="${k}">${n}</button>`).join('')}</div>
+      <p class="fine cmpnote">${{ compare: '每一小节从上往下三行：<b>右手（原曲旋律）</b>、<b>原曲左手</b>、<b>和弦左手</b>。第二行和第三行弹的是同一个和弦：原曲把它拆开弹，和弦版把它一下按住。对着看，就知道原曲的左手是从哪个和弦变出来的。', practice: '<b>右手照原曲弹旋律，左手换成和弦</b>：每小节开头按下上面标的和弦，按住到下一个和弦。先慢速，弹熟了再换回原曲左手。', orig: '按你上传的谱逐音扒下来的原曲（两只手）。每小节上方标了和弦。' }[M]}</p>
+      <div class="chips">${secs.map(([n], i) => `<button class="chip${i === CMP.sec ? ' on' : ''}" data-act="cmpsec" data-v="${i}">${esc(n)}</button>`).join('')}<button class="chip${CMP.sec < 0 ? ' on' : ''}" data-act="cmpsec" data-v="-1">全曲</button></div>
+      <div class="row">${M !== 'practice' ? '<button class="btn" data-act="cmpplay" data-v="orig">▶ 听原曲</button>' : ''}${M !== 'orig' ? `<button class="${M === 'practice' ? 'btn' : 'ghost'}" data-act="cmpplay" data-v="practice">▶ 听练习版</button>` : ''}<button class="ghost sm" data-act="screte" data-v="-0.1">慢</button><button class="ghost sm" data-act="screte" data-v="0.1">快</button></div>
+      <div class="score" id="cmpscore"><p class="fine">正在生成谱面…</p></div>
+      <a class="link" href="#mem-${s.id}"><small>边弹边判断</small><b>打开收音，一个和弦一个和弦弹</b><span>→</span></a>
+      <details class="lyr"${lyr ? '' : ' open'}><summary>歌词${lyr ? '（已贴上）' : '：粘贴进来就会贴到旋律音下面'}</summary>
+        <p class="fine">歌词有版权，App 不自带。你把歌词粘贴到这里，只存在这台手机上。中文一个字对一个音，按顺序贴到右手旋律的每个新音下面；某个音不唱字就写一个 _ 跳过；前奏没有歌词的话，在前面写够 _ 或者从「主歌」开始数。</p>
+        <textarea id="lyrtext" rows="5" placeholder="在这里粘贴歌词">${esc(lyr)}</textarea>
+        <div class="row"><button class="ghost sm" data-act="lyrsave">贴到谱上</button>${lyr ? '<button class="ghost sm" data-act="lyrclear">清空</button>' : ''}</div></details>`;
+    const bm = songBarMap(s), lab = {};
+    Object.keys(bm).forEach(n => (lab[n] = barLabel(s, +n)));
+    const kern = FullScore.build(FULL[s.id].kern, { mode: M, barChords: bm, kp, title: s.title + ' · ' + { compare: '上下对比', practice: '练习版', orig: '原曲' }[M], lyrics: lyr, from: sec && CMP.sec >= 0 ? sec[1] : null, to: sec && CMP.sec >= 0 ? sec[2] : null });
+    Score.render($('#cmpscore'), { kern }, { section: false, labels: lab, barAct: true }).catch(e => ($('#cmpscore').innerHTML = '<p class="no">谱面生成失败：' + esc(String(e && e.message || e)) + '</p>'));
   }
   function srcBox(s) {
     const src = s.src || 'simplified', ev = s.ev ? Object.values(s.ev) : [];
@@ -929,15 +958,16 @@
   }
   function songSheet(s) {
     const sc = s.orig && s.orig.score;
-    if (sc) return `<div class="sheet"><p class="fine">${sc.made ? '新造谱：左手是原谱左手，右手是这一小节的和弦（不含旋律）。' : '这是公有领域的原谱（只显示分析过的小节）。'}</p><div class="score" id="songscore"><p class="fine">正在加载谱面…（第一次需要下载乐谱引擎）</p></div></div>`;
+    if (hasFull(s.id)) return `<div class="sheet"><p class="fine">按你上传的谱逐音扒下来的原曲（两只手）。想看原曲左手和和弦左手上下对照、或者练「右手原曲 + 左手和弦」，点上面的「原曲 ↔ 和弦伴奏」。</p><div class="score" id="songscore"><p class="fine">正在加载谱面…（第一次需要下载乐谱引擎）</p></div></div>`;
+    if (sc) return `<div class="sheet"><p class="fine">${sc.made ? '新造谱：左手是原谱左手，右手是这一小节的和弦（不含旋律）。完整的原曲扒谱只在你的私人版本里。' : '这是公有领域的原谱（只显示分析过的小节）。'}</p><div class="score" id="songscore"><p class="fine">正在加载谱面…（第一次需要下载乐谱引擎）</p></div></div>`;
     const st = sectionStarts(s);
     return `<div class="sheet">${s.sections.map((sec, i) => `<div class="stf"><small>${esc(sec.name)}</small>${Staff.html({ key: s.key, bars: parseBars(sec.bars), end: i === s.sections.length - 1, time: i === 0, start: st[i] })}</div>`).join('')}<p class="fine">这是和声骨架：左手弹低音，右手弹和弦，不是原曲的音。${s.copy ? '原曲旋律请听录音或看你自己的谱。' : ''}</p></div>`;
   }
   function songSheetRender(s) {
     const el = $('#songscore'); if (!el) return;
-    const sc = s.orig.score, lab = {};
-    Object.keys(songBarMap(s)).forEach(n => (lab[n] = barLabel(s, +n)));
-    Score.render(el, Object.assign({}, sc), { section: !sc.made && !!sc.measures, labels: lab, barAct: true }).then(() => {
+    const lab = {}; Object.keys(songBarMap(s)).forEach(n => (lab[n] = barLabel(s, +n)));
+    const sc = hasFull(s.id) ? { kern: FullScore.build(FULL[s.id].kern, { mode: 'orig', barChords: songBarMap(s), kp, title: s.title + ' · 原曲（扒谱）', lyrics: (S.lyrics || {})[s.id] }) } : s.orig.score;
+    Score.render(el, Object.assign({}, sc), { section: !hasFull(s.id) && !sc.made && !!sc.measures, labels: lab, barAct: true }).then(() => {
       const want = route[2] ? route[2].split('.').map(Number) : [];
       el.querySelectorAll('text.chordlab').forEach(t => { if (want.includes(+t.dataset.n)) t.classList.add('hit'); });
       const first = el.querySelector('text.chordlab.hit'); if (first) first.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -994,7 +1024,7 @@
         <p>2. <b>分块</b>：按乐句（通常 2 或 4 小节）记，不按单个音记。</p>
         <p>3. <b>找相同与不同</b>：重复的地方只记一次，只把注意力放在不同处。</p>
         <p>4. <b>离开琴背</b>：能在脑中把级数说出来，手上才稳。</p></section>`;
-      if (S.songView !== 'grid' && s.orig && s.orig.score) songSheetRender(s);
+      if (S.songView !== 'grid' && ((s.orig && s.orig.score) || hasFull(s.id))) songSheetRender(s);
     if (route[2]) {
       const want = route[2].split('.').map(Number); let first = null;
       view.querySelectorAll('#grid .bar').forEach(el => { const n = +el.querySelector('.bn').textContent; if (want.includes(n)) { el.classList.add('hit'); first = first || el; } });
@@ -1293,15 +1323,16 @@
   function kd(b) { if (KDUR[b]) return [KDUR[b]]; const out = []; let r = b; [4, 2, 1, 0.5, 0.25].forEach(x => { while (r >= x - 1e-6) { out.push(KDUR[x]); r -= x; } }); return out; }
   function singKern(song, lhMode) {
     const K = T.parseKey(song.key), sc = T.scale(K, true).map(x => x.name), tl = songTimeline(song);
-    const L = ['!!!OTL: ' + song.title + '（双手谱）', '**kern\t**kern', '*staff2\t*staff1', '*clefF4\t*clefG2', (KSIG[song.key] || '*k[]') + '\t' + (KSIG[song.key] || '*k[]'), `*M${song.beats}/4\t*M${song.beats}/4`];
+    // 第三个声部 **text = 歌词，贴在它左边的右手（旋律）声部下面
+    const L = ['!!!OTL: ' + song.title + '（双手谱）', '**kern\t**kern\t**text', '*staff2\t*staff1\t*staff1', '*clefF4\t*clefG2\t*', (KSIG[song.key] || '*k[]') + '\t' + (KSIG[song.key] || '*k[]') + '\t*', `*M${song.beats}/4\t*M${song.beats}/4\t*`];
     let barStart = 0;
     song.bars.forEach((b, bi) => {
       const ns = tl.notes.filter(n => n.bar === bi), sl = tl.slots.filter(x => x.bar === bi);
       const len = ns.reduce((a, n) => a + n.beats, 0) < song.beats - 1e-6 && bi === 0 ? ns.reduce((a, n) => a + n.beats, 0) : song.beats;
-      L.push(`=${bi + 1}\t=${bi + 1}`);
+      L.push(`=${bi + 1}\t=${bi + 1}\t=${bi + 1}`);
       const ev = [];
       let t = 0;
-      ns.forEach(n => { const ds = kd(n.beats); ds.forEach((d, j) => { const tok = n.midi == null ? d + 'r' : d + kp(sc[n.deg - 1], n.midi) + (ds.length > 1 ? (j === 0 ? '[' : j === ds.length - 1 ? ']' : '_') : ''); ev.push([t, 1, tok]); t += 4 / parseFloat(d) * (d.endsWith('.') ? 1.5 : 1) / (d.endsWith('.') ? 1 : 1); }); });
+      ns.forEach(n => { const ds = kd(n.beats); ds.forEach((d, j) => { const tok = n.midi == null ? d + 'r' : d + kp(sc[n.deg - 1], n.midi) + (ds.length > 1 ? (j === 0 ? '[' : j === ds.length - 1 ? ']' : '_') : ''); ev.push([t, 1, tok]); if (j === 0 && n.midi != null && n.lyric && n.lyric !== '~') ev.push([t, 2, n.lyric.replace(/\s/g, '')]); t += 4 / parseFloat(d) * (d.endsWith('.') ? 1.5 : 1); }); });
       // 左手：每个和弦一个
       if (bi === 0 && len < song.beats) { ev.push([0, 0, kd(len).map(d => d + 'r')[0]]); }
       else sl.forEach(x => {
@@ -1313,10 +1344,10 @@
         ds.forEach((d, j) => { const tie = ds.length > 1 ? (j === 0 ? '[' : j === ds.length - 1 ? ']' : '_') : ''; ev.push([tt, 0, ms.map(([nm, m]) => d + kp(nm, m) + tie).join(' ')]); tt += 4 / parseFloat(d) * (d.endsWith('.') ? 1.5 : 1); });
       });
       const times = [...new Set(ev.map(e => +e[0].toFixed(3)))].sort((a, b) => a - b);
-      times.forEach(tt => { const a = ev.find(e => +e[0].toFixed(3) === tt && e[1] === 0), b2 = ev.find(e => +e[0].toFixed(3) === tt && e[1] === 1); L.push(`${a ? a[2] : '.'}\t${b2 ? b2[2] : '.'}`); });
+      times.forEach(tt => { const g = k => ev.find(e => +e[0].toFixed(3) === tt && e[1] === k); const a = g(0), b2 = g(1), ly = g(2); L.push(`${a ? a[2] : '.'}\t${b2 ? b2[2] : '.'}\t${ly && b2 ? ly[2] : '.'}`); });
       barStart += len;
     });
-    L.push('==\t==', '*-\t*-');
+    L.push('==\t==\t==', '*-\t*-\t*-');
     return L.join('\n');
   }
   window.__singKern = s => singKern(s, SG.lh); // 自查用
@@ -1618,8 +1649,9 @@
     Object.keys(bm).forEach(n => (lab[n] = bm[n].map(x => D(x) + ' ' + degLabel(x, s.key)).join('  ')));
     Score.render($('#score'), sc, { section: SC.section, labels: lab }).catch(() => { const e = $('#score'); if (e) e.innerHTML = '<p class="no">乐谱加载失败：需要联网。可以先用下面的链接。</p>'; });
   }
-  function scorePlay() {
-    const c = Score.get(); if (!c || !c.notes.length) return toast('乐谱还没加载好');
+  function scorePlay(staffs) {
+    const c0 = Score.get(); if (!c0 || !c0.notes.length) return toast('乐谱还没加载好');
+    const c = staffs ? Object.assign({}, c0, { notes: c0.notes.filter(n => staffs.includes(n.staff)) }) : c0;
     stopAll(); A.init();
     const r = 1 / SC.rate, el = c.el;
     let lastY = -1;
@@ -1763,6 +1795,7 @@
         <button class="ghost sm" data-act="symdemo">▶ 再看一遍演示</button>
         ${CARD_VIDEO[card.id] ? renderBlocks([Object.assign({ t: 'video', tall: 1, credit: '本应用录制的演示（原创）' }, CARD_VIDEO[card.id])]) : ''}
         <div id="symtask"></div>
+        ${symDone(card.id) ? '' : `<button class="skipbtn" data-act="symskip" data-id="${card.id}">这一课我已经会了，跳过 →</button>`}
       </section>`;
     later(() => symDemo(card), 300);
     symRep();
@@ -2130,6 +2163,11 @@
       case 'sglh': SG.lh = el.dataset.v; render(); break;
       case 'songview': S.songView = el.dataset.v; save(); render(); break;
       case 'barev': { const s = allSongs().find(x => x.id === route[1]); const r = el.getBoundingClientRect(); if (s) barPop(s, +el.dataset.n, r.left + r.width / 2, r.bottom); break; }
+      case 'cmpmode': CMP.mode = el.dataset.v; render(); break;
+      case 'cmpsec': CMP.sec = +el.dataset.v; render(); break;
+      case 'cmpplay': scorePlay(CMP.mode === 'orig' ? null : el.dataset.v === 'orig' ? [0, 1] : CMP.mode === 'practice' ? null : [0, 2]); break;
+      case 'lyrsave': S.lyrics = S.lyrics || {}; S.lyrics[route[1]] = $('#lyrtext').value.trim(); save(); render(); toast('歌词已贴到谱上（只存在这台手机）'); break;
+      case 'lyrclear': if (S.lyrics) delete S.lyrics[route[1]]; save(); render(); break;
       case 'scrange': SC.range = el.dataset.v; render(); break;
       case 'scplay': scorePlay(); el.textContent = '■ 停止'; el.dataset.act = 'scstop'; break;
       case 'scstop': stopAll(); el.textContent = '▶ 播放'; el.dataset.act = 'scplay'; break;
@@ -2139,6 +2177,16 @@
       case 'alstop': alStop(); render(); break;
       case 'alsec': alStop(); AL.sec = +el.dataset.v; render(); break;
       case 'alsound': AL.sound = !AL.sound; el.classList.toggle('on', AL.sound); el.textContent = 'App 也轻声弹和弦：' + (AL.sound ? '开' : '关'); break;
+      case 'symskip': {
+        const id = el.dataset.id; S.sym = S.sym || {}; S.sym[id] = 'skip'; S.skip = S.skip || {}; S.skip[id] = today(); logEv('skip', { id }); save();
+        const c = ALLCARDS.find(x => x.id === id), nx = symNext(courseOf(c)) || nextAny();
+        toast('已跳过「' + c.title + '」· 记为「跳过」，不算学会，随时可以回来学');
+        go(SY && SY.fromToday ? stepHref('learn') : nx ? '#sym-' + nx.id : '#' + courseOf(c)); break;
+      }
+      case 'unitskip': {
+        const u = unitState(el.dataset.u); u.done = true; u.skipped = today(); logEv('skip', { id: el.dataset.u }); save();
+        toast('已跳过这个单元 · 下一单元已解锁；它仍会出现在每日复习里'); go('#path'); break;
+      }
       case 'brq': BR.q = el.dataset.v; go('#browse'); render(); break;
       case 'place': S.place = el.dataset.v; save(); render(); break;
       case 'key': if (['sym', 'inv', 'logic'].includes(route[0])) symTap(+el.dataset.m); else drillTapKey(+el.dataset.m); break;

@@ -614,3 +614,11 @@ details.melwhy summary { font-weight: 600; font-size: 15px; cursor: pointer; pad
 text.chordlab.hit { fill: var(--acc); font-weight: 700; }
 .barpop .evd { border-bottom: 1px solid var(--line); }
 .barpop { max-height: 60vh; overflow-y: auto; }
+
+.skipbtn { display: block; width: 100%; margin: 18px 0 4px; background: none; border: 0; color: var(--mute); font: inherit; font-size: 13.5px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 8px; }
+
+/* 原曲 ↔ 和弦伴奏 */
+.cmpnote { border-left: 2px solid var(--acc); padding-left: 10px; }
+details.lyr { margin: 14px 0; }
+details.lyr summary { font-weight: 600; cursor: pointer; padding: 6px 0; }
+details.lyr textarea { width: 100%; font: 15px/1.6 inherit; border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: var(--bg); color: var(--ink); }

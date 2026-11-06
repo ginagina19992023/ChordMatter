@@ -69,6 +69,10 @@ const Score = (() => {
         try { const v = tk.getMIDIValuesForElement(id); if (v && v.pitch) notes.push({ t: e.tstamp / 1000, dur: Math.max(0.12, v.duration / 1000), pitch: v.pitch, id }); } catch (err) {}
       });
     });
+    // 每个音在第几行谱表（从上往下 0、1、2…）：对比谱只播放选中的那几行
+    const staffOf = {};
+    el.querySelectorAll('g.measure').forEach(mg => { [...mg.querySelectorAll(':scope > g.staff')].forEach((sg, si) => sg.querySelectorAll('g.note').forEach(nn => (staffOf[nn.dataset.id || nn.id] = si))); });
+    notes.forEach(n => (n.staff = staffOf[n.id]));
     cur = { el, notes, sc, tk };
     el.onclick = e => {
       const g = e.target.closest('g.note, g.chord');
