@@ -1046,17 +1046,68 @@
   // ---- 曲库 ----
   function parseBars(str) { return String(str || '').split('|').map(b => b.trim().split(/\s+/).filter(Boolean)).filter(b => b.length); }
   function allSongs() { return SONGS.concat(GIFT_SONGS.filter(g => S.cards && S.cards[g.id])).map(s => Object.assign({}, s, S.custom.find(c => c.id === s.id) || {})).concat(S.custom.filter(c => !SONGS.some(s => s.id === c.id))); }
+  // ---------------- 曲目：弹一首曲子（看谱 → 认和弦 → 弹下来）----------------
+  // 类型自动识别；用户可以自己改标签（S.tags[id] 覆盖自动结果）
+  const TYPES = ['古典', '影视', '流行', '儿歌民谣', '我的谱'];
+  function autoTags(s) {
+    const t = `${s.title} ${s.sub || ''} ${s.tag || ''}`, out = [];
+    if (/莫扎特|巴赫|贝多芬|克列门蒂|帕赫贝尔|肖邦|舒伯特|海顿|奏鸣曲|前奏曲|BWV|K\.\d|Op\./.test(t) || s.tag === '古典') out.push('古典');
+    else if (/《|电影|久石让|宫崎骏|爱乐之城|天空之城|OST/i.test(t)) out.push('影视');
+    else if (/儿歌|民谣|民歌|童谣/.test(t)) out.push('儿歌民谣');
+    else if (S.custom.some(c => c.id === s.id) && !SONGS.some(x => x.id === s.id)) out.push('我的谱');
+    else out.push('流行');
+    if (s.key) out.push(/m$/.test(s.key) ? '小调' : '大调');
+    const flat = songFlat(s), sev = flat.filter(x => /7|maj7|m7/.test(x)).length;
+    if (flat.length && sev / flat.length > 0.3) out.push('七和弦多');
+    if (hasFull(s.id)) out.push('有扒谱');
+    if (s.copy) out.push('有版权');
+    return out;
+  }
+  const tagsOf = s => (S.tags && S.tags[s.id]) || autoTags(s);
+  const typeOf = s => tagsOf(s).find(t => TYPES.includes(t)) || '流行';
+  function miniStrip(s) { return `<span class="mstrip">${songFlat(s).map(x => `<i class="f${chordFunc(x, s.key)}"></i>`).join('')}</span>`; }
+  const LV = { songs: 'card', acc: 'card' };
+  function viewToggle(k) { const v = (S.lv && S.lv[k]) || 'card'; return `<div class="vtoggle"><button class="${v === 'card' ? 'on' : ''}" data-act="lvset" data-k="${k}" data-v="card" aria-label="卡片">▦</button><button class="${v === 'list' ? 'on' : ''}" data-act="lvset" data-k="${k}" data-v="list" aria-label="条状">☰</button></div>`; }
   function vSongs() {
-    const songs = allSongs();
-    const drafts = SONG_DRAFTS.filter(d => !songs.some(s => s.title === d.title));
-    view.innerHTML = `<header class="top"><div><small>经典与流行 · 和声逻辑 · 背谱</small><h1>曲目</h1></div><a class="stat" href="#scan"><b>⌗</b><small>识谱</small></a><a class="stat" href="#edit-new"><b>＋</b><small>手动</small></a></header>
-      <section class="cxblock withmel"><h3>原曲旋律 + 伴奏 <small>· 没有版权，旋律和和弦写在同一张谱上</small></h3><ul class="list">${SING.map(x => `<li><a href="#sing-${x.id}"><span><b>${esc(x.title)}</b><small>${esc(x.sub)} · 双手谱 · 逐小节讲为什么配这个和弦</small></span><span class="arr">→</span></a></li>`).join('')}</ul></section>
-      <h3 class="h3">曲库 · 和弦分析</h3>
-      <a class="unitbar" href="#browse"><small>按和弦找</small><b>和弦浏览：曲库里有哪些和弦、没有哪些</b><small>选一个和弦，列出所有含它的乐句，点一下就能听、跟着弹</small></a>
-      <a class="unitbar" href="#scan"><small>新歌</small><b>上传谱子的截图或 PDF，自动认出和弦</b><small>认出后自动判断调、级数和功能，马上可以练</small></a>
-      <ul class="list">${songs.map(s => { const lv = (S.songs[s.id] || { level: 0 }).level; return `<li><a href="#song-${s.id}"><span><b>${esc(s.title)}</b><small>${esc(s.sub || '')} · ${s.key ? kz(s.key) : '未设调'} · ${srcLabel(s)}${s.melody ? ' · 有原曲旋律' : s.copy ? ' · 有版权：只放和弦，可跟录音弹' : ''}</small></span><span class="lv2"><span class="lv">${[0, 1, 2, 3].map(i => `<i class="${i < lv ? 'on' : i < (S.songs[s.id] || {}).away ? 'half' : ''}"></i>`).join('')}</span><small>${pkTag(songSt(s.id)) || '未学'}</small></span></a></li>`; }).join('')}
-      ${drafts.map(d => `<li class="draft"><a href="#edit-new-${SONG_DRAFTS.indexOf(d)}"><span><b>${esc(d.title)}</b><small>${esc(d.sub)}</small></span><span class="arr">＋</span></a></li>`).join('')}</ul>
-      <p class="fine">右边四格 = 背谱的四层：看全谱 → 遮 1/3 → 遮 2/3 → 只看功能。在「编辑」里改成你手上谱的和弦，系统会自动分析级数、功能和终止式。</p>`;
+    const songs = allSongs(), drafts = SONG_DRAFTS.filter(d => !songs.some(s => s.title === d.title));
+    const lv = (S.lv && S.lv.songs) || 'card', f = S.songFilter || '全部';
+    const allTags = [...new Set(songs.flatMap(tagsOf))].filter(t => !TYPES.includes(t));
+    const types = TYPES.filter(t => songs.some(s => typeOf(s) === t));
+    const shown = songs.filter(s => f === '全部' || tagsOf(s).includes(f));
+    const prog = s => { const l = (S.songs[s.id] || {}).level || 0, a = (S.songs[s.id] || {}).away || 0; return `<span class="lv">${[0, 1, 2, 3].map(i => `<i class="${i < l ? 'on' : i < a ? 'half' : ''}"></i>`).join('')}</span>`; };
+    const card = s => `<a class="scard" href="#song-${s.id}"><span class="stype">${typeOf(s)}</span><b>${esc(s.title)}</b><small>${esc(s.sub || '')}</small>${miniStrip(s)}<span class="smeta">${s.key ? kz(s.key) : '未设调'} · ${srcLabel(s)}</span><span class="sfoot">${prog(s)}<button class="tagbtn" data-act="tagedit" data-id="${s.id}">标签</button></span></a>`;
+    const row = s => `<li><a href="#song-${s.id}"><span><b>${esc(s.title)}</b><small>${typeOf(s)} · ${s.key ? kz(s.key) : '未设调'} · ${srcLabel(s)}</small>${miniStrip(s)}</span><span class="lv2">${prog(s)}<button class="tagbtn" data-act="tagedit" data-id="${s.id}">标签</button></span></a></li>`;
+    view.innerHTML = `<header class="top"><div><small>弹一首曲子：看谱 → 认和弦 → 弹下来</small><h1>曲目</h1></div><a class="stat" href="#scan"><b>⌗</b><small>识谱</small></a><a class="stat" href="#edit-new"><b>＋</b><small>手动</small></a></header>
+      <div class="listbar"><div class="chips scroll">${['全部'].concat(types, allTags).map(t => `<button class="chip${f === t ? ' on' : ''}" data-act="sfilter" data-v="${esc(t)}">${t}${t === '全部' ? '' : ` <small>${songs.filter(s => tagsOf(s).includes(t)).length}</small>`}</button>`).join('')}</div>${viewToggle('songs')}</div>
+      ${lv === 'card' ? `<div class="cards">${shown.map(card).join('')}</div>` : `<ul class="list slist">${shown.map(row).join('')}</ul>`}
+      ${drafts.length ? `<ul class="list">${drafts.map(d => `<li class="draft"><a href="#edit-new-${SONG_DRAFTS.indexOf(d)}"><span><b>${esc(d.title)}</b><small>${esc(d.sub)}</small></span><span class="arr">＋</span></a></li>`).join('')}</ul>` : ''}
+      <div class="pills" style="margin-top:14px"><a class="pill" href="#browse">按和弦找乐句</a><a class="pill" href="#scan">上传谱子识别和弦</a><a class="pill" href="#acc">想练即兴伴奏？去「伴奏」</a></div>
+      <p class="fine">色条 = 整首的和声（深灰 稳 · 蓝 走 · 橙 紧）。四个小格 = 背谱四层：实心是在琴上弹过，虚线是屏幕上点过。</p>`;
+  }
+  function tagPop(anchor, id) {
+    const s = allSongs().find(x => x.id === id); if (!s) return;
+    const cur = tagsOf(s), pool = [...new Set(TYPES.concat(allSongs().flatMap(tagsOf), ['考级', '想学', '已背下']))];
+    infoPop(anchor, '标签 · ' + esc(s.title), `<p class="fine">点一下加上 / 去掉。类型（第一行）只能选一个。${S.tags && S.tags[id] ? ' <a href="#" data-act="tagreset" data-id="' + id + '">恢复自动识别</a>' : ''}</p>
+      <div class="chips">${TYPES.map(t => `<button class="chip${cur.includes(t) ? ' on' : ''}" data-act="tagtog" data-id="${id}" data-v="${t}" data-type="1">${t}</button>`).join('')}</div>
+      <div class="chips">${pool.filter(t => !TYPES.includes(t)).map(t => `<button class="chip${cur.includes(t) ? ' on' : ''}" data-act="tagtog" data-id="${id}" data-v="${esc(t)}">${esc(t)}</button>`).join('')}</div>
+      <div class="row"><input id="newtag" class="tagin" placeholder="自己加一个标签"><button class="ghost sm" data-act="tagadd" data-id="${id}">加上</button></div>`);
+  }
+  // ---------------- 伴奏：给旋律配伴奏（一首歌 × 一种伴奏型）----------------
+  function singTags(x) { const t = x.sub + ' ' + x.title, out = [x.beats + '/4 拍']; out.push(/儿歌|小星星/.test(t) ? '儿歌' : /贝多芬|帕赫贝尔|莫扎特/.test(t) ? '古典旋律' : /生日/.test(t) ? '生活' : '老歌'); const ch = [...new Set(x.bars.flatMap(b => String(b[2] || '').split(/\s+/).filter(Boolean).map(y => y.split(':')[0])))]; out.push(ch.length <= 3 ? '三个和弦' : '多于三个和弦'); return out; }
+  function vAcc() {
+    const d = day(), lv = (S.lv && S.lv.acc) || 'card', f = S.accFilter || '全部';
+    const tags = [...new Set(SING.flatMap(singTags))], shown = SING.filter(x => f === '全部' || singTags(x).includes(f));
+    const chordsOf = x => [...new Set(x.bars.flatMap(b => String(b[2] || '').split(/\s+/).filter(Boolean).map(y => y.split(':')[0])))];
+    const firstMel = x => songTimeline(x).notes.slice(0, 8).map(n => n.deg || '0').join(' ');
+    const patName = x => { const pats = PATTERNS[x.beats]; const p = pats.find(q => q.id === SG.pat[x.id]); return p ? p.name : '还没选伴奏型'; };
+    const card = x => `<a class="scard acard" href="#sing-${x.id}"><span class="stype">${x.beats}/4 拍</span><b>${esc(x.title)}</b><small>${esc(x.sub)}</small><span class="jpprev">${firstMel(x)}</span><span class="chordset">${chordsOf(x).map(c => `<i class="f${chordFunc(c, x.key)}">${D(c)}</i>`).join('')}</span><span class="smeta">${patName(x)}</span></a>`;
+    const row = x => `<li><a href="#sing-${x.id}"><span><b>${esc(x.title)}</b><small>${x.beats}/4 拍 · ${chordsOf(x).map(D).join(' ')} · ${patName(x)}</small></span><span class="arr">→</span></a></li>`;
+    view.innerHTML = `<header class="top"><div><small>给旋律配伴奏：一首歌 × 一种伴奏型</small><h1>伴奏</h1></div></header>
+      <a class="unitbar" href="#acctest"><small>每日一考${d.acc ? ' · 今天已完成 ✓' : ''}</small><b>给一段旋律配和弦</b><small>4 小节 · 选 I / IV / V · 弹给你听对不对</small></a>
+      <div class="listbar"><div class="chips scroll">${['全部'].concat(tags).map(t => `<button class="chip${f === t ? ' on' : ''}" data-act="afilter" data-v="${esc(t)}">${t}</button>`).join('')}</div>${viewToggle('acc')}</div>
+      ${lv === 'card' ? `<div class="cards">${shown.map(card).join('')}</div>` : `<ul class="list">${shown.map(row).join('')}</ul>`}
+      <div class="pills" style="margin-top:14px"><a class="pill" href="#unit-u13">即兴伴奏入门：三步配和弦</a><a class="pill" href="#combo">组合和弦</a><a class="pill" href="#songs">想弹整首曲子？去「曲目」</a></div>
+      <p class="fine">卡片上：第一句旋律（简谱）、这首用到的和弦（颜色 = 稳 / 走 / 紧）、你上次选的伴奏型。</p>`;
   }
   function songLogic(s) {
     const key = T.parseKey(s.key);
@@ -1408,14 +1459,6 @@
       }, t * 1000);
     });
     later(() => { document.querySelectorAll('#skb .k.on-play, .pgrid i.now').forEach(k => k.classList.remove('on-play', 'now')); }, (2 * beats * spb + 0.3) * 1000);
-  }
-  function vAcc() {
-    const d = day();
-    view.innerHTML = `<header class="top"><div><small>看简谱 · 配和弦 · 边弹边唱</small><h1>伴奏</h1></div></header>
-      <a class="unitbar" href="#acctest"><small>每日一考${d.acc ? ' · 今天已完成 ✓' : ''}</small><b>给一段旋律配和弦</b><small>4 小节 · 选 I / IV / V · 弹给你听对不对</small></a>
-      <h3 class="h3">跟弹 · 跟唱</h3>
-      <ul class="list">${SING.map(s => `<li><a href="#sing-${s.id}"><span><b>${s.title}</b><small>${s.sub} · ${s.beats}/4 拍</small></span><span class="arr">▶</span></a></li>`).join('')}</ul>
-      <a class="link" href="#unit-u13"><small>先看</small><b>即兴伴奏入门：三步配和弦</b><span>→</span></a>`;
   }
   // 伴奏页：三个分页 —— ① 看谱（双手谱）② 跟弹跟唱（大字现在/下一个）③ 为什么这样配
   function vSing() {
@@ -2385,7 +2428,7 @@
 
   // ---------------- 文字里的和弦名：自动加下划线，点开浮窗解释 ----------------
   const CHORD_RE = /(^|[^A-Za-z0-9#♯♭\/])([A-G](?:#|♯|b|♭)?(?:maj7|m7b5|m7♭5|dim7|dim|aug|sus2|sus4|m7|m|7|°|ø)?(?:\/[A-G](?:#|♯|b|♭)?)?)(?![A-Za-z0-9#♯♭])/g;
-  const SKIP = 'button, a, svg, input, textarea, select, label, nav, h1, .chain, .hstrip, .variant small, .chordref, .kb, .tcard, .symbig, .jp, .grade, .now, .cell, .pc, .opt, .chip, .stat, .qbar, .cxname, .tc-title, .bars, .ring-t, .heat, .jpq, .src, code';
+  const SKIP = 'button, a, svg, input, textarea, select, label, nav, h1, .chain, .hstrip, .cards, .slist, .variant small, .chordref, .kb, .tcard, .symbig, .jp, .grade, .now, .cell, .pc, .opt, .chip, .stat, .qbar, .cxname, .tc-title, .bars, .ring-t, .heat, .jpq, .src, code';
   // 取文字节点前后（跨过 <b> 之类的标签）的几个字
   function sideText(n, dir) {
     let t = '', cur = n;
@@ -2582,6 +2625,13 @@
       case 'selclear': SELB.on = false; selPaint(); stopAll(); dockReset(); break;
       case 'info': { const sg = allSongs().find(x => x.id === route[1]); if (!sg) break; const [t, h] = songInfo(sg, el.dataset.k); infoPop(el, t, h); break; }
       case 'mytoggle': S.myOpen = !S.myOpen; save(); { const b = document.querySelector('.mybox'); if (b) b.hidden = !S.myOpen; } el.textContent = '我的原谱 ' + (S.myOpen ? '⌃' : '⌄'); break;
+      case 'lvset': S.lv = S.lv || {}; S.lv[el.dataset.k] = el.dataset.v; save(); render(); break;
+      case 'sfilter': S.songFilter = el.dataset.v; save(); render(); break;
+      case 'afilter': S.accFilter = el.dataset.v; save(); render(); break;
+      case 'tagedit': e.preventDefault(); e.stopPropagation(); tagPop(el, el.dataset.id); break;
+      case 'tagtog': { const id = el.dataset.id, sg = allSongs().find(x => x.id === id); S.tags = S.tags || {}; let t = (S.tags[id] || autoTags(sg)).slice(); const v = el.dataset.v; if (el.dataset.type) t = t.filter(x => !TYPES.includes(x)).concat([v]); else t = t.includes(v) ? t.filter(x => x !== v) : t.concat([v]); S.tags[id] = t; save(); render(); tagPop(document.querySelector('.tagbtn[data-id="' + id + '"]') || document.body, id); break; }
+      case 'tagadd': { const v = ($('#newtag').value || '').trim().slice(0, 8); if (!v) break; const id = el.dataset.id, sg = allSongs().find(x => x.id === id); S.tags = S.tags || {}; const t = (S.tags[id] || autoTags(sg)).slice(); if (!t.includes(v)) t.push(v); S.tags[id] = t; save(); render(); tagPop(document.querySelector('.tagbtn[data-id="' + id + '"]') || document.body, id); break; }
+      case 'tagreset': e.preventDefault(); if (S.tags) delete S.tags[el.dataset.id]; save(); render(); document.querySelectorAll('.tpop').forEach(x => x.remove()); break;
       case 'dockplay': dockPlay(); break;
       case 'rlmode': RL.mode = el.dataset.v; Roll.stop(); drillStop(); if (document.querySelector('.rollfs')) rollOpen(); else render(); break;
       case 'rllvl': if (el.dataset.locked) { toast('先在「中等」用「等你弹」一遍弹对，困难才解锁'); break; } RL.lvl = +el.dataset.v; Roll.stop(); drillStop(); if (document.querySelector('.rollfs')) rollOpen(); else render(); break;
