@@ -267,15 +267,35 @@ details { margin: 14px 0; } summary { cursor: pointer; color: var(--ink); }
 .mini.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .btn:disabled { opacity: .35; }
 
-/* 横屏：练习页加宽，键盘更大 */
-@media (orientation: landscape) and (max-height: 520px) {
-  main { max-width: 980px; }
-  body.focus main { padding-top: 10px; }
-  .mem, .arp, .sing { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; align-items: start; }
-  .mem > *, .arp > *, .sing > * { grid-column: 1 / -1; min-width: 0; }
-  .mem #memstaff { grid-column: 1; } .mem #dctl, .mem .explain { grid-column: 2; }
-  .jp { grid-template-columns: repeat(4, 1fr); }
-  .ring-wrap { width: 110px; height: 110px; }
+/* 横屏（body.land：真机横屏，或电脑预览里点了「横屏预览」）
+   高度很宝贵：导航栏挪到左边竖着放，内容占满宽度，避开左右刘海安全区 */
+body.land main { max-width: none; margin: 0; padding: calc(env(safe-area-inset-top) + 10px) max(16px, env(safe-area-inset-right)) 24px calc(env(safe-area-inset-left) + 78px); }
+body.land.focus main { padding-top: 8px; padding-left: max(16px, env(safe-area-inset-left)); }
+body.land.focus .selbar { left: max(12px, env(safe-area-inset-left)); }
+body.land.focus #toast { left: 50%; }
+body.land nav { top: 0; bottom: 0; right: auto; width: calc(env(safe-area-inset-left) + 62px); flex-direction: column; justify-content: center; gap: 4px; border-top: 0; border-right: 1px solid var(--line); padding: 8px 0 8px env(safe-area-inset-left); }
+body.land nav a { flex: none; max-width: none; padding: 6px 0; }
+/* 横屏：播放 / 和声标注收进左边导航栏底部，不挡内容 */
+body.land nav { justify-content: flex-start; padding-top: 10px; }
+body.land .dock { left: calc(env(safe-area-inset-left) + 5px); right: auto; bottom: 8px; width: 52px; flex-direction: column; gap: 6px; z-index: 6; }
+body.land .dk { flex-direction: column; justify-content: center; gap: 3px; padding: 6px 2px; font-size: 10.5px; line-height: 1.2; border-radius: 12px; box-shadow: none; text-align: center; }
+body.land .dk.lab i { width: 22px; height: 13px; } body.land .dk.lab i::after { width: 9px; height: 9px; } body.land .dk.lab.on i::after { left: 11px; }
+body.land .selbar { left: calc(env(safe-area-inset-left) + 74px); right: calc(env(safe-area-inset-right) + 12px); }
+body.land #toast { bottom: 16px; left: calc(50% + 31px); }
+body.land .cxtop { position: static; margin-left: 0; margin-right: 0; }
+body.land .mem, body.land .arp, body.land .sing { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; align-items: start; }
+body.land .mem > *, body.land .arp > *, body.land .sing > * { grid-column: 1 / -1; min-width: 0; }
+body.land .mem #memstaff { grid-column: 1; } body.land .mem #dctl, body.land .mem .explain { grid-column: 2; }
+body.land .jp { grid-template-columns: repeat(4, 1fr); }
+body.land .ring-wrap { width: 110px; height: 110px; }
+body.land .hbar { flex-basis: calc(6.25% - 2px); }
+body.land .qbar { padding-left: 0; }
+/* 电脑预览里的「横屏预览」：外框变成横的 */
+#rotbtn { display: none; }
+@media (min-width: 760px) and (min-height: 600px) {
+  #rotbtn { display: block; margin: 0 auto 10px; border: 1px solid #d6d6d6; background: #fff; border-radius: 999px; padding: 6px 14px; font: 13px -apple-system, sans-serif; color: #444; cursor: pointer; }
+  body.landprev #phone { width: 844px; height: 390px; border-radius: 34px; }
+  body.landprev #phone main { padding-top: 14px; }
 }
 
 /* 原曲乐谱 */
@@ -352,7 +372,6 @@ audio { width: 100%; margin: 4px 0; }
 .chips.scroll::-webkit-scrollbar { display: none; }
 .chips.scroll .chip { flex: none; }
 .explain a { color: var(--S); }
-@media (orientation: landscape) and (max-height: 520px) { .cxtop { position: static; } }
 
 /* 符号入门 */
 .symbig { font-size: 44px; font-weight: 500; letter-spacing: .02em; line-height: 1.1; margin: 6px 0 4px; color: var(--acc); font-family: "Times New Roman", "Songti SC", serif; }
@@ -432,8 +451,9 @@ dl.stor { margin: 0 0 6px; font-size: 13px; }
 .lhc { color: var(--S); }
 .cxpractice { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 12px; }
 
-/* 宽屏（电脑预览）时用手机外框模拟 iPhone：外框是一个固定大小、自己滚动的容器 */
-@media (min-width: 760px) {
+/* 电脑预览时用手机外框模拟 iPhone：外框是一个固定大小、自己滚动的容器。
+   要求高度也够（≥ 600）：iPhone 横屏宽 844 但只有 390 高，不能被当成电脑 */
+@media (min-width: 760px) and (min-height: 600px) {
   html, body { background: #f3f3f3; }
   body { padding: 24px 0; }
   #phone { width: 390px; height: 800px; margin: 0 auto; border: 1px solid #dcdcdc; border-radius: 40px; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; transform: translateZ(0); box-shadow: 0 12px 40px rgba(0,0,0,.06); scrollbar-width: none; background: var(--bg); position: relative; }
@@ -441,7 +461,6 @@ dl.stor { margin: 0 0 6px; font-size: 13px; }
   #phone main { padding-top: 34px; }
   #phone .cxtop { margin-top: -34px; padding-top: 40px; }
   #toast { bottom: 90px; }
-}
 }
 
 a.term { border-bottom: 1px dashed var(--acc); color: inherit; }

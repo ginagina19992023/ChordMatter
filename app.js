@@ -1853,7 +1853,7 @@
   function rollMount(id, data, bpm) {
     const el = document.getElementById(id); if (!el) return;
     RL.data = data;
-    Roll.mount(el, { events: data.events, chords: data.chords, beats: data.beats, bpm, barNo: data.barNo, lead: 2, height: Math.min(420, Math.round(innerHeight * 0.5)), onKey: m => { A.init(); A.note(m, 0, 0.8, 0.6); if (RL.mode === 'wait' && DR) drillTapKey(m); } });
+    Roll.mount(el, { events: data.events, chords: data.chords, beats: data.beats, bpm, barNo: data.barNo, lead: 2, height: isLand() ? Math.max(220, (document.getElementById('phone') && getComputedStyle(document.getElementById('phone')).overflowY === 'auto' ? document.getElementById('phone').clientHeight : innerHeight) - 80) : Math.min(420, Math.round(innerHeight * 0.5)), onKey: m => { A.init(); A.note(m, 0, 0.8, 0.6); if (RL.mode === 'wait' && DR) drillTapKey(m); } });
     $('#rlctl').innerHTML = RL.mode === 'wait' ? (place() === 'away' ? '<p class="fine">没钢琴模式：点画面里的键盘。</p>' : '<div class="row"><button class="ghost sm" data-act="dlisten">开始收音 · 弹给它听</button></div>') : '';
   }
   function rollGo() {
@@ -1918,6 +1918,24 @@
     playBars(n, n); toast('播放第 ' + n + ' 小节');
   });
   document.addEventListener('staffplayfrom', e => { playBars(e.detail, null); toast('从第 ' + e.detail + ' 小节播放到结尾'); });
+  // ---- 横屏：真机横屏或「横屏预览」时给 body 加 land；转屏后按新宽度重新排谱（保留大致滚动位置）----
+  const LAND_MQ = window.matchMedia ? matchMedia('(orientation: landscape) and (max-height: 520px)') : null;
+  const isLand = () => document.body.classList.contains('landprev') || !!(LAND_MQ && LAND_MQ.matches);
+  let lastW = 0, rotT = null;
+  function applyLand(relayout) {
+    document.body.classList.toggle('land', isLand());
+    const box = document.getElementById('phone'), w = (box && getComputedStyle(box).overflowY === 'auto') ? box.clientWidth : innerWidth;
+    if (relayout && lastW && Math.abs(w - lastW) > 60) {
+      const sc = box && getComputedStyle(box).overflowY === 'auto' ? box : document.scrollingElement, frac = sc.scrollTop / Math.max(1, sc.scrollHeight - sc.clientHeight);
+      render(); const back = () => { sc.scrollTop = frac * Math.max(0, sc.scrollHeight - sc.clientHeight); };
+      setTimeout(back, 60); setTimeout(back, 1600);
+    }
+    lastW = w;
+  }
+  window.addEventListener('resize', () => { clearTimeout(rotT); rotT = setTimeout(() => applyLand(true), 250); });
+  const rb = document.getElementById('rotbtn');
+  if (rb) rb.addEventListener('click', () => { document.body.classList.toggle('landprev'); rb.textContent = document.body.classList.contains('landprev') ? '竖屏预览' : '横屏预览'; applyLand(true); });
+  setTimeout(() => applyLand(false), 0);
   // ---- 右下角固定的小工具条：播放（跟着高亮）+ 一键开关和声标注 ----
   const labOn = () => S.lab !== false;
   function dockHtml() {
