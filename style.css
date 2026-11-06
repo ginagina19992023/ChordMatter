@@ -809,3 +809,11 @@ body.land .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .klrow > small { width: 56px; font-size: 11.5px; color: var(--mute); }
 .klrow .chip, .chip.sm { padding: 3px 10px; font-size: 12.5px; min-width: 0; min-height: 0; line-height: 1.6; }
 .cell.sel { outline: 2px solid var(--S); outline-offset: -2px; }
+
+/* 和弦体块：迷你大谱表 + 横条 */
+.cshape { display: block; margin: 4px auto 2px; overflow: visible; }
+.cshape .sl line { stroke: #d9d9d9; stroke-width: .6; }
+.cshape .sl line.ldg { stroke: #9a9a9a; stroke-width: .8; }
+.cshape rect { fill: #1d1d1d; }
+.cshape rect.lh { opacity: .55; }
+.cshape.fT rect { fill: #464646; } .cshape.fS rect { fill: #2f6fdb; } .cshape.fD rect { fill: #e8541e; }

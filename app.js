@@ -1141,7 +1141,7 @@
     let idx = 0;
     return s.sections.map((sec, si) => (only >= 0 && si !== only) ? (idx += parseBars(sec.bars).flat().length, '') : `<div class="sec"><small>${esc(sec.name)}</small><div class="bars">${parseBars(sec.bars).map((bar, bi) => `<div class="bar"><span class="bn">${starts[si] + bi}</span>${bar.map(sym => {
       const a = T.analyze(sym, key), i = idx++;
-      return `<div class="cell${s.ev && s.ev[starts[si] + bi] && s.ev[starts[si] + bi].conf === 'low' ? ' lowconf' : ''}" data-i="${i}" data-n="${starts[si] + bi}" data-act="explain" data-s="${esc(sym)}"><b>${D(sym)}</b><i>${a ? degLabel(sym, key) : '?'}</i>${funcTag(a && a.func)}</div>`;
+      return `<div class="cell${s.ev && s.ev[starts[si] + bi] && s.ev[starts[si] + bi].conf === 'low' ? ' lowconf' : ''}" data-i="${i}" data-n="${starts[si] + bi}" data-act="explain" data-s="${esc(sym)}"><b>${D(sym)}</b><i>${a ? degLabel(sym, key) : '?'}</i>${chordShape(sym, key)}${funcTag(a && a.func)}</div>`;
     }).join('')}</div>`).join('')}</div></div>`).join('');
   }
   // 曲目页主体：谱和和弦在一起，一小节对一小节
@@ -1149,6 +1149,21 @@
   function barLabel(s, n) {
     const bm = songBarMap(s)[n]; if (!bm) return '';
     return n + '  ' + bm.map(x => { const a = T.analyze(x, s.key); return D(x) + ' ' + degLabel(x, s.key) + (a && FUNC_ZH[a.func] ? ' ' + FUNC_ZH[a.func] : ''); }).join('  ·  ');
+  }
+  // ---------------- 和弦的「体块」：一小块大谱表，每个音换成一根横条（位置 = 五线谱上的高低，颜色 = 感觉色）----------------
+  const LETTER = { C: 0, D: 1, E: 2, F: 3, G: 4, A: 5, B: 6 };
+  function chordShape(sym, key, w = 64, h = 58) {
+    const c = T.parseChord(sym); if (!c) return '';
+    const b = c.bass || c.root; let bm = 36 + b.pc; if (bm < 40) bm += 12;
+    const step = (name, midi) => { const L = LETTER[name[0]]; let oct = Math.floor(midi / 12) - 1; if (name.startsWith('B#')) oct -= 1; if (name.startsWith('Cb')) oct += 1; return L + 7 * oct; };
+    const notes = [{ st: step(b.name, bm), L: 1 }].concat(T.voicing(c).map(n => ({ st: step(n.name, n.midi), L: 0 })));
+    // 竖向范围：低音谱表最下线 G2（18）到高音谱表最上线 F5（38），留一点上下余量
+    const top = 41, bot = 15, k = h / (top - bot), y = st => (top - st) * k;
+    const lines = [30, 32, 34, 36, 38, 18, 20, 22, 24, 26].map(st => `<line x1="0" x2="${w}" y1="${y(st).toFixed(1)}" y2="${y(st).toFixed(1)}"/>`).join('');
+    const ledger = notes.some(n => n.st === 28) ? `<line class="ldg" x1="${w * 0.3}" x2="${w * 0.7}" y1="${y(28).toFixed(1)}" y2="${y(28).toFixed(1)}"/>` : '';
+    const f = klCfg().feel ? chordFunc(sym, key) : 'N';
+    const bars = notes.map(n => `<rect class="${n.L ? 'lh' : 'rh'}" x="${w * 0.14}" y="${(y(n.st) - k * 0.55).toFixed(1)}" width="${w * 0.72}" height="${(k * 1.1).toFixed(1)}" rx="${(k * 0.55).toFixed(1)}"/>`).join('');
+    return `<svg class="cshape f${f}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><g class="sl">${lines}${ledger}</g>${bars}</svg>`;
   }
   // ---------------- 键盘图层：用键盘上的高低看和弦（和弦格子下面）----------------
   // 三层可以分别开关：调内音（铺底）· 感觉色（稳走紧）· 和弦音（圆点 + 字：级数 / R 3 5 7 / 音名）；「只看」R 3 5 7 9
@@ -2681,7 +2696,7 @@
       case 'tagadd': { const v = ($('#newtag').value || '').trim().slice(0, 8); if (!v) break; const id = el.dataset.id, sg = allSongs().find(x => x.id === id); S.tags = S.tags || {}; const t = (S.tags[id] || autoTags(sg)).slice(); if (!t.includes(v)) t.push(v); S.tags[id] = t; save(); render(); tagPop(document.querySelector('.tagbtn[data-id="' + id + '"]') || document.body, id); break; }
       case 'tagreset': e.preventDefault(); if (S.tags) delete S.tags[el.dataset.id]; save(); render(); document.querySelectorAll('.tpop').forEach(x => x.remove()); break;
       case 'klstep': { const s = allSongs().find(x => x.id === route[1]); klShow(KL.i + +el.dataset.v); playChord(songFlat(s)[KL.i]); break; }
-      case 'klset': { const cfg = klCfg(), k = el.dataset.k, v = el.dataset.v; if (k === 'label') cfg.label = v; else if (k === 'show') cfg.show[v] = cfg.show[v] ? 0 : 1; else cfg[k] = !cfg[k]; save(); klShow(KL.i); break; }
+      case 'klset': { const cfg = klCfg(), k = el.dataset.k, v = el.dataset.v; if (k === 'label') cfg.label = v; else if (k === 'show') cfg.show[v] = cfg.show[v] ? 0 : 1; else cfg[k] = !cfg[k]; save(); klShow(KL.i); if (k === 'feel') { const sg = allSongs().find(x => x.id === route[1]); document.querySelectorAll('#grid .cell').forEach(cl => { const old = cl.querySelector('.cshape'); if (old) old.outerHTML = chordShape(cl.dataset.s, sg.key); }); } break; }
       case 'dockplay': dockPlay(); break;
       case 'rlmode': RL.mode = el.dataset.v; Roll.stop(); drillStop(); if (document.querySelector('.rollfs')) rollOpen(); else render(); break;
       case 'rllvl': if (el.dataset.locked) { toast('先在「中等」用「等你弹」一遍弹对，困难才解锁'); break; } RL.lvl = +el.dataset.v; Roll.stop(); drillStop(); if (document.querySelector('.rollfs')) rollOpen(); else render(); break;
