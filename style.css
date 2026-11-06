@@ -726,3 +726,34 @@ details.jpbox summary { font-size: 14px; color: var(--mute); cursor: pointer; pa
 .pills.oneline .pill { flex: none; }
 .linkchip { color: var(--S); border-color: color-mix(in srgb, var(--S) 40%, var(--line)); }
 .songtop { margin-bottom: 4px; }
+
+/* 瀑布流：页面里是入口卡片，点进去全屏沉浸 */
+.rollentry { display: grid; grid-template-columns: 92px 1fr auto; gap: 12px; align-items: center; width: 100%; text-align: left; background: none; border: 1px solid var(--ink); border-radius: var(--r); padding: 10px 12px; font: inherit; color: var(--ink); cursor: pointer; margin: 6px 0 12px; }
+.rprev { position: relative; height: 54px; border-radius: 8px; background: #f3f3f1; overflow: hidden; border-bottom: 3px solid #1b1b1b; }
+.rprev i { position: absolute; bottom: 0; width: 7%; border-radius: 3px 3px 0 0; }
+.rprev i.fT { background: #464646; } .rprev i.fS { background: #2f6fdb; } .rprev i.fD { background: #e8541e; }
+.rtxt b { display: block; font-weight: 600; }
+.rtxt small { display: block; color: var(--mute); font-size: 12.5px; line-height: 1.5; margin-top: 2px; }
+.rollfs { position: fixed; inset: 0; z-index: 30; background: var(--bg); display: flex; flex-direction: column; padding: calc(env(safe-area-inset-top) + 6px) max(12px, env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 8px) max(12px, env(safe-area-inset-left)); overflow: hidden; }
+.fshead { display: flex; align-items: center; gap: 10px; padding: 2px 0 6px; }
+.fshead b { flex: 1; font-size: 16px; font-weight: 600; }
+.fshead small { color: var(--mute); font-size: 12px; }
+.fsx { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: none; font-size: 22px; line-height: 1; color: var(--ink); cursor: pointer; }
+.rollfs .rollbox { display: flex; flex-direction: column; min-height: 0; }
+.rollfs .rollbox .chips { margin-bottom: 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.rollfs .rollbox .chips .chip { flex: none; }
+.rollfs .rollbox > p.fine { display: none; }
+.rollfs .rollbox .row { margin: 8px 0 0; }
+body.immersive nav, body.immersive .dock, body.immersive .selbar { display: none !important; }
+/* 横屏全屏：左边一窄列放标题、选项和按钮，右边整个高度都给彩条 */
+body.land .rollfs { display: grid; grid-template-columns: 178px 1fr; grid-auto-rows: min-content; column-gap: 12px; align-content: start; }
+body.land .rollfs .rollbox { display: contents; }
+body.land .rollfs > *, body.land .rollfs .rollbox > * { grid-column: 1; }
+body.land .rollfs #fsroll { grid-column: 2; grid-row: 1 / span 12; margin: 0; }
+body.land .rollfs .rollbox .chips { flex-wrap: wrap; overflow: visible; }
+body.land .rollfs .chip { font-size: 12.5px; padding: 5px 9px; }
+body.land .rollfs .rollbox .row { flex-wrap: wrap; }
+body.land .rollfs .rollbox .row > * { flex: 1 1 40%; min-height: 36px; padding: 0 8px; font-size: 13px; }
+body.land .rollfs .fshead b { font-size: 14px; }
+.rollfs .rollbox .row > * { white-space: nowrap; }
+.rollfs .rollbox .row > .btn { flex: 1.4; }

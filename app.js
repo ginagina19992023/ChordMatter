@@ -424,7 +424,7 @@
     route = (location.hash.replace(/^#\/?/, '') || 'today').split(/[-\/]/).map(decodeURIComponent);
     const r = route[0];
     document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.dataset.r === r || (r === 'song' && a.dataset.r === 'songs') || (r === 'unit' && a.dataset.r === 'path')));
-    drillStop(); alStop(); stopAll(); Roll.stop(); SELB.on = false; document.querySelectorAll('.giftov, .cpop, .tpop').forEach(x => x.remove());
+    drillStop(); alStop(); stopAll(); Roll.stop(); SELB.on = false; { const ov = document.querySelector('.rollfs'); if (ov) { ov.remove(); document.body.classList.remove('immersive'); } } document.querySelectorAll('.giftov, .cpop, .tpop').forEach(x => x.remove());
     document.body.classList.toggle('focus', ['quiz', 'arp', 'mem', 'sing', 'acctest'].includes(r) || (['sym', 'inv', 'logic'].includes(r) && route[1]));
     document.querySelectorAll('nav a').forEach(x => { if ((r === 'sing' || r === 'acctest') && x.dataset.r === 'acc') x.classList.add('on'); if (['know', 'sym', 'inv', 'logic'].includes(r) && x.dataset.r === 'path') x.classList.add('on'); if ((r === 'score' || r === 'scan') && x.dataset.r === 'songs') x.classList.add('on'); });
     ({ today: vToday, path: vPath, unit: vUnit, chords: vChords, songs: vSongs, song: vSong, edit: vEdit, quiz: vQuiz, arp: vArp, mem: vMem, me: vMe, acc: vAcc, sing: vSing, acctest: vAccTest, know: vKnow, score: vScore, scan: vScan, pk: vPk, browse: vBrowse, along: vAlong, cmp: vCmp, combo: vCombo, sym: vSym, inv: vInv, cards: vCards, logic: vLogic }[r] || vToday)();
@@ -814,7 +814,7 @@
       </section>
       <section class="cxblock"><h3>填空 <small>${st ? `· 做过 ${st.n} 题，原版答对 ${st.r} 题` : ''}</small></h3>${cbQuizHtml(cb)}</section>
       <section class="cxblock"><h3>在曲子里</h3>${finds.length ? finds.map(f => `<a class="link" href="#song-${f.s.id}-${f.hits.flat().join('.')}-${encodeURIComponent(cbChords(cb, f.s.key)[0])}"><small>${esc(f.s.title)}</small><b>第 ${f.hits.map(h => h[0] + '–' + h[h.length - 1]).slice(0, 4).join('、')}${f.hits.length > 4 ? ' 等' : ''} 小节 · ${cbChords(cb, f.s.key).map(D).join(' ')}</b><span>→</span></a>`).join('') : '<p class="fine">曲库里还没有完整出现这一串。</p>'}</section>
-      <section class="cxblock"><h3>看着彩条弹（练手感）</h3>${(() => { RL.maxLv = 2; if (RL.lvl > 2) RL.lvl = 1; return ''; })()}${rollPanel('cbroll')}</section>
+      <section class="cxblock"><h3>看着彩条弹（练手感）</h3>${rollEntry('combo', '把这一串连着落两遍，左右手跟着彩条弹')}</section>
       <section class="cxblock"><h3>在琴上弹这一串</h3><p class="fine">一个和弦弹对了才往下走。</p>${placeChips()}<div id="cbtarget" class="chain">${ch.map((x, i) => `<span data-i="${i}"><b>${D(x)}</b></span>`).join('<em>→</em>')}</div><div id="dctl"></div></section>
       <p class="pageend">— 到底了 —</p>`;
     drillStart(ch.map(x => ({ kind: 'chord', pcs: T.parseChord(x).notes.map(n => n.pc), label: x })), {
@@ -825,7 +825,7 @@
     });
     DR.cands = ch.map(x => T.parseChord(x).notes.map(n => n.pc));
     $('#dctl').innerHTML = drillControls();
-    { const rep4 = [].concat(ch, ch).map(x => [x]); rollMount('cbroll', rollFromBars(rep4, key, 2, 1, RL.lvl === 1), 72); }
+
     if ((relisten || S.micOK) && place() === 'piano') { relisten = false; drillListen(); }
   }
   // 填空：先听原版，再从选项里选被抠掉的那个。同一个「字」的别的和弦算「也成立的变体」，但不算答对原版
@@ -1160,7 +1160,7 @@
       <div class="chips scroll"><button class="chip${v === 'sheet' ? ' on' : ''}" data-act="songview" data-v="sheet">谱 + 和弦</button><button class="chip${v === 'roll' ? ' on' : ''}" data-act="songview" data-v="roll">瀑布流</button><button class="chip${v === 'grid' ? ' on' : ''}" data-act="songview" data-v="grid">和弦格子</button>${hasFull(s.id) ? `<a class="chip linkchip" href="#cmp-${s.id}">原曲↔和弦 →</a>` : ''}<button class="pill info" data-act="info" data-k="how">ⓘ</button></div>
       ${secChips}
       ${route[2] ? `<p class="hitnote">从 <b>${D(route[3] || '')}</b> 和弦页过来：要找的是第 ${route[2].split('.').join('、')} 小节。</p>` : ''}
-      ${v === 'grid' ? `<div class="grid" id="grid">${songGrid(s, si)}</div><p class="explain" id="explain">点任意和弦：听声音，并看它是什么意思。</p>` : v === 'roll' ? rollPanel('songroll') : songSheet(s, si)}`;
+      ${v === 'grid' ? `<div class="grid" id="grid">${songGrid(s, si)}</div><p class="explain" id="explain">点任意和弦：听声音，并看它是什么意思。</p>` : v === 'roll' ? rollEntry('song', hasFull(s.id) ? '整首按原谱落下：简单只弹和弦，中等加左手低音，困难是原曲两只手' : '整首落下：简单只弹和弦，中等加左手低音') : songSheet(s, si)}`;
     if (tab === 'shape') body = `
       ${harmonyStrip(s)}
       <section class="logic"><h3>谱面逻辑 <small>· 点下划线的词看解释</small></h3>${songLogic(s).map(l => `<p>${l}</p>`).join('')}</section>
@@ -1183,7 +1183,7 @@
     view.innerHTML = `<header class="top"><div><a class="back" href="#songs">←</a><small>${esc(s.sub || '')}</small><h1>${esc(s.title)}</h1></div><a class="stat" href="#edit-${s.id}"><b>✎</b><small>编辑</small></a></header>
       ${songTop(s)}${tabs}<section class="songmain">${body}</section>`;
     if (tab !== 'sheet') return;
-    if (v === 'roll') { const bars = s.sections.flatMap(x => parseBars(x.bars)), lvv = Math.min(RL.lvl, RL.maxLv); rollMount('songroll', lvv === 3 ? rollFromFull(s) : rollFromBars(bars, s.key, 4, st[0], lvv === 1), s.bpm || 80); }
+    if (v === 'roll') {}
     else if (v === 'sheet' && ((s.orig && s.orig.score) || hasFull(s.id))) songSheetRender(s, si);
     if (route[2] && v === 'grid') {
       const want = route[2].split('.').map(Number); let first = null;
@@ -1433,7 +1433,7 @@
       body = `${patChips}
         <p class="fine">右手弹上面一行（原曲旋律，歌词在音符下面），左手弹下面一行（「${pat.name}」）。换伴奏型，左手整首跟着换。</p>
         <div class="chips"><button class="chip${SG.view === 'roll' ? '' : ' on'}" data-act="sgview" data-v="score">谱面</button><button class="chip${SG.view === 'roll' ? ' on' : ''}" data-act="sgview" data-v="roll">瀑布流</button></div>
-        ${SG.view === 'roll' ? rollPanel('singroll') : `<div class="score" id="twoscore"><p class="fine">正在生成双手谱…（第一次需要下载乐谱引擎）</p></div>
+        ${SG.view === 'roll' ? rollEntry('sing', '右手旋律 + 左手「' + pat.name + '」跟着彩条落下') : `<div class="score" id="twoscore"><p class="fine">正在生成双手谱…（第一次需要下载乐谱引擎）</p></div>
         <div class="row"><button class="btn" data-act="scplay" id="scbtn">▶ 旋律 + 伴奏一起听</button><button class="ghost sm" data-act="screte" data-v="-0.1">慢</button><button class="ghost sm" data-act="screte" data-v="0.1">快</button></div>`}`;
     }
     if (tab === 'play') body = `${patChips}
@@ -1455,7 +1455,7 @@
         </section></details>`;
     view.innerHTML = `<div class="qbar"><a href="#acc" class="x">×</a><span class="meter"><i id="sgbar" style="width:0%"></i></span><small>${song.title}</small></div>
       <section class="sing">${tabs}${body}</section>`;
-    if (tab === 'score') { if (SG.view === 'roll') setTimeout(() => rollMount('singroll', rollFromSing(song, singPat(song), RL.lvl), song.bpm), 0); else setTimeout(() => singScore(song), 0); }
+    if (tab === 'score') { if (SG.view !== 'roll') setTimeout(() => singScore(song), 0); }
     melFit(song).forEach(f => { if (f.n.midi == null) return; view.querySelectorAll(`.jm .jn[data-n="${f.n.i}"]`).forEach(e => e.classList.add(f.role ? 'ct' : 'nct')); });
   }
   // 旋律 → 伴奏：每个旋律音落在当时那个和弦里的哪个位置（根 / 三 / 五 / 七），不在就是经过音
@@ -1908,10 +1908,39 @@
       <div id="rlctl"></div>
       <p class="fine">${RL.mode === 'wait' ? '彩条落到键盘就停住，等你把这个和弦弹对（有钢琴：开收音弹给它听；没钢琴：点上面画面里的键盘，任意八度都行）。一遍一遍来，手会自己记住形状。' : '彩条落到哪个键就弹哪个键。颜色就是这个和弦的感觉：深灰 = 稳，蓝 = 走，橙 = 紧；浅色是左手。'}</p></div>`;
   }
+  // 入口卡片：页面里只放这个，点进去全屏跟练
+  function rollEntry(kind, sub) {
+    const bars = ['T', 'S', 'D', 'T', 'S', 'D', 'T', 'T', 'S', 'D'].map((f, i) => `<i class="f${f}" style="height:${30 + (i * 37 % 45)}%;left:${6 + i * 9}%"></i>`).join('');
+    return `<button class="rollentry" data-act="rollopen" data-k="${kind}"><span class="rprev">${bars}</span><span class="rtxt"><b>瀑布流跟练 · 全屏</b><small>${sub}</small></span><span class="arr">→</span></button>`;
+  }
+  // 当前页对应的瀑布流数据
+  function rollBuild(kind) {
+    if (kind === 'song') { const s = allSongs().find(x => x.id === route[1]); RL.maxLv = hasFull(s.id) ? 3 : 2; RL.lvl3name = '两只手全部音符'; if (RL.lvl > RL.maxLv || (RL.lvl === 3 && rollPassed() < 2)) RL.lvl = 1; const bars = s.sections.flatMap(x => parseBars(x.bars)); return { title: s.title, bpm: s.bpm || 80, data: RL.lvl === 3 ? rollFromFull(s) : rollFromBars(bars, s.key, 4, sectionStarts(s)[0], RL.lvl === 1) }; }
+    if (kind === 'sing') { const song = SING.find(x => x.id === route[1]) || SING[0], pat = singPat(song); RL.maxLv = 3; RL.lvl3name = '旋律 + ' + pat.name; if (RL.lvl === 3 && rollPassed() < 2) RL.lvl = 1; return { title: song.title, bpm: song.bpm, data: rollFromSing(song, pat, RL.lvl) }; }
+    if (kind === 'combo') { const cb = COMBOS.find(x => x.id === route[1]), ch = cbChords(cb); RL.maxLv = 2; if (RL.lvl > 2) RL.lvl = 1; return { title: cb.name + ' · ' + cb.alias, bpm: 72, data: rollFromBars([].concat(ch, ch).map(x => [x]), cbKey(cb), 2, 1, RL.lvl === 1) }; }
+  }
+  function rollOpen(kind) {
+    RL.kind = kind || RL.kind;
+    stopAll(); Roll.stop(); drillStop();
+    const b = rollBuild(RL.kind); if (!b) return;
+    let ov = document.querySelector('.rollfs');
+    if (!ov) { ov = document.createElement('div'); ov.className = 'rollfs'; (document.getElementById('phone') || document.body).appendChild(ov); RL.scrollY = (document.getElementById('phone') && getComputedStyle(document.getElementById('phone')).overflowY === 'auto') ? document.getElementById('phone').scrollTop : scrollY; }
+    document.body.classList.add('immersive');
+    ov.innerHTML = `<div class="fshead"><button class="fsx" data-act="rollclose" aria-label="关闭">×</button><b>${esc(b.title)}</b><small>${isLand() ? '' : '横过来更宽'}</small></div>${rollPanel('fsroll')}`;
+    const H = ov.clientHeight, used = [...ov.children].reduce((a, e) => a + (e.querySelector && e.querySelector('#fsroll') ? 0 : e.offsetHeight), 0);
+    const other = [...ov.querySelectorAll('.rollbox > :not(#fsroll)')].reduce((a, e) => a + e.offsetHeight + 8, 0);
+    RL.fsH = isLand() ? Math.max(200, H - 22) : Math.max(200, H - ov.querySelector('.fshead').offsetHeight - other - 24);
+    rollMount('fsroll', b.data, b.bpm);
+  }
+  function rollClose() {
+    stopAll(); Roll.stop(); drillStop();
+    const ov = document.querySelector('.rollfs'); if (ov) ov.remove();
+    document.body.classList.remove('immersive');
+  }
   function rollMount(id, data, bpm) {
     const el = document.getElementById(id); if (!el) return;
     RL.data = data;
-    Roll.mount(el, { events: data.events, chords: data.chords, beats: data.beats, bpm, barNo: data.barNo, lead: 2, height: isLand() ? Math.max(220, (document.getElementById('phone') && getComputedStyle(document.getElementById('phone')).overflowY === 'auto' ? document.getElementById('phone').clientHeight : innerHeight) - 80) : Math.min(420, Math.round(innerHeight * 0.5)), onKey: m => { A.init(); A.note(m, 0, 0.8, 0.6); if (RL.mode === 'wait' && DR) drillTapKey(m); } });
+    Roll.mount(el, { events: data.events, chords: data.chords, beats: data.beats, bpm, barNo: data.barNo, lead: 2, height: id === 'fsroll' && RL.fsH ? RL.fsH : isLand() ? Math.max(220, (document.getElementById('phone') && getComputedStyle(document.getElementById('phone')).overflowY === 'auto' ? document.getElementById('phone').clientHeight : innerHeight) - 80) : Math.min(420, Math.round(innerHeight * 0.5)), onKey: m => { A.init(); A.note(m, 0, 0.8, 0.6); if (RL.mode === 'wait' && DR) drillTapKey(m); } });
     $('#rlctl').innerHTML = RL.mode === 'wait' ? (place() === 'away' ? '<p class="fine">没钢琴模式：点画面里的键盘。</p>' : '<div class="row"><button class="ghost sm" data-act="dlisten">开始收音 · 弹给它听</button></div>') : '';
   }
   function rollGo() {
@@ -1924,7 +1953,7 @@
         onMode: () => ($('#rlctl').innerHTML = DR && DR.mode === 'mic' ? drillControls() : $('#rlctl').innerHTML),
         onDone: r => {
           logEv('roll', { r: route.join('-'), lvl: RL.lvl, miss: r.miss, n: r.total, m: DR ? DR.mode : '' });
-          if (!r.miss) { S.rollPass = S.rollPass || {}; const k = rollKey(), was = S.rollPass[k] || 0; S.rollPass[k] = Math.max(was, RL.lvl); save(); if (RL.lvl === 2 && was < 2 && (RL.maxLv || 2) === 3) { toast('中等一遍弹对 · 困难（原曲）解锁了'); setTimeout(render, 900); return; } }
+          if (!r.miss) { S.rollPass = S.rollPass || {}; const k = rollKey(), was = S.rollPass[k] || 0; S.rollPass[k] = Math.max(was, RL.lvl); save(); if (RL.lvl === 2 && was < 2 && (RL.maxLv || 2) === 3) { toast('中等一遍弹对 · 困难（原曲）解锁了'); setTimeout(() => (document.querySelector('.rollfs') ? rollOpen() : render()), 900); return; } }
           toast(r.miss ? `弹完了 · 错了 ${r.miss} 次 · 再来一遍` : '一遍弹对 · 手感就是这样练出来的');
         },
       });
@@ -1985,6 +2014,7 @@
     const box = document.getElementById('phone'), w = (box && getComputedStyle(box).overflowY === 'auto') ? box.clientWidth : innerWidth;
     if (relayout && lastW && Math.abs(w - lastW) > 60) {
       const sc = box && getComputedStyle(box).overflowY === 'auto' ? box : document.scrollingElement, frac = sc.scrollTop / Math.max(1, sc.scrollHeight - sc.clientHeight);
+      if (document.querySelector('.rollfs')) { rollOpen(); lastW = w; return; }
       render(); const back = () => { sc.scrollTop = frac * Math.max(0, sc.scrollHeight - sc.clientHeight); };
       setTimeout(back, 60); setTimeout(back, 1600);
     }
@@ -2552,9 +2582,11 @@
       case 'selclear': SELB.on = false; selPaint(); stopAll(); dockReset(); break;
       case 'info': { const sg = allSongs().find(x => x.id === route[1]); if (!sg) break; const [t, h] = songInfo(sg, el.dataset.k); infoPop(el, t, h); break; }
       case 'mytoggle': S.myOpen = !S.myOpen; save(); { const b = document.querySelector('.mybox'); if (b) b.hidden = !S.myOpen; } el.textContent = '我的原谱 ' + (S.myOpen ? '⌃' : '⌄'); break;
-      case 'dockplay': if (document.querySelector('.roll')) { rollGo(); break; } dockPlay(); break;
-      case 'rlmode': RL.mode = el.dataset.v; Roll.stop(); drillStop(); render(); break;
-      case 'rllvl': if (el.dataset.locked) { toast('先在「中等」用「等你弹」一遍弹对，困难才解锁'); break; } RL.lvl = +el.dataset.v; Roll.stop(); drillStop(); render(); break;
+      case 'dockplay': dockPlay(); break;
+      case 'rlmode': RL.mode = el.dataset.v; Roll.stop(); drillStop(); if (document.querySelector('.rollfs')) rollOpen(); else render(); break;
+      case 'rllvl': if (el.dataset.locked) { toast('先在「中等」用「等你弹」一遍弹对，困难才解锁'); break; } RL.lvl = +el.dataset.v; Roll.stop(); drillStop(); if (document.querySelector('.rollfs')) rollOpen(); else render(); break;
+      case 'rollopen': rollOpen(el.dataset.k); break;
+      case 'rollclose': rollClose(); break;
       case 'rlgo': rollGo(); break;
       case 'rlstop': stopAll(); Roll.stop(); drillStop(); break;
       case 'rlrate': RL.rate = Math.max(0.4, Math.min(1.6, +(RL.rate + +el.dataset.v).toFixed(2))); $('#rlrate').textContent = Math.round(RL.rate * 100) + '%'; break;
