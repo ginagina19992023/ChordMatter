@@ -45,9 +45,12 @@ const Score = (() => {
     }
     // 每小节上方写上和弦与级数（来自曲目的和声分析）
     if (opt.labels) {
+      // 同一个小节号只标最后那个（弱起小节在 Verovio 里会和第 1 小节同号）
+      const lastOf = {}; el.querySelectorAll('g.measure').forEach((g, i) => { let n = NaN; try { n = parseInt(tk.getElementAttr(g.dataset.id || g.id).n, 10); } catch (e) {} if (isNaN(n)) n = i + 1; lastOf[n] = g; });
       el.querySelectorAll('g.measure').forEach((g, i) => {
         let n = NaN; try { n = parseInt(tk.getElementAttr(g.dataset.id || g.id).n, 10); } catch (e) {}
         if (isNaN(n)) n = i + 1;
+        if (lastOf[n] !== g) return;
         const txt = opt.labels[n]; if (!txt) return;
         const bb = g.getBBox(), svg = g.ownerSVGElement;
         const fs = Math.max(bb.height * 0.1, 1);
@@ -71,8 +74,12 @@ const Score = (() => {
     });
     // 每个音在第几行谱表（从上往下 0、1、2…）：对比谱只播放选中的那几行
     const staffOf = {};
-    el.querySelectorAll('g.measure').forEach(mg => { [...mg.querySelectorAll(':scope > g.staff')].forEach((sg, si) => sg.querySelectorAll('g.note').forEach(nn => (staffOf[nn.dataset.id || nn.id] = si))); });
-    notes.forEach(n => (n.staff = staffOf[n.id]));
+    const barOf = {};
+    el.querySelectorAll('g.measure').forEach((mg, mi) => {
+      let mn = NaN; try { mn = parseInt(tk.getElementAttr(mg.dataset.id || mg.id).n, 10); } catch (e) {} if (isNaN(mn)) mn = mi + 1;
+      [...mg.querySelectorAll(':scope > g.staff')].forEach((sg, si) => sg.querySelectorAll('g.note').forEach(nn => { staffOf[nn.dataset.id || nn.id] = si; barOf[nn.dataset.id || nn.id] = mn; }));
+    });
+    notes.forEach(n => { n.staff = staffOf[n.id]; n.m = barOf[n.id]; });
     cur = { el, notes, sc, tk };
     el.onclick = e => {
       const g = e.target.closest('g.note, g.chord');

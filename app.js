@@ -429,6 +429,8 @@
     document.querySelectorAll('nav a').forEach(x => { if ((r === 'sing' || r === 'acctest') && x.dataset.r === 'acc') x.classList.add('on'); if (['know', 'sym', 'inv', 'logic'].includes(r) && x.dataset.r === 'path') x.classList.add('on'); if ((r === 'score' || r === 'scan') && x.dataset.r === 'songs') x.classList.add('on'); });
     ({ today: vToday, path: vPath, unit: vUnit, chords: vChords, songs: vSongs, song: vSong, edit: vEdit, quiz: vQuiz, arp: vArp, mem: vMem, me: vMe, acc: vAcc, sing: vSing, acctest: vAccTest, know: vKnow, score: vScore, scan: vScan, pk: vPk, browse: vBrowse, along: vAlong, cmp: vCmp, combo: vCombo, sym: vSym, inv: vInv, cards: vCards, logic: vLogic }[r] || vToday)();
     try { linkChords(view); linkTerms(view); } catch (e) {} // 立即给文字加下划线，不等谱面画完
+    document.body.classList.toggle('nolab', S.lab === false);
+    if (['song', 'cmp', 'score'].includes(r) && !view.querySelector('.dock')) view.insertAdjacentHTML('beforeend', dockHtml());
     if (r === 'song') mountMyScore(route[1]);
     if (S.pendingGift && !document.body.classList.contains('focus')) setTimeout(flushGift, 400);
     window.scrollTo(0, 0); const ph = document.getElementById('phone'); if (ph) ph.scrollTop = 0;
@@ -1065,7 +1067,7 @@
     if (hasFull(s.id)) return `<div class="sheet"><p class="fine">按你上传的谱逐音扒下来的原曲（两只手）。想看原曲左手和和弦左手上下对照、或者练「右手原曲 + 左手和弦」，点上面的「原曲 ↔ 和弦伴奏」。</p><div class="score" id="songscore"><p class="fine">正在加载谱面…（第一次需要下载乐谱引擎）</p></div></div>`;
     if (sc) return `<div class="sheet"><p class="fine">${sc.made ? '新造谱：左手是原谱左手，右手是这一小节的和弦（不含旋律）。完整的原曲扒谱只在你的私人版本里。' : '这是公有领域的原谱（只显示分析过的小节）。'}</p><div class="score" id="songscore"><p class="fine">正在加载谱面…（第一次需要下载乐谱引擎）</p></div></div>`;
     const st = sectionStarts(s);
-    return `<div class="sheet">${s.sections.map((sec, i) => `<div class="stf"><small>${esc(sec.name)}</small>${Staff.html({ key: s.key, bars: parseBars(sec.bars), end: i === s.sections.length - 1, time: i === 0, start: st[i] })}</div>`).join('')}<p class="fine">这是和声骨架：左手弹低音，右手弹和弦，不是原曲的音。${s.copy ? '原曲旋律请听录音或看你自己的谱。' : ''}</p></div>`;
+    return `<div class="sheet">${s.sections.map((sec, i) => `<div class="stf"><small>${esc(sec.name)}</small>${Staff.html({ key: s.key, bars: parseBars(sec.bars), end: i === s.sections.length - 1, time: i === 0, start: st[i], hideName: !labOn(), numerals: labOn() })}</div>`).join('')}<p class="fine">这是和声骨架：左手弹低音，右手弹和弦，不是原曲的音。${s.copy ? '原曲旋律请听录音或看你自己的谱。' : ''}</p></div>`;
   }
   function songSheetRender(s) {
     const el = $('#songscore'); if (!el) return;
@@ -1758,10 +1760,11 @@
     const c = staffs ? Object.assign({}, c0, { notes: c0.notes.filter(n => staffs.includes(n.staff)) }) : c0;
     stopAll(); A.init();
     const r = 1 / SC.rate, el = c.el;
-    let lastY = -1;
+    let lastY = -1, curM = null;
     c.notes.forEach(n => {
       A.note(n.pitch, n.t * r + 0.05, Math.min(2.5, n.dur * r + 0.3), 0.55);
       later(() => {
+        if (n.m != null && n.m !== curM) { curM = n.m; el.querySelectorAll('text.chordlab.now').forEach(t => t.classList.remove('now')); const lb = el.querySelector(`text.chordlab[data-n="${n.m}"]`); if (lb) lb.classList.add('now'); }
         const g = el.querySelector('[data-id="' + n.id + '"]') || el.querySelector('[id="' + n.id + '"]'); if (!g) return;
         g.classList.add('playing'); setTimeout(() => g.classList.remove('playing'), Math.max(120, n.dur * r * 1000));
         const y = g.getBoundingClientRect().top;
@@ -1770,7 +1773,44 @@
       }, (n.t * r + 0.05) * 1000);
     });
     const end = Math.max(...c.notes.map(n => n.t + n.dur)) * r;
-    later(() => { const b = $('#scbtn'); if (b) { b.textContent = '▶ 再听一遍'; b.dataset.act = 'scplay'; } }, end * 1000 + 300);
+    later(() => { const b = $('#scbtn'); if (b) { b.textContent = '▶ 再听一遍'; b.dataset.act = 'scplay'; } el.querySelectorAll('text.chordlab.now').forEach(t => t.classList.remove('now')); dockReset(); }, end * 1000 + 300);
+  }
+  // ---- 右下角固定的小工具条：播放（跟着高亮）+ 一键开关和声标注 ----
+  const labOn = () => S.lab !== false;
+  function dockHtml() {
+    return `<div class="dock"><button class="dk play" data-act="dockplay">▶ 播放</button><button class="dk lab${labOn() ? ' on' : ''}" data-act="labtog"><i></i>和声标注</button></div>`;
+  }
+  function dockReset() { const b = document.querySelector('.dock .play'); if (b) { b.textContent = '▶ 播放'; b.dataset.act = 'dockplay'; } }
+  function dockPlay() {
+    const sc = document.querySelector('#songscore svg, #cmpscore svg, #score svg');
+    if (sc) {
+      const staffs = route[0] === 'cmp' && CMP.mode === 'compare' ? [0, 1] : null;
+      scorePlay(staffs);
+    } else if (route[0] === 'song') playSkeleton(allSongs().find(x => x.id === route[1]));
+    else return toast('谱面还没加载好');
+    const b = document.querySelector('.dock .play'); if (b) { b.textContent = '■ 停止'; b.dataset.act = 'dockstop'; }
+  }
+  // 和弦骨架谱（没有原谱的曲子）：一个和弦一个和弦弹，谱上对应的和弦变色
+  function playSkeleton(s) {
+    if (!s) return; stopAll(); A.init();
+    const staffs = [...document.querySelectorAll('.sheet div.staff')];
+    const spb = 60 / (s.bpm || 80) / SC.rate; let t = 0;
+    let k = 0;
+    s.sections.forEach((sec, si) => {
+      let local = 0;
+      parseBars(sec.bars).forEach(bar => bar.forEach(sym => {
+        const d = 4 / bar.length * spb, li = local++, el = staffs[si], at = t;
+        const ms = chordMidis(sym); A.chord(ms, at + 0.05, 0.01, d * 0.95);
+        later(() => {
+          staffs.forEach((x, xi) => { if (xi !== si && x.__marked) { const cfg = JSON.parse(x.dataset.staff); delete cfg.mark; x.dataset.staff = JSON.stringify(cfg); try { Staff.draw(x); } catch (e) {} x.__marked = false; } });
+          if (!el) return; const cfg = JSON.parse(el.dataset.staff); cfg.mark = li; el.dataset.staff = JSON.stringify(cfg); try { Staff.draw(el); } catch (e) {} el.__marked = true;
+          const r = el.getBoundingClientRect(), box = document.getElementById('phone') && getComputedStyle(document.getElementById('phone')).overflowY === 'auto' ? document.getElementById('phone').getBoundingClientRect() : { top: 0, bottom: innerHeight };
+          if (r.top < box.top + 40 || r.bottom > box.bottom - 120) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }, at * 1000);
+        t += d; k++;
+      }));
+    });
+    later(() => { staffs.forEach(x => { if (x.__marked) { const cfg = JSON.parse(x.dataset.staff); delete cfg.mark; x.dataset.staff = JSON.stringify(cfg); try { Staff.draw(x); } catch (e) {} x.__marked = false; } }); dockReset(); }, t * 1000 + 300);
   }
 
   // ---------------- 识谱 ----------------
@@ -2283,6 +2323,9 @@
       case 'cbredo': render(); break;
       case 'cbqplay': case 'cbqyours': { const cb = COMBOS.find(x => x.id === route[1]); const ch = cbChords(cb); if (act === 'cbqyours') ch[CB.q.pos] = CB.q.ans; A.init(); ch.forEach((x, i) => A.chord(chordMidis(x), i * 0.9, 0.01, 1)); break; }
       case 'cbans': { const cb = COMBOS.find(x => x.id === route[1]); const ch = cbChords(cb); CB.q.ans = el.dataset.v; const ok = CB.q.ans === ch[CB.q.pos]; S.combo = S.combo || {}; const r = (S.combo[cb.id] = S.combo[cb.id] || { n: 0, r: 0 }); r.n++; if (ok) r.r++; logEv('cbq', { id: cb.id, ok: ok ? 1 : 0, pick: CB.q.ans }); save(); render(); setTimeout(() => { const e = view.querySelectorAll('.cxblock')[2]; if (e) e.scrollIntoView({ block: 'start' }); }, 30); break; }
+      case 'dockplay': dockPlay(); break;
+      case 'dockstop': stopAll(); dockReset(); document.querySelectorAll('text.chordlab.now').forEach(t => t.classList.remove('now')); break;
+      case 'labtog': S.lab = !labOn(); save(); document.body.classList.toggle('nolab', !labOn()); el.classList.toggle('on', labOn()); document.querySelectorAll('.sheet div.staff').forEach(x => { const cfg = JSON.parse(x.dataset.staff); cfg.hideName = !labOn(); cfg.numerals = labOn(); x.dataset.staff = JSON.stringify(cfg); try { Staff.draw(x); } catch (e) {} }); /* 原地重画，不跳回页面顶部 */ toast(labOn() ? '和声标注：开' : '和声标注：关（纯谱面）'); break;
       case 'scrange': SC.range = el.dataset.v; render(); break;
       case 'scplay': scorePlay(); el.dataset.lab = el.textContent; el.textContent = '■ 停止'; el.dataset.act = 'scstop'; break;
       case 'scstop': stopAll(); el.textContent = el.dataset.lab || '▶ 播放'; el.dataset.act = 'scplay'; break;
