@@ -906,3 +906,16 @@ body.land .rollfs #rlctl p, .rollfs.rot #rlctl p { display: none; }
 .findev { margin: 4px 0 8px; font-size: 12.5px; }
 .findev summary { color: var(--S); cursor: pointer; }
 .findev ul { padding-left: 18px; margin: 4px 0; color: var(--mute); }
+/* 横屏全屏：左边选项可以收起，彩条和键盘占满整个屏幕；收起后左上角只留 × ▶ ■ 选项 */
+.fsb { height: 32px; min-width: 32px; padding: 0 10px; border-radius: 16px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font-size: 13px; cursor: pointer; }
+.fsmini { display: none; gap: 6px; }
+body.land .rollfs .fshead, .rollfs.rot .fshead { flex-wrap: wrap; row-gap: 6px; }
+body.land .rollfs .fspanel, .rollfs.rot .fspanel { margin-left: auto; }
+body.land .rollfs.nopanel, .rollfs.rot.nopanel { grid-template-columns: 1fr; }
+body.land .rollfs.nopanel .rollbox > :not(#fsroll), .rollfs.rot.nopanel .rollbox > :not(#fsroll) { display: none !important; }
+body.land .rollfs.nopanel #fsroll, .rollfs.rot.nopanel #fsroll { grid-column: 1; grid-row: 1; }
+body.land .rollfs.nopanel .fshead, .rollfs.rot.nopanel .fshead { position: absolute; z-index: 2; top: 8px; left: 8px; padding: 4px; gap: 6px; flex-wrap: nowrap; background: rgba(255,255,255,.85); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border-radius: 22px; }
+body.land .rollfs.nopanel .fshead b, body.land .rollfs.nopanel .fshead small, .rollfs.rot.nopanel .fshead b, .rollfs.rot.nopanel .fshead small { display: none; }
+body.land .rollfs.nopanel .fsmini, .rollfs.rot.nopanel .fsmini { display: inline-flex; }
+body.land .rollfs.nopanel .fsx, .rollfs.rot.nopanel .fsx { width: 32px; height: 32px; font-size: 18px; }
+body.land .rollfs.nopanel .fspanel, .rollfs.rot.nopanel .fspanel { margin-left: 0; }

@@ -32,14 +32,17 @@ const Roll = (() => {
     cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px';
     const g = cv.getContext('2d'); g.scale(dpr, dpr);
     const total = Math.max(...opt.events.map(e => e.t + e.d), ...(opt.chords || []).map(c => c.t + c.d));
-    cur = { el, cv, g, W, H, lo, hi, geo: keyGeom(lo, hi, W, opt.real), opt, chords: opt.chords || [], beat: -opt.lead || -2, total, raf: 0, waitIdx: 0, released: 0, tapped: new Set() };
+    // keyW：每个白键固定宽度（真实大小），键盘比屏幕宽时跟着当前和弦左右滑
+    let nW = 0; for (let m = lo; m <= hi; m++) if (!isBlack(m)) nW++;
+    const GW = opt.keyW ? Math.max(W, nW * opt.keyW) : W;
+    cur = { el, cv, g, W, H, lo, hi, GW, sx: 0, geo: keyGeom(lo, hi, GW, opt.real), opt, chords: opt.chords || [], beat: -opt.lead || -2, total, raf: 0, waitIdx: 0, released: 0, tapped: new Set() };
     cur.keyH = opt.keyFrac ? Math.round(H * opt.keyFrac) : Math.min(70, H * 0.2); cur.hitY = H - cur.keyH; cur.ppb = opt.ppb || 46;
-    draw();
+    cur.sx = scrollTarget(); draw();
     // 多指同时按（和弦）：每根手指单独记，抬起才松开；rot = 画面被转了 90° 显示（竖着拿手机时模拟横屏）
     const down = new Map();
     const keyAt = e => {
       const r = cv.getBoundingClientRect();
-      const x = opt.rot ? e.clientY - r.top : e.clientX - r.left, y = opt.rot ? r.right - e.clientX : e.clientY - r.top;
+      const x = (opt.rot ? e.clientY - r.top : e.clientX - r.left) + cur.sx, y = opt.rot ? r.right - e.clientX : e.clientY - r.top;
       if (y < cur.hitY) return null;
       const blackHit = y < cur.hitY + cur.keyH * 0.63;
       let m = null;
@@ -59,13 +62,25 @@ const Roll = (() => {
     return cur;
   }
   function rgba(c, a) { return `rgba(${c[0]},${c[1]},${c[2]},${a})`; }
+  // 当前（或下一个）和弦的音放在屏幕中间
+  function scrollTarget() {
+    if (!cur || cur.GW <= cur.W) return 0;
+    const c = cur.chords.find(c => c.t + c.d > cur.beat + 1e-6) || cur.chords[cur.chords.length - 1];
+    const xs = cur.opt.events.filter(e => c ? e.t >= c.t - 1e-6 && e.t < c.t + c.d - 1e-6 : true).map(e => cur.geo.pos[e.midi]).filter(Boolean);
+    if (!xs.length) return cur.sx;
+    const a = Math.min(...xs.map(p => p.x)), b = Math.max(...xs.map(p => p.x + p.w));
+    return Math.max(0, Math.min(cur.GW - cur.W, (a + b) / 2 - cur.W / 2));
+  }
   function draw() {
     if (!cur) return;
+    if (cur.GW > cur.W) { const t = scrollTarget(); cur.sx += Math.abs(t - cur.sx) < 0.5 ? t - cur.sx : (t - cur.sx) * 0.12; }
     const { g, W, H, hitY, ppb, geo, beat, chords, opt } = cur;
     g.clearRect(0, 0, W, H);
     g.fillStyle = '#fbfbfa'; g.fillRect(0, 0, W, hitY);
     // 竖直的键道（黑键位置浅灰）
+    g.save(); g.translate(-cur.sx, 0);
     for (const [m, p] of Object.entries(geo.pos)) if (p.black) { g.fillStyle = 'rgba(0,0,0,0.035)'; g.fillRect(p.x, 0, p.w, hitY); }
+    g.restore();
     const yOf = t => hitY - (t - beat) * ppb;
     // 小节线 + 和弦标签
     const beats = opt.beats || 4;
@@ -82,6 +97,7 @@ const Roll = (() => {
       const ly = Math.min(hitY - 4, y0 - 4); if (ly > 12) g.fillText(c.label, W - g.measureText(c.label).width - 6, ly);
     });
     // 彩条
+    g.save(); g.translate(-cur.sx, 0);
     opt.events.forEach(e => {
       const y0 = yOf(e.t), y1 = yOf(e.t + e.d); if (y1 > hitY || y0 < 0) return;
       const p = geo.pos[e.midi]; if (!p) return;
@@ -89,6 +105,7 @@ const Roll = (() => {
       const x = p.x + 1, w = p.w - 2, top = Math.max(0, y1), bot = Math.min(hitY, y0) - 1;
       g.fillStyle = rgba(col, a); roundRect(g, x, top, w, Math.max(3, bot - top), Math.min(5, w / 2)); g.fill();
     });
+    g.restore();
     // 判定线
     g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, hitY - 1, W, 2);
     // 键盘：正在响的键按颜色亮
@@ -96,6 +113,7 @@ const Roll = (() => {
     opt.events.forEach(e => { if (beat >= e.t - 1e-3 && beat < e.t + e.d) on[e.midi] = { col: COL[funcAt(chords, e.t)] || COL.N, hand: e.hand }; });
     if (cur.waiting) cur.waiting.forEach(m => (on[m] = on[m] || { col: COL[funcAt(chords, beat)] || COL.N, hand: 'R', wait: 1 }));
     const kh = cur.keyH;
+    g.save(); g.translate(-cur.sx, 0);
     for (const [m, p] of Object.entries(geo.pos)) if (!p.black) {
       const o = on[m], t = cur.tapped.has(+m);
       g.fillStyle = o ? rgba(o.col, o.wait ? 0.45 : 0.85) : t ? '#e9e9e9' : '#fff'; g.fillRect(p.x, hitY + 1, p.w - 1, kh - 1);
@@ -107,6 +125,7 @@ const Roll = (() => {
       const o = on[m], t = cur.tapped.has(+m);
       g.fillStyle = o ? rgba(o.col, 1) : t ? '#555' : '#1b1b1b'; roundRect(g, p.x, hitY + 1, p.w, kh * (opt.real ? 0.63 : 0.62), 2); g.fill();
     }
+    g.restore();
     if (cur.waiting) { g.fillStyle = 'rgba(0,0,0,0.55)'; g.font = '600 13px -apple-system, sans-serif'; const t = '等你弹：' + (cur.waitLabel || ''); g.fillText(t, 8, hitY - 10); }
   }
   function roundRect(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }

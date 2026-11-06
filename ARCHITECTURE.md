@@ -281,3 +281,5 @@ bash tools/run-all.sh
 - 全屏跟练里的「📱 用手机弹」：`RL.kb`（存 `S.rlkb`）。键盘占画面 42%，只放 C4–E5（`KB_LO/KB_HI`），所有音按八度折进这个音区。
 - `Roll.mount` 新参数：`real`（真钢琴比例：黑键宽 0.58、长 0.63，C♯D♯ / F♯G♯A♯ 按真实位置错开）、`lo/hi`、`keyFrac`、`rot`。多指：每个 pointerId 单独按下 / 抬起。
 - 自动横屏：先试 `requestFullscreen + screen.orientation.lock('landscape')`（安卓）；iPhone 不支持，就给 `.rollfs` 加 `.rot`，整个画面 `rotate(90deg)`，触点坐标在 Roll 里换算回来。手机真的转过来后（isLand）自动取消旋转。
+- 横屏全屏：`RL.nopanel` 收起左边选项（`.rollfs.nopanel`），左上角只留 × ▶ ■「选项」。
+- 琴键真实大小（默认，`S.rlkbReal`）：白键 23.5 mm ≈ 143 CSS px（`KEY_REAL`）；`Roll` 的 `keyW` 让键盘比屏幕宽，`scrollTarget()` 每帧把当前 / 下一个和弦的音滑到屏幕中间；「一屏放下」= 旧的 10 键铺满。

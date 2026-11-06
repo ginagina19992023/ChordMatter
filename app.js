@@ -2066,7 +2066,9 @@
     later(() => { const b = $('#scbtn'); if (b) { b.textContent = '▶ 再听一遍'; b.dataset.act = 'scplay'; } el.querySelectorAll('text.chordlab.now').forEach(t => t.classList.remove('now')); dockReset(); }, end * 1000 + 300);
   }
   // ---------------- 瀑布流 + 和声色带 ----------------
-  const RL = { mode: S.rlkb ? 'wait' : 'play', rate: 1, lvl: 1, kb: !!S.rlkb };
+  const RL = { mode: S.rlkb ? 'wait' : 'play', rate: 1, lvl: 1, kb: !!S.rlkb, kbReal: S.rlkbReal !== false, nopanel: false };
+  // 真实琴键宽 23.5 mm；iPhone 网页里 1 mm ≈ 6.1 个 CSS 像素
+  const KEY_REAL = Math.round(23.5 * 6.1);
   // 用手机弹：屏幕下半部分变成按真钢琴比例的键盘（只放 C4–E5 这 10 个白键），和弦都折进这个音区；竖着拿时整个画面转成横屏
   const KB_LO = 60, KB_HI = 76;
   // 难度：1 简单（只有右手和弦）· 2 中等（左手低音 + 右手和弦）· 3 困难（原曲两只手 / 旋律 + 伴奏型）
@@ -2117,7 +2119,7 @@
   function rollPanel(id) {
     const maxLv = RL.maxLv || 2, passed = rollPassed();
     const lvChips = `<div class="chips lvchips">${[1, 2, 3].slice(0, maxLv).map(l => { const locked = l === 3 && passed < 2; return `<button class="chip${RL.lvl === l ? ' on' : ''}${locked ? ' locked' : ''}" data-act="rllvl" data-v="${l}"${locked ? ' data-locked="1"' : ''}>${LV_NAME[l]}${locked ? ' · 未解锁' : ''}${l === 3 && RL.lvl3name ? '（' + RL.lvl3name + '）' : ''}</button>`; }).join('')}</div>${maxLv === 3 && passed < 2 ? '<p class="fine">困难（原曲）先锁着：在「中等」用「等你弹」一遍弹对，就解锁。先把和弦的手感练出来，再加细节。</p>' : ''}`;
-    return `<div class="rollbox">${lvChips}<div class="chips"><button class="chip${RL.mode === 'play' ? ' on' : ''}" data-act="rlmode" data-v="play">跟着落下（有声音）</button><button class="chip${RL.mode === 'wait' ? ' on' : ''}" data-act="rlmode" data-v="wait">等你弹（练手感）</button><button class="chip${RL.kb ? ' on' : ''}" data-act="rlkb">📱 用手机弹</button></div>
+    return `<div class="rollbox">${lvChips}<div class="chips"><button class="chip${RL.mode === 'play' ? ' on' : ''}" data-act="rlmode" data-v="play">跟着落下（有声音）</button><button class="chip${RL.mode === 'wait' ? ' on' : ''}" data-act="rlmode" data-v="wait">等你弹（练手感）</button><button class="chip${RL.kb ? ' on' : ''}" data-act="rlkb">📱 用手机弹</button></div>${RL.kb && id === 'fsroll' ? `<div class="chips"><button class="chip${RL.kbReal ? ' on' : ''}" data-act="rlkbsize" data-v="1">琴键真实大小</button><button class="chip${!RL.kbReal ? ' on' : ''}" data-act="rlkbsize" data-v="0">一屏放下</button></div>` : ''}
       <div class="roll" id="${id}"></div>
       <div class="row"><button class="btn" data-act="rlgo">▶ 开始</button><button class="ghost sm" data-act="rlstop">■ 停</button><button class="ghost sm" data-act="rlrate" data-v="-0.15">慢</button><button class="ghost sm" data-act="rlrate" data-v="0.15">快</button><small class="fine" id="rlrate">${Math.round(RL.rate * 100)}%</small></div>
       <div id="rlctl"></div>
@@ -2143,8 +2145,9 @@
     document.body.classList.add('immersive');
     const rot = RL.kb && !isLand();
     ov.classList.toggle('rot', rot);
+    const wide = isLand() || rot; ov.classList.toggle('nopanel', wide && RL.nopanel);
     if (rot) { ov.style.width = innerHeight + 'px'; ov.style.height = innerWidth + 'px'; } else { ov.style.width = ov.style.height = ''; }
-    ov.innerHTML = `<div class="fshead"><button class="fsx" data-act="rollclose" aria-label="关闭">×</button><b>${esc(b.title)}</b><small>${isLand() ? '' : rot ? '把手机横过来拿' : '横过来更宽'}</small></div>${rollPanel('fsroll')}`;
+    ov.innerHTML = `<div class="fshead"><button class="fsx" data-act="rollclose" aria-label="关闭">×</button><b>${esc(b.title)}</b><small>${isLand() ? '' : rot ? '把手机横过来拿' : '横过来更宽'}</small>${wide ? `<span class="fsmini"><button class="fsb" data-act="rlgo" aria-label="开始">▶</button><button class="fsb" data-act="rlstop" aria-label="停">■</button></span><button class="fsb fspanel" data-act="rlpanel">${RL.nopanel ? '选项 ›' : '‹ 收起'}</button>` : ''}</div>${rollPanel('fsroll')}`;
     const H = ov.clientHeight, used = [...ov.children].reduce((a, e) => a + (e.querySelector && e.querySelector('#fsroll') ? 0 : e.offsetHeight), 0);
     const other = [...ov.querySelectorAll('.rollbox > :not(#fsroll)')].reduce((a, e) => a + e.offsetHeight + 8, 0);
     RL.fsH = isLand() || rot ? Math.max(200, H - 22) : Math.max(200, H - ov.querySelector('.fshead').offsetHeight - other - 24);
@@ -2162,7 +2165,7 @@
     const fs = id === 'fsroll', kb = fs && RL.kb, rot = kb && !!document.querySelector('.rollfs.rot');
     let evs = data.events;
     if (kb) { const seen = new Set(); evs = data.events.map(e => { let m = e.midi; while (m < KB_LO) m += 12; while (m > KB_HI) m -= 12; return Object.assign({}, e, { midi: m }); }).filter(e => { const k = e.t.toFixed(3) + ':' + e.midi; if (seen.has(k)) return false; seen.add(k); return true; }); }
-    Roll.mount(el, { events: evs, real: kb, rot, lo: kb ? KB_LO : undefined, hi: kb ? KB_HI : undefined, keyFrac: kb ? 0.42 : 0, chords: data.chords, beats: data.beats, bpm, barNo: data.barNo, lead: 2, height: id === 'fsroll' && RL.fsH ? RL.fsH : isLand() ? Math.max(220, (document.getElementById('phone') && getComputedStyle(document.getElementById('phone')).overflowY === 'auto' ? document.getElementById('phone').clientHeight : innerHeight) - 80) : Math.min(420, Math.round(innerHeight * 0.5)), onKey: m => { A.init(); if (RL.mode === 'wait' && DR) drillTapKey(m); else A.note(m, 0, 0.8, 0.6); } });
+    Roll.mount(el, { events: evs, real: kb, rot, lo: kb ? KB_LO : undefined, hi: kb ? KB_HI : undefined, keyFrac: kb ? 0.42 : 0, keyW: kb && RL.kbReal ? KEY_REAL : 0, chords: data.chords, beats: data.beats, bpm, barNo: data.barNo, lead: 2, height: id === 'fsroll' && RL.fsH ? RL.fsH : isLand() ? Math.max(220, (document.getElementById('phone') && getComputedStyle(document.getElementById('phone')).overflowY === 'auto' ? document.getElementById('phone').clientHeight : innerHeight) - 80) : Math.min(420, Math.round(innerHeight * 0.5)), onKey: m => { A.init(); if (RL.mode === 'wait' && DR) drillTapKey(m); else A.note(m, 0, 0.8, 0.6); } });
     $('#rlctl').innerHTML = kb ? `<p class="fine">${RL.mode === 'wait' ? '彩条停住时，在下面的键盘上把这个和弦按出来（几根手指一起按，或一个一个点都行）。' : '跟着彩条在下面的键盘上按。'}</p>` : RL.mode === 'wait' ? (place() === 'away' ? '<p class="fine">没钢琴模式：点画面里的键盘。</p>' : '<div class="row"><button class="ghost sm" data-act="dlisten">开始收音 · 弹给它听</button></div>') : '';
   }
   function rollGo() {
@@ -2922,6 +2925,8 @@
         // 能锁横屏的（安卓 Chrome 全屏时）就锁；iPhone 不支持，就把画面转 90° 显示
         if (RL.kb && !isLand()) { try { const d = document.documentElement; (d.requestFullscreen ? d.requestFullscreen() : Promise.reject()).then(() => screen.orientation.lock('landscape')).then(() => setTimeout(rollOpen, 300)).catch(() => {}); } catch (e) {} }
         rollOpen(); break;
+      case 'rlpanel': RL.nopanel = !RL.nopanel; Roll.stop(); drillStop(); rollOpen(); break;
+      case 'rlkbsize': RL.kbReal = el.dataset.v === '1'; S.rlkbReal = RL.kbReal; save(); Roll.stop(); drillStop(); rollOpen(); break;
       case 'rlmode': RL.mode = el.dataset.v; Roll.stop(); drillStop(); if (document.querySelector('.rollfs')) rollOpen(); else render(); break;
       case 'rllvl': if (el.dataset.locked) { toast('先在「中等」用「等你弹」一遍弹对，困难才解锁'); break; } RL.lvl = +el.dataset.v; Roll.stop(); drillStop(); if (document.querySelector('.rollfs')) rollOpen(); else render(); break;
       case 'rollopen': rollOpen(el.dataset.k); break;
