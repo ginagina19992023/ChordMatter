@@ -347,3 +347,18 @@ audio { width: 100%; margin: 4px 0; }
 .thumbs img { height: 160px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
 .myscore { display: flex; flex-direction: column; gap: 10px; }
 .myscore img { width: 100%; border-radius: 6px; background: #fff; border: 1px solid var(--line); }
+
+/* 和弦页：结果固定在上方，选择在下方 */
+.cxtop { position: sticky; top: 0; z-index: 4; background: var(--bg); margin: calc(-1 * env(safe-area-inset-top)) -16px 12px; padding: calc(env(safe-area-inset-top) + 10px) 16px 8px; border-bottom: 1px solid var(--line); }
+.cxhead { display: flex; align-items: center; gap: 8px; }
+.cxname { flex: 1; min-width: 0; }
+.cxname b { display: block; font-size: 32px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.05; white-space: nowrap; }
+.cxname span { display: block; font-size: 12.5px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cxview { display: grid; grid-template-columns: 38% 1fr; gap: 8px; align-items: center; margin-top: 4px; }
+.cxview > * { min-width: 0; }
+.cxline { margin: 4px 0 0; font-size: 13px; color: var(--mute); font-variant-numeric: tabular-nums; }
+.chips.scroll { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-right: -16px; padding-right: 16px; scroll-behavior: smooth; }
+.chips.scroll::-webkit-scrollbar { display: none; }
+.chips.scroll .chip { flex: none; }
+.explain a { color: var(--S); }
+@media (orientation: landscape) and (max-height: 520px) { .cxtop { position: static; } }

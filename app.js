@@ -526,24 +526,23 @@
     const INV = [['原位', '根音在最下面'], ['一转', '三音在最下面'], ['二转', '五音在最下面'], ['三转', '七音在最下面']];
     const qi = QINFO[CX.q], invi = Math.max(0, c.inv);
     const bottom = v[0];
-    view.innerHTML = `<header class="top"><div><small>三步选一个和弦，马上看到、听到</small><h1>和弦</h1></div><a class="stat" href="#know-k0"><b>?</b><small>看不懂</small></a></header>
-      <div class="cxrow"><p><b>① 根音</b>：和弦名的字母，从哪个音开始叠（♭ = 左边紧挨的黑键，♯ = 右边紧挨的黑键）</p>
-      <div class="chips">${ROOT_MAJ.map(r => `<button class="chip${r === CX.root ? ' on' : ''}" data-act="cx" data-k="root" data-v="${r}">${D(r)}</button>`).join('')}</div></div>
-      <div class="cxrow"><p><b>② 性质</b>：听起来是什么颜色。小字是和弦名后面的写法</p>
-      <div class="chips qchips">${qlist.map(q => `<button class="chip q${q === CX.q ? ' on' : ''}" data-act="cx" data-k="q" data-v="${q}"><b>${QINFO[q][0]}</b><small>${q === '' ? '不写' : D(q)} · ${QINFO[q][1]}</small></button>`).join('')}</div></div>
-      <div class="cxrow"><p><b>③ 转位</b>：同样的音，换一个放在最下面。左右手的指法也不同</p>
-      <div class="chips">${c.notes.map((_, i) => `<button class="chip${i === invi ? ' on' : ''}" data-act="cx" data-k="inv" data-v="${i}">${INV[i][0]}<small> · ${INV[i][1]}</small></button>`).join('')}
-        <span class="sp"></span><button class="chip${CX.hand === 'R' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="R">右手</button><button class="chip${CX.hand === 'L' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="L">左手</button></div></div>
-      <p class="explain">现在选的是 <b>${D(c.sym)}</b>：以 ${D(c.root.name)} 为根音的${c.quality.zh}，${qi[2]}，听起来${qi[1]}。${invi ? `这是${INV[invi][0]}：最下面弹 ${D(bottom.name)}（${INV[invi][1]}），写成 ${D(c.sym)}，斜线后面就是最低音。` : '原位：根音 ' + D(c.root.name) + ' 在最下面。'}键盘上的数字是${CX.hand === 'R' ? '右' : '左'}手手指（1 = 拇指，5 = 小指）。</p>
-      <section class="cbig">
-        <div class="cbig-h"><b>${D(c.sym)}</b><span>${c.quality.zh} · ${c.quality.en}</span></div>
-        ${Staff.html({ bars: [[c.sym]], numerals: false, perRow: 1 })}
-        ${kb(v.map((n, i) => ({ midi: n.midi, f: fg[i] })), { trim: true })}
-        <dl><dt>组成</dt><dd>${c.notes.map(n => D(n.name)).join(' – ')}</dd><dt>结构</dt><dd>${c.quality.f}</dd><dt>${CX.hand === 'R' ? '右手' : '左手'}指法</dt><dd>${fg.join('-')}（低 → 高）</dd></dl>
-        <div class="row"><button class="btn" data-act="play" data-s="${esc(c.sym)}">▶ 柱式</button><button class="ghost" data-act="play" data-s="${esc(c.sym)}" data-arp="1">▶ 分解</button>
-        ${arp.white && T.Q[CX.q].ints.length === 3 && !CX.q.startsWith('sus') ? `<a class="ghost" href="#arp-${CX.root + CX.q}">琶音练习 →</a>` : ''}</div>
+    view.innerHTML = `<section class="cxtop">
+        <div class="cxhead"><div class="cxname"><b>${D(c.sym)}</b><span>${qi[0]}和弦${invi ? ' · ' + INV[invi][0] : ''} · ${qi[1]}</span></div>
+          <button class="ghost sm" data-act="play" data-s="${esc(c.sym)}">▶ 柱式</button><button class="ghost sm" data-act="play" data-s="${esc(c.sym)}" data-arp="1">▶ 分解</button></div>
+        <div class="cxview">${Staff.html({ bars: [[c.sym]], numerals: false, perRow: 1, minBar: 60 })}${kb(v.map((n, i) => ({ midi: n.midi, f: fg[i] })), { trim: true })}</div>
+        <p class="cxline">${c.notes.map(n => D(n.name)).join(' – ')} · ${c.quality.f} · ${CX.hand === 'R' ? '右手' : '左手'} ${fg.join('-')}</p>
       </section>
+      <div class="cxrow"><p><b>① 根音</b> 和弦从哪个音开始叠</p>
+      <div class="chips scroll">${ROOT_MAJ.map(r => `<button class="chip${r === CX.root ? ' on' : ''}" data-act="cx" data-k="root" data-v="${r}">${D(r)}</button>`).join('')}</div></div>
+      <div class="cxrow"><p><b>② 性质</b> 听起来是什么颜色（小字是和弦名里的写法）</p>
+      <div class="chips scroll">${qlist.map(q => `<button class="chip q${q === CX.q ? ' on' : ''}" data-act="cx" data-k="q" data-v="${q}"><b>${QINFO[q][0]}</b><small>${q === '' ? '不写' : D(q)} · ${QINFO[q][1]}</small></button>`).join('')}</div></div>
+      <div class="cxrow"><p><b>③ 转位</b> 哪个音放最下面 · <b>手</b> 看哪只手的指法</p>
+      <div class="chips">${c.notes.map((_, i) => `<button class="chip${i === invi ? ' on' : ''}" data-act="cx" data-k="inv" data-v="${i}">${INV[i][0]}</button>`).join('')}
+        <span class="sp"></span><button class="chip${CX.hand === 'R' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="R">右手</button><button class="chip${CX.hand === 'L' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="L">左手</button></div></div>
+      <p class="explain"><b>${D(c.sym)}</b>：以 ${D(c.root.name)} 为根音的${c.quality.zh}，${qi[2]}，听起来${qi[1]}。${invi ? `${INV[invi][0]}：最下面弹 ${D(bottom.name)}（${INV[invi][1]}），所以写成 ${D(c.sym)}，斜线后面就是最低音。` : '原位：根音 ' + D(c.root.name) + ' 在最下面。'}键盘上的数字是${CX.hand === 'R' ? '右' : '左'}手手指（1 = 拇指，5 = 小指）。<a href="#know-k0">看不懂？</a></p>
+      ${arp.white && T.Q[CX.q].ints.length === 3 && !CX.q.startsWith('sus') ? `<a class="link" href="#arp-${CX.root + CX.q}"><small>练这个和弦</small><b>${D(CX.root + CX.q)} 琶音 · 带指法和收音</b><span>→</span></a>` : ''}
       ${inSongs.length ? `<p class="fine">出现在：${inSongs.map(s => `<a href="#song-${s.id}">${s.title}</a>`).join('、')}</p>` : ''}`;
+    const sc = view.querySelector(`.chips.scroll .chip.on`); document.querySelectorAll('.chips.scroll').forEach(row => { const on = row.querySelector('.on'); if (on) row.scrollLeft = on.offsetLeft - row.clientWidth / 2 + on.clientWidth / 2; });
   }
 
   // ---- 琶音（指法 + 速度阶梯） ----
