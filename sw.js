@@ -1,5 +1,5 @@
-const V = 'hexian-v32';
-const FILES = ['./', 'index.html', 'style.css', 'theory.js', 'data.js', 'harmony.js', 'symbols.js', 'inversions.js', 'logic.js', 'cards.js', 'combos.js', 'terms.js', 'app.js', 'staff.js', 'listen.js', 'score.js', 'fullscore.js', 'ocr.js', 'vendor/vexflow.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png'];
+const V = 'hexian-v33';
+const FILES = ['./', 'index.html', 'style.css', 'theory.js', 'data.js', 'harmony.js', 'symbols.js', 'inversions.js', 'logic.js', 'cards.js', 'combos.js', 'terms.js', 'app.js', 'staff.js', 'listen.js', 'score.js', 'fullscore.js', 'roll.js', 'ocr.js', 'vendor/vexflow.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k))))); self.clients.claim(); });
 // 网络优先，离线时用缓存：更新会自动生效

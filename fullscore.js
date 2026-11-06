@@ -91,6 +91,35 @@ const FullScore = (() => {
     L.push(hdr(() => '=='), hdr(() => '*-'));
     return L.join('\n');
   }
-  return { parse, build, syllables };
+  // 扒谱 → 瀑布流用的音符（拍为单位；连音线合并成一个长音）
+  function kernMidi(sub) {
+    const m = /([a-gA-G])\1*/.exec(sub); if (!m) return null;
+    const L = m[0], lower = L[0] === L[0].toLowerCase(), n = L.length;
+    const oct = lower ? 3 + n : 4 - n;
+    const pc = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 }[L[0].toLowerCase()];
+    const acc = (sub.slice(m.index + n).match(/^[#\-n]*/) || [''])[0];
+    return 12 * (oct + 1) + pc + (acc.split('#').length - 1) - (acc.split('-').length - 1);
+  }
+  function events(kern) {
+    const ms = parse(kern), out = [], open = {};
+    let off = 0;
+    ms.forEach(m => {
+      m.rows.filter(r => r.f).forEach(r => r.f.forEach((tok, sp) => {
+        if (!tok || tok === '.' || /^[*!=]/.test(tok)) return;
+        tok.split(' ').forEach(sub => {
+          if (/r/.test(sub) || /q/.test(sub)) return;
+          const midi = kernMidi(sub), d = dur(sub); if (midi == null || !d) return;
+          const key = sp + ':' + midi;
+          if (/[\]_]/.test(sub) && open[key]) { open[key].d += d; if (/\]/.test(sub)) delete open[key]; return; }
+          const e = { t: off + r.t, d, midi, hand: sp === 0 ? 'L' : 'R', bar: m.n }; out.push(e);
+          if (/\[/.test(sub)) open[key] = e;
+        });
+      }));
+      off += m.len || 4;
+    });
+    const starts = {}; let o2 = 0; ms.forEach(m => { starts[m.n] = o2; o2 += m.len || 4; });
+    return { events: out, barStart: starts, lens: Object.fromEntries(ms.map(m => [m.n, m.len || 4])) };
+  }
+  return { parse, build, syllables, events };
 })();
 if (typeof module !== 'undefined') module.exports = FullScore;

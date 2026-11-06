@@ -450,10 +450,10 @@ a.term { border-bottom: 1px dashed var(--acc); color: inherit; }
 
 /* 曲目页：原谱在最上面，格子带小节号 */
 .orig.first h3 { margin-bottom: 8px; }
-.scorelink { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--ink); border-radius: var(--r); margin-bottom: 8px; }
-.scorelink b { font-weight: 500; }
-.scorelink small { display: block; }
-.scorelink > :first-child { flex: 1; }
+.scorelink { display: grid; grid-template-columns: 1fr auto; column-gap: 10px; row-gap: 3px; align-items: center; padding: 12px; border: 1px solid var(--ink); border-radius: var(--r); margin-bottom: 8px; }
+.scorelink b { font-weight: 600; grid-column: 1; }
+.scorelink small { display: block; grid-column: 1; color: var(--mute); font-size: 12.5px; line-height: 1.5; }
+.scorelink > span { grid-column: 2; grid-row: 1 / span 2; }
 .origlinks { margin: 8px 0 0; }
 .drop.small { padding: 16px; }
 .songmain { margin-bottom: 18px; }
@@ -653,3 +653,15 @@ text.chordlab.now { fill: var(--S); font-weight: 800; }
 
 details.patdetail { margin: 10px 0 14px; }
 details.patdetail summary { font-size: 14px; color: var(--mute); cursor: pointer; padding: 6px 0; }
+
+/* 瀑布流 + 和声色带 */
+.roll { margin: 8px 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: #fbfbfa; touch-action: manipulation; }
+.rollcv { display: block; }
+.rollbox .row small { align-self: center; margin-left: 4px; }
+.hstrip { margin: 8px 0 12px; }
+.hsec small { display: block; font-size: 11.5px; color: var(--mute); margin: 6px 0 3px; }
+.hrow { display: flex; flex-wrap: wrap; gap: 2px; }
+.hbar { display: flex; gap: 1px; flex: 0 0 calc(12.5% - 2px); min-width: 34px; height: 30px; cursor: pointer; }
+.hbar i { flex: 1; font-style: normal; font-size: 10.5px; color: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; border-radius: 4px; }
+.hbar i.fT { background: #464646; } .hbar i.fS { background: #2f6fdb; } .hbar i.fD { background: #e8541e; } .hbar i.fN { background: #9a9a9a; }
+.hstrip p .fT { color: #464646; } .hstrip p .fS { color: #2f6fdb; } .hstrip p .fD { color: #e8541e; }
