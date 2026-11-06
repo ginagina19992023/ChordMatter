@@ -709,3 +709,20 @@ a.pill { color: var(--S); }
 .infopop .infobody p { font-size: 14px; line-height: 1.65; margin: 0 0 8px; }
 .infopop .infobody a { color: var(--S); }
 .infopop { max-height: 70vh; overflow-y: auto; }
+
+/* 分页（一页只做一件事） */
+.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--line); margin: 6px 0 12px; position: sticky; top: 0; z-index: 3; background: var(--bg); }
+.tab { flex: 1; background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 0 9px; font: inherit; font-size: 15px; color: var(--mute); cursor: pointer; }
+.tab.on { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+.secchips { margin-top: -2px; }
+.sheetnote { margin-top: 6px; }
+details.logic summary { font-weight: 600; cursor: pointer; }
+
+.chipsh { align-self: center; font-size: 12px; color: var(--mute); margin-right: 2px; }
+details.jpbox summary { font-size: 14px; color: var(--mute); cursor: pointer; padding: 8px 0; }
+
+.pills.oneline { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-right: -16px; padding-right: 16px; }
+.pills.oneline::-webkit-scrollbar { display: none; }
+.pills.oneline .pill { flex: none; }
+.linkchip { color: var(--S); border-color: color-mix(in srgb, var(--S) 40%, var(--line)); }
+.songtop { margin-bottom: 4px; }
