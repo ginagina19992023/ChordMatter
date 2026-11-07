@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 66; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 67; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -2317,30 +2317,56 @@
 
   // ---------------- 识谱 ----------------
   let SCAN = null;
+  // AI 识谱的设置：API Key 只存这台手机（localStorage），不进 S、备份和云端同步
+  const AIK = 'hexian.ai';
+  const aiCfg = () => { try { return JSON.parse(localStorage.getItem(AIK) || '{}') || {}; } catch (e) { return {}; } };
+  const aiSet = o => { try { localStorage.setItem(AIK, JSON.stringify(Object.assign(aiCfg(), o))); } catch (e) {} };
+  const aiInArt = () => 'HX_PRESEED' in window && !!window.claude;
   function vScan() {
+    const cfg = aiCfg(), mode = cfg.mode || 'ai', inArt = aiInArt(), ready = mode === 'ai' && (inArt || cfg.key);
+    const aiBox = mode !== 'ai' ? '' : inArt
+      ? `<div class="cloudbox aibox"><p class="fine">用你自己的 Claude 账号读谱：第一次会弹窗问你是否允许这个页面使用 Claude、发送图片。谱子图片会发给 Claude，不会存进这个页面。</p></div>`
+      : cfg.key
+        ? `<div class="cloudbox aibox"><p>已填 API Key：<b>…${esc(cfg.key.slice(-4))}</b></p><div class="pills"><button class="pill" data-act="aikeyoff">换 / 删除 Key</button></div><p class="fine">谱子图片会发给 Anthropic 的 Claude 识别（不经过别的服务器）；Key 只存在这台手机，不进备份、不同步。每页大约花几毛钱人民币，从你的 API 余额里扣。</p></div>`
+        : `<div class="cloudbox aibox"><p class="fine">AI 识谱用你自己的 Anthropic API Key：</p><ol class="fine cloudsteps"><li><a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">点这里创建 Key</a>（要先在 Billing 里充一点余额）</li><li>复制 sk-ant-… 粘到下面</li></ol><div class="row"><input id="aikey" type="password" autocomplete="off" placeholder="sk-ant-…"><button class="btn" data-act="aikeyset">保存</button></div><p class="fine">Key 只存在这台手机，不进备份、不同步到云端。也可以在 Claude App 里打开<a href="https://claude.ai/artifact/HaKhjcq9e3HQqRTsBY18Cj" target="_blank" rel="noopener">预览版</a>，用 Claude 账号识谱，不用 Key。</p></div>`;
     view.innerHTML = `<header class="top"><div><a class="back" href="#songs">←</a><small>截图 / 照片 / PDF</small><h1>识谱</h1></div></header>
-      <label class="drop" for="scanfile"><b>选择谱子</b><small>支持 PNG、JPG、PDF（最多 6 页）。文件只在这台手机上处理，不会上传</small></label>
-      <input type="file" id="scanfile" accept="image/*,application/pdf,.pdf" hidden>
+      <div class="scanmode"><span class="seg"><button class="${mode === 'ai' ? 'on' : ''}" data-act="scanmode" data-v="ai">AI 识谱</button><button class="${mode !== 'ai' ? 'on' : ''}" data-act="scanmode" data-v="local">本机识别</button></span></div>
+      ${aiBox}
+      <label class="drop${mode === 'ai' && !ready ? ' off' : ''}" for="scanfile"><b>选择谱子</b><small>${mode === 'ai' ? '支持 PNG、JPG、PDF（最多 6 页）。印了和弦记号的谱照抄；纯五线谱由 Claude 读音判断和弦，会标出来' : '支持 PNG、JPG、PDF（最多 6 页）。文件只在这台手机上处理，不会上传'}</small></label>
+      <input type="file" id="scanfile" accept="image/*,application/pdf,.pdf" hidden${mode === 'ai' && !ready ? ' disabled' : ''}>
       <div id="scanprog"></div><div id="scanout"></div>
-      <p class="fine"><b>说实话：</b>手机截图里的小号和弦字（尤其是 Gm⁷ 这种带上标的）经常认错，结果只能当起点。更准的办法：在 iPhone「照片」里长按谱子 →「实况文本」选中和弦字母 → 拷贝，粘贴到识别结果的文本框里修改。</p>
-      <p class="fine">能认出的是谱子上<b>印出来的和弦记号</b>（流行谱、弹唱谱上方的 C、Am、G7/B 这些）。纯五线谱的音符目前在手机上识别不准，这类谱子会保存成原谱图片，和弦可以自己补上。</p>`;
+      ${mode === 'ai' ? `<p class="fine"><b>说实话：</b>AI 读印出来的和弦记号很准；读纯五线谱判断和弦是「理解后的判断」，转位、经过音可能和你想的不一样，结果当起点，对照原谱改。</p>`
+        : `<p class="fine"><b>说实话：</b>手机截图里的小号和弦字（尤其是 Gm⁷ 这种带上标的）经常认错，结果只能当起点。更准的办法：用「AI 识谱」，或在 iPhone「照片」里长按谱子 →「实况文本」选中和弦字母 → 拷贝，粘贴到识别结果的文本框里修改。</p>
+      <p class="fine">能认出的是谱子上<b>印出来的和弦记号</b>（流行谱、弹唱谱上方的 C、Am、G7/B 这些）。纯五线谱的音符本机认不了，请用「AI 识谱」。</p>`}`;
     $('#scanfile').addEventListener('change', async e => {
       const f = e.target.files[0]; if (!f) return;
       const prog = $('#scanprog'); $('#scanout').innerHTML = '';
       const show = (msg, p) => { prog.innerHTML = `<p class="fine">${msg}</p><span class="meter"><i style="width:${Math.round(p * 100)}%"></i></span>`; };
+      const title = f.name.replace(/\.[^.]+$/, '');
       try {
-        const r = await OCR.recognize(f, show);
-        SCAN = Object.assign(r, { title: f.name.replace(/\.[^.]+$/, '') });
+        if (mode === 'ai') {
+          const r = await OCR.aiRecognize(f, show, inArt ? { claude: true } : { api: aiCfg().key });
+          SCAN = Object.assign(r, { title: r.title || title, lines: r.sections.map(x => x.bars) });
+        } else {
+          const r = await OCR.recognize(f, show);
+          SCAN = Object.assign(r, { title });
+        }
         prog.innerHTML = '';
         renderScan();
-      } catch (err) { prog.innerHTML = `<p class="no">没能读取这个文件（${esc(err.message || err)}）。识谱需要联网下载识别引擎，请检查网络后再试。</p>`; }
+      } catch (err) {
+        const st = err.status, code = err.code;
+        const why = st === 401 ? 'API Key 不对，或者被删掉了：点「换 / 删除 Key」重新填' : st === 400 && /credit|balance/i.test(err.message) ? 'API 余额不够：去 console.anthropic.com 的 Billing 充值' : st === 429 ? '请求太频繁，等一分钟再试' : st >= 500 ? 'Claude 那边暂时忙，过一会儿再试' : code === 'not_granted' ? '你没有允许这个页面使用 Claude；想用的话刷新页面再点一次' : code === 'rate_limited' ? 'Claude 用量到上限了，过一会儿再试' : code ? 'Claude 暂时用不了（' + esc(code) + '）' : mode === 'ai' ? esc(err.message || err) + '。检查网络后再试，或者先切到「本机识别」' : '识谱需要联网下载识别引擎，请检查网络后再试（' + esc(err.message || err) + '）';
+        prog.innerHTML = `<p class="no">没能识别：${why}</p>`;
+      }
     });
   }
   function renderScan() {
     const r = SCAN, n = r.lines.flat().length;
-    const txt = r.lines.map((l, i) => `第${i + 1}行: ${l.join(' | ')}`).join('\n');
+    const txt = r.sections ? r.sections.map(x => `${x.name}: ${x.bars.join(' | ')}`).join('\n') : r.lines.map((l, i) => `第${i + 1}行: ${l.join(' | ')}`).join('\n');
+    const inf = r.sections ? r.sections.filter(x => x.src === 'inferred').map(x => x.name) : [];
     $('#scanout').innerHTML = `<div class="thumbs">${r.thumbs.map(t => `<img src="${t}" alt="谱子">`).join('')}</div>
-      <p class="${n ? 'ok' : 'no'}">${n ? `认出 ${n} 个和弦，猜测是 ${kz(r.key)}` : '没有找到印出来的和弦记号'}</p>
+      <p class="${n ? 'ok' : 'no'}">${n ? `${r.ai ? 'Claude 读出' : '认出'} ${n} 个和弦，${r.ai ? '判断' : '猜测'}是 ${kz(r.key)}` : r.ai ? 'Claude 没读出和弦' : '没有找到印出来的和弦记号'}</p>
+      ${r.ai && n ? `<p class="fine">${inf.length ? `<span class="srctag">我读原谱判断的</span> ${inf.map(esc).join('、')}（谱上没印和弦，是 Claude 按音判断的）${inf.length < r.sections.length ? '；其余段落是<span class="srctag">谱上印的</span>' : ''}` : '<span class="srctag">谱上印的</span> 全部照抄谱面上的和弦记号'}${r.note ? '<br>' + esc(r.note) : ''}</p>` : ''}
       <form class="form" id="scanform">
         <label for="sctitle">曲名<input id="sctitle" name="title" value="${esc(r.title)}" required></label>
         <label for="sckey">调（自动猜的，可以改）<input id="sckey" name="key" value="${esc(r.key || 'C')}" autocapitalize="off"></label>
@@ -2354,7 +2380,8 @@
       const sections = f.secs.value.split('\n').map(l => l.trim()).filter(Boolean).map((l, i) => { const k = l.search(/[:：]/); return k > -1 ? { name: l.slice(0, k).trim(), bars: l.slice(k + 1).trim() } : { name: '第' + (i + 1) + '行', bars: l }; })
         .map(s => ({ name: s.name, bars: parseBars(s.bars).map(b => b.filter(x => T.parseChord(x)).join(' ')).filter(Boolean).join(' | ') })).filter(s => s.bars);
       const id = 'scan' + Date.now().toString(36);
-      const song = { id, title: f.title.value.trim() || '我的谱子', sub: '识谱导入', key, sections, tag: '我的', bpm: 76, note: '和弦由识谱自动读取，请对照原谱核对', scanned: 1 };
+      const inf = SCAN.ai && SCAN.sections ? SCAN.sections.filter(x => x.src === 'inferred').map(x => x.name) : [];
+      const song = { id, title: f.title.value.trim() || '我的谱子', sub: SCAN.ai ? 'AI 识谱' : '识谱导入', key, sections, tag: '我的', bpm: 76, note: SCAN.ai ? (inf.length ? 'AI 识谱：' + inf.join('、') + ' 谱上没印和弦，是 Claude 读五线谱判断的；其余照抄谱面。请对照原谱核对' : 'AI 识谱：照抄谱面印的和弦记号，请对照原谱核对') : '和弦由识谱自动读取，请对照原谱核对', scanned: 1 };
       try { await OCR.savePages(id, SCAN.thumbs); } catch (err) {}
       S.custom = S.custom.concat(song); save();
       logEv('scan', { id, n: sections.reduce((s, x) => s + parseBars(x.bars).flat().length, 0) });
@@ -3063,6 +3090,9 @@
       case 'splay': { const sg = allSongs().find(x => x.id === el.dataset.id); playChords(sg, songRange(sg)); const bt = document.querySelector('.dock .play'); if (bt) { bt.textContent = '■ 停止'; bt.dataset.act = 'dockstop'; } break; }
       case 'sdel': S.custom = S.custom.filter(c => c.id !== el.dataset.id); save(); try { indexedDB.open('hexian-scores', 1).onsuccess = e => { const d = e.target.result; if (d.objectStoreNames.contains('pages')) d.transaction('pages', 'readwrite').objectStore('pages').delete(el.dataset.id); }; } catch (err) {} go('#songs'); break;
       case 'export': exportBackup(); break;
+      case 'scanmode': aiSet({ mode: el.dataset.v }); vScan(); break;
+      case 'aikeyset': { const v = (($('#aikey') || {}).value || '').trim(); if (!/^sk-ant-/.test(v)) { toast('Key 应该以 sk-ant- 开头'); break; } aiSet({ key: v }); vScan(); toast('已保存，只存在这台手机'); break; }
+      case 'aikeyoff': if (confirm('删除这台手机上保存的 API Key？')) { aiSet({ key: '' }); vScan(); } break;
       case 'cloudconnect': { const v = ($('#cloudtoken') || {}).value; if (!v) { toast('先粘贴令牌'); break; } el.disabled = true; el.textContent = '连接中…'; cloudConnect(v).then(r => { toast(r === 'new' ? '已连接 · 在你的 GitHub 里新建了私密存档' : r === 'pulled' ? '已连接 · 已接上云端的记录' : '已连接 · 已同步'); cloudPaint(); storInfo(); }).catch(e => { CL.msg = e.status === 401 ? '令牌不对：确认复制完整，并且勾了 gist' : '连不上 GitHub，检查一下网络'; cloudPaint(); }); break; }
       case 'cloudsync': cloudPull(true); cloudPaint(); break;
       case 'cloudoff': if (confirm('断开后这台设备不再同步（本机和云端的记录都还在）。确定？')) { cloudSet(null); CL.msg = ''; cloudPaint(); storInfo(); } break;

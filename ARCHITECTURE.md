@@ -43,7 +43,7 @@ flowchart TD
 | `staff.js` | 五线谱组件 `Staff`：和弦大谱表、伴奏型一小节、五线谱日历；每个音符可点（发 `staffplay` 事件）；用 MutationObserver 自动挂载 `div.staff` | VexFlow、`T` |
 | `listen.js` | 弹奏识别 `Listen`：麦克风频谱 → 起音检测 → 音级（chroma）→ 和弦模板匹配 / 单音判断 | Web Audio |
 | `score.js` | 原曲完整乐谱 `Score`：Verovio 渲染 Humdrum 乐谱，学习段落高亮，每小节上方标和弦与级数，可播放、可点音符 | Verovio（运行时） |
-| `ocr.js` | 识谱 `OCR`：截图 / PDF → 识别印出来的和弦字母 → 猜调；原谱图片存 IndexedDB | Tesseract.js、pdf.js（运行时） |
+| `ocr.js` | 识谱 `OCR`：截图 / PDF → 识别印出来的和弦字母 → 猜调；`aiRecognize` 把图片交给 Claude 读（印的和弦照抄、纯五线谱判断和弦并标 src）；原谱图片存 IndexedDB | Tesseract.js、pdf.js（运行时）、Claude API / artifact `sample` |
 | `data.js` | 单元课程 `UNITS`、曲库 `SONGS`、跟唱曲 `SING`、伴奏型 `PATTERNS`、知识点 `KNOW`、参考视频搜索词 | — |
 | `symbols.js` / `inversions.js` / `logic.js` | 三门入门课的卡片：`SYMS`（符号 20 课）、`INVS`（转位 10 课）、`LOGICS`（谱面逻辑 12 课）。每张卡 = `say` 一句话 + `demo` 演示 + `task(i)` 第 i 次练习 + 可选 `why` 讲解 | `T` |
 | `cards.js` | 卡册 `CARDS`、积分解锁的曲目 `GIFT_SONGS` | — |
@@ -265,7 +265,8 @@ bash tools/run-all.sh
 ## 10. 已知限制与技术债
 
 - **`app.js` 是 1800 行的单文件**。各区块用分隔注释划分、靠闭包共享状态。功能继续增加时，优先拆出「入门课卡片引擎」「即兴伴奏」「评级与卡册」三块为独立文件。
-- **识谱只认印出来的和弦字母**；手机截图的小字（尤其 Gm⁷ 这类上标）准确率低，界面上已如实提示，并引导用 iPhone「实况文本」复制。
+- **AI 识谱**：网站版用用户自己的 Anthropic API Key（localStorage `hexian.ai`，不进 S / 备份 / 云端同步），浏览器直连 api.anthropic.com（`anthropic-dangerous-direct-browser-access`），模型 claude-opus-5-5；Claude 预览版里改用 `claude.use('sample')`（声明 `sample: {images: true}`），花看的人自己的 Claude 用量。长截图先切段再发。结果里谱面印的标「谱上印的」，读五线谱判断的标「我读原谱判断的」，写进曲目的 note。
+- **本机识别只认印出来的和弦字母**；手机截图的小字（尤其 Gm⁷ 这类上标）准确率低，界面上已如实提示，并引导用 iPhone「实况文本」复制。
 - **麦克风识别**用合成钢琴音测试准确，真钢琴 + 房间噪音会差一些；可随时切到点键盘。
 - **原谱引擎首次加载约 13 MB**；只有 K.545、BWV 846 有数字原谱，其他曲目靠用户上传截图。
 - **曲目和声是学习用简化分析**（Always Online 由谱面左手推断），页面上注明了请对照原谱核对。

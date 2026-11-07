@@ -979,3 +979,7 @@ body.immersive #pbar { display: none; }
 .mini.locked { border-style: dashed; align-items: center; justify-content: center; color: var(--mute); font: 26px "Times New Roman", serif; }
 .cardbox .meter { display: block; margin-bottom: 4px; }
 .cardgrid .tcard { aspect-ratio: 5 / 8.4; }
+/* 识谱：AI / 本机 切换 */
+.scanmode { display: flex; justify-content: flex-end; margin: 2px 0 10px; }
+.drop.off { opacity: .4; pointer-events: none; }
+.aibox .pills { margin-top: 4px; }
