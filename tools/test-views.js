@@ -20,6 +20,7 @@ server.listen(8781, async () => {
     ['#browse', '.brchips .chip', 10, '和弦浏览'],
     ['#today', '.steps li', 4, '今天的 4 步'],
     ['#sight', '.sightpath li', 14, '视奏关卡'],
+    ['#sight-piece', '.spscore .vf-stavenote', 24, '视奏小曲的音符'],
     ['#sight-t1', '.sight-st svg .vf-stavenote', 1, '视奏开头的路标音'],
   ];
   let bad = 0;

@@ -100,6 +100,147 @@ const Sight = (() => {
     const ms = lv.keys ? [lv.lo, lv.hi] : (lv.kind === 'chord' ? [60, 81] : lv.pool.map(x => (typeof x === 'object' ? x.m : x)));
     return [Math.min(...ms), Math.max(...ms)];
   }
-  return { LEVELS, ROUND, round, span, vex, name, nameOct, range };
+  // ================= 5 级视奏：每次生成一首新的 8 小节双手小曲 =================
+  // 音用「字母序号」L 表示：C4 = 28（八度 × 7 + 字母），升降由调号决定，alt 是额外的临时升降
+  const NATS = [0, 2, 4, 5, 7, 9, 11], LET = 'cdefgab', UP = 'CDEFGAB';
+  function keyInfo(key) {
+    const k = T.parseKey(key), sc = T.scale(k), acc = {};
+    sc.forEach(n => { acc[UP.indexOf(n.name[0])] = (n.name.slice(1).match(/#/g) || []).length - (n.name.slice(1).match(/b/g) || []).length; });
+    return { key, k, tl: UP.indexOf(k.tonic.name[0]), acc, minor: k.minor };
+  }
+  const accStr = (a, sh, fl) => (a > 0 ? sh.repeat(a) : a < 0 ? fl.repeat(-a) : '');
+  function noteL(L, ki, alt = 0) {
+    const li = ((L % 7) + 7) % 7, oct = Math.floor(L / 7), a = (ki.acc[li] || 0) + alt;
+    return { L, alt, midi: 12 * (oct + 1) + NATS[li] + a, vex: LET[li] + accStr(a, '#', 'b') + '/' + oct, name: UP[li] + accStr(a, '♯', '♭'), oct };
+  }
+  const degOf = (L, ki) => (((L - ki.tl) % 7) + 7) % 7;
+  const GRADE = {
+    4: { keys: ['C', 'G', 'F', 'D', 'Am', 'Em', 'Dm'], times: ['2/4', '3/4', '4/4'], hi: 38, chrom: 0 },
+    5: { keys: ['G', 'D', 'A', 'F', 'Bb', 'Eb', 'Em', 'Bm', 'Dm', 'Gm', 'Am', 'Cm'], times: ['3/4', '4/4', '6/8', '2/4'], hi: 40, chrom: 1 },
+    6: { keys: ['A', 'E', 'Eb', 'Ab', 'Bb', 'D', 'F#m', 'C#m', 'Fm', 'Cm', 'Bm', 'Gm'], times: ['3/4', '4/4', '6/8', '2/4'], hi: 42, chrom: 2 },
+  };
+  const BARQ = { '2/4': 2, '3/4': 3, '4/4': 4, '6/8': 3 };
+  const STRONG = { '2/4': [0], '3/4': [0], '4/4': [0, 2], '6/8': [0, 1.5] };
+  // 节奏型（单位：四分音符；负数 = 休止）。g 是从几级开始出现
+  const RH = {
+    '4/4': [[4, [1, 1, 1, 1]], [4, [2, 1, 1]], [4, [1, 1, 2]], [4, [2, 2]], [4, [1.5, .5, 1, 1]], [4, [.5, .5, 1, 1, 1]], [4, [1, .5, .5, 2]], [4, [3, 1]],
+      [5, [1.5, .5, 1.5, .5]], [5, [.5, .5, .5, .5, 1, 1]], [5, [1, .5, .5, .5, .5, 1]], [5, [1, .5, 1, .5, 1]], [5, [-1, 1, 1, 1]], [5, [.5, 1, .5, 2]],
+      [6, [.75, .25, 1, 1, 1]], [6, [.25, .25, .5, 1, 2]], [6, [1, .75, .25, 2]], [6, [-.5, .5, .5, .5, 1, 1]]],
+    '3/4': [[4, [1, 1, 1]], [4, [2, 1]], [4, [1, 2]], [4, [1.5, .5, 1]], [4, [.5, .5, 1, 1]], [4, [1, .5, .5, 1]],
+      [5, [.5, .5, .5, .5, 1]], [5, [1.5, .5, .5, .5]], [5, [-1, 1, 1]], [5, [.5, 1, .5, 1]],
+      [6, [.75, .25, 1, 1]], [6, [.25, .25, .5, 1, 1]], [6, [1, .75, .25, 1]]],
+    '2/4': [[4, [1, 1]], [4, [.5, .5, 1]], [4, [1.5, .5]], [4, [1, .5, .5]],
+      [5, [.5, .5, .5, .5]], [5, [-.5, .5, 1]], [5, [.5, 1, .5]],
+      [6, [.25, .25, .5, 1]], [6, [.75, .25, 1]], [6, [.75, .25, .5, .5]]],
+    '6/8': [[5, [1.5, 1.5]], [5, [1, .5, 1, .5]], [5, [1, .5, 1.5]], [5, [.5, .5, .5, 1.5]], [5, [1.5, .5, .5, .5]], [5, [-.5, .5, .5, 1, .5]],
+      [6, [.75, .25, .5, 1.5]], [6, [.5, .5, .5, .5, .5, .5]], [6, [1, .5, .5, .5, .5]]],
+  };
+  const PROG = [[0, 3, 4, 0, 5, 1, 4, 0], [0, 5, 3, 4, 0, 3, 4, 0], [0, 4, 0, 4, 3, 0, 4, 0], [0, 3, 0, 4, 5, 3, 4, 0], [0, 5, 1, 4, 0, 3, 4, 0]];
+  const LHT = {
+    '4/4': { 4: ['bass', 'block'], 5: ['block', 'alberti'], 6: ['alberti'] },
+    '3/4': { 4: ['bass', 'waltz'], 5: ['waltz'], 6: ['waltz', 'broken'] },
+    '2/4': { 4: ['bass', 'block'], 5: ['alberti', 'block'], 6: ['alberti'] },
+    '6/8': { 4: ['bass'], 5: ['bass', 'broken'], 6: ['broken'] },
+  };
+  const LHNAME = { bass: '单音低音', block: '柱式（两个音一起）', alberti: '阿尔贝蒂（低-高-中-高）', waltz: '华尔兹（低音 + 和弦）', broken: '分解和弦' };
+  const TEMPO = { '4/4': [['Andante', 76], ['Moderato', 92], ['Allegretto', 104]], '2/4': [['Andante', 76], ['Moderato', 96], ['Allegretto', 108]], '3/4': [['Andantino', 84], ['Moderato', 100], ['Grazioso', 92]], '6/8': [['Andante', 50], ['Allegretto', 60]] };
+  function piece(grade = 5) {
+    const G = GRADE[grade] || GRADE[5];
+    const ki = keyInfo(pick(G.keys)), time = pick(G.times), BQ = BARQ[time], prog = pick(PROG), lht = pick(LHT[time][grade] || LHT[time][5] || ['bass']);
+    const altFor = (L, cd) => (ki.minor && (cd === 4 || cd === 6) && degOf(L, ki) === 6 ? 1 : 0);
+    const ct = cd => [cd, (cd + 2) % 7, (cd + 4) % 7];
+    const pool = RH[time].filter(([g]) => g <= grade).map(x => x[1]);
+    const lo = grade >= 6 ? 27 : 28, hi = G.hi;
+    const tonicNear = (x, set) => { let best = null; for (let L = lo; L <= hi; L++) if (set.includes(degOf(L, ki)) && (best === null || Math.abs(L - x) < Math.abs(best - x) || (Math.abs(L - x) === Math.abs(best - x) && Math.random() < 0.5))) best = L; return best; };
+    let prev = tonicNear(28 + ki.tl + 2 + Math.floor(Math.random() * 3), ct(0)), rep = 0;
+    const bars = [];
+    for (let b = 0; b < 8; b++) {
+      const cd = prog[b], tones = ct(cd), t0 = b * BQ;
+      let pat;
+      if (b === 7) pat = [BQ];
+      else {
+        let cand = pool.filter(p => (b === 0 ? p[0] > 0 : true) && (b === 3 ? p[p.length - 1] >= 1 : true));
+        if (grade < 5 || b === 0 || b === 4) cand = cand.filter(p => p.every(d => d > 0));
+        pat = pick(cand.length ? cand : pool);
+      }
+      const rh = []; let pos = 0;
+      pat.forEach((d, i) => {
+        if (d < 0) { rh.push({ t: t0 + pos, d: -d, rest: true }); pos += -d; return; }
+        const strong = STRONG[time].includes(pos), last = i === pat.length - 1;
+        let L;
+        if (b === 7) L = tonicNear(prev, [0]);
+        else if (b === 3 && last) L = tonicNear(prev, ct(4));
+        else if (strong || d >= 1) {
+          const opts = []; for (let x = Math.max(lo, prev - 4); x <= Math.min(hi, prev + 4); x++) if (tones.includes(degOf(x, ki)) && (x !== prev || (rep < 1 && Math.random() < 0.2))) opts.push(x);
+          L = opts.length ? opts.sort((a, c) => Math.abs(a - prev) - Math.abs(c - prev) + (Math.random() - 0.5) * 3)[0] : tonicNear(prev, tones);
+        } else {
+          L = prev + pick([1, -1, 1, -1, 2, -2, 1]);
+          if (L < lo) L = lo + 1; if (L > hi) L = hi - 1;
+          if (ki.minor && (cd === 4 || cd === 6) && degOf(L, ki) === 5) L += (L > prev ? 1 : -1); // 小调 V 和弦里不用 ♭6（避免增二度）
+        }
+        rep = L === prev ? rep + 1 : 0; prev = L;
+        rh.push({ t: t0 + pos, d, notes: [noteL(L, ki, altFor(L, cd))] });
+        pos += d;
+      });
+      // 左手
+      const [rlo, rhi] = lht === 'waltz' || lht === 'broken' ? [14, 19] : [17, 23];
+      const rl = (() => { let L = 14 + ((ki.tl + cd) % 7); while (L < rlo) L += 7; while (L > rhi) L -= 7; return L; })();
+      const N = (...Ls) => Ls.map(L => noteL(L, ki, altFor(L, cd)));
+      const lh = [];
+      const put = (d, Ls, stac) => { lh.push({ t: t0 + lh.reduce((a, e) => a + e.d, 0), d, notes: N(...Ls), stac }); };
+      if (b === 7) put(BQ, lht === 'bass' ? [rl] : [rl, rl + 4]);
+      else if (lht === 'bass') { if (time === '4/4') { put(2, [rl]); put(2, [rl + (b % 2 ? 4 : 0) - (b % 2 ? 7 : 0)]); } else if (time === '6/8') { put(1.5, [rl]); put(1.5, [rl + 4 - 7]); } else put(BQ, [rl]); }
+      else if (lht === 'block') { if (time === '4/4') { put(2, [rl, rl + 4]); put(2, [rl, rl + 2 + (Math.random() < .5 ? 0 : 2)]); } else put(BQ, [rl, rl + 4]); }
+      else if (lht === 'alberti') { for (let k = 0; k < BQ * 2; k++) put(0.5, [[rl, rl + 4, rl + 2, rl + 4][k % 4]]); }
+      else if (lht === 'waltz') { put(1, [rl]); put(1, [rl + 9, rl + 11], true); put(1, [rl + 9, rl + 11], true); }
+      else if (lht === 'broken') { const seq = time === '6/8' ? [0, 4, 7, 9, 7, 4] : [0, 4, 7, 9, 7, 4]; seq.forEach(x => put(0.5, [rl + x])); }
+      bars.push({ cd, rh, lh });
+    }
+    // 临时记号：第二乐句里，弱拍上离下一个音一个全音的音升高半音，变成「导音」式的倚音
+    if (G.chrom) {
+      const cands = [];
+      bars.slice(4, 7).forEach(bar => bar.rh.forEach((e, i) => { const nx = bar.rh[i + 1]; if (!e.rest && nx && !nx.rest && !STRONG[time].includes(e.t % BQ) && nx.notes[0].L === e.notes[0].L + 1 && nx.notes[0].midi - e.notes[0].midi === 2 && !e.notes[0].alt) cands.push(e); }));
+      cands.sort(() => Math.random() - 0.5).slice(0, G.chrom).forEach(e => { e.notes = [noteL(e.notes[0].L, ki, 1)]; e.chrom = 1; });
+    }
+    const tp = pick(TEMPO[time]);
+    const d1 = pick(['p', 'mp', 'mf']), d5 = pick(['f', 'mf', 'p', 'mp'].filter(x => x !== d1));
+    return { grade, key: ki.key, keyZh: ki.k.zh, minor: ki.minor, time, bq: BQ, bars, lht, lhName: LHNAME[lht], tempo: { text: tp[0], bpm: time === '6/8' ? Math.round(tp[1] * 1.5) : tp[1], mark: time === '6/8' ? '♩. = ' + tp[1] : '♩ = ' + tp[1] }, dyn: { 0: d1, 4: d5 }, cresc: grade >= 5 ? 5 : null, rit: grade >= 5 };
+  }
+  // 预读三问：调、右手最高音 / 临时记号、左手伴奏型
+  function questions(P) {
+    const ki = keyInfo(P.key), sc = T.scale(ki.k), qs = [];
+    const rel = ki.minor ? sc[2].name : sc[5].name + 'm', par = ki.minor ? ki.k.tonic.name : ki.k.tonic.name + 'm';
+    const dom = sc[4].name + (ki.minor ? 'm' : '');
+    const kz = k => T.parseKey(k).zh;
+    qs.push({ q: '这首是什么调？', a: kz(P.key), opts: shuffle([kz(P.key), kz(rel), kz(par), kz(dom)].filter((x, i, a) => a.indexOf(x) === i)), why: `看调号${ki.minor ? '，再看结尾落在哪个音、有没有升高的导音（小调的 V 和弦里会出现临时升号）' : '，再看第一个和最后一个低音'}：${kz(P.key)}。` });
+    const chromBar = P.bars.findIndex(b => b.rh.some(e => e.chrom) || b.rh.concat(b.lh).some(e => !e.rest && e.notes.some(n => n.alt)));
+    if (chromBar >= 0) {
+      const bars = P.bars.map((b, i) => i).filter(i => P.bars[i].rh.concat(P.bars[i].lh).some(e => !e.rest && e.notes.some(n => n.alt))).map(i => i + 1);
+      const others = shuffle([1, 2, 3, 4, 5, 6, 7, 8].filter(x => !bars.includes(x))).slice(0, 3);
+      const a = '第 ' + bars[0] + ' 小节';
+      qs.push({ q: '最先出现临时记号（调号以外的升降号）的是哪一小节？', a, opts: shuffle([a].concat(others.map(x => '第 ' + x + ' 小节'))), why: `第 ${bars.join('、')} 小节有临时记号。弹之前先圈出来，弹到那里手才不会按成调号里的音。` });
+    } else {
+      const top = P.bars.flatMap(b => b.rh).filter(e => !e.rest).reduce((a, e) => (e.notes[0].midi > a.notes[0].midi ? e : a)).notes[0];
+      const kiN = keyInfo(P.key), alt = [-2, -1, 1].map(d => noteL(top.L + d, kiN)).map(n => n.name + n.oct);
+      const a = top.name + top.oct;
+      qs.push({ q: '右手最高的音是哪个？（预读时先找音域，手才知道要伸多远）', a, opts: shuffle([a].concat(alt)), why: `最高是 ${a}。` });
+    }
+    const all = Object.keys(LHNAME).map(k => LHNAME[k]);
+    qs.push({ q: '左手是什么伴奏型？', a: P.lhName, opts: shuffle([P.lhName].concat(shuffle(all.filter(x => x !== P.lhName)).slice(0, 3))), why: `左手是${P.lhName}。认出型来，左手就不用一个音一个音读，只看每小节的和弦换没换。` });
+    return qs;
+  }
+  function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+  // 评分用：每个起音时刻要响的音（两只手合在一起），以及每只手各自的起音
+  function onsets(P) {
+    const m = new Map(), hands = { r: [], l: [] };
+    P.bars.forEach((b, bi) => [['r', b.rh], ['l', b.lh]].forEach(([h, evs]) => evs.forEach(e => {
+      if (e.rest) return;
+      hands[h].push({ t: e.t, bar: bi });
+      const o = m.get(e.t) || { t: e.t, bar: bi, ms: [] }; e.notes.forEach(n => o.ms.push(n.midi)); m.set(e.t, o);
+    })));
+    return { all: [...m.values()].sort((a, b) => a.t - b.t), r: hands.r, l: hands.l };
+  }
+
+  return { LEVELS, ROUND, round, span, vex, name, nameOct, range, piece, questions, onsets, GRADE };
 })();
 if (typeof module !== 'undefined') module.exports = Sight;

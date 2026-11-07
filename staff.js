@@ -72,6 +72,7 @@ const Staff = (() => {
     if (cfg.pattern) return drawPattern(el, cfg, VF);
     if (cfg.calendar) return drawCalendar(el, cfg, VF);
     if (cfg.sight) return drawSight(el, cfg, VF);
+    if (cfg.piece) return drawPiece(el, cfg, VF);
     const W = Math.max(260, el.clientWidth || 340);
     const keySig = vexKeySig(cfg.key);
     const ksCount = Math.abs(VF.keySignature(keySig).length);
@@ -258,6 +259,78 @@ const Staff = (() => {
     const cols = []; voices.forEach(v => v.getTickables().forEach(n => collect(cols, n)));
     const svg = el.querySelector('svg'); if (svg) { svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.style.width = '100%'; svg.style.height = 'auto'; el.style.width = el.style.height = ''; }
     if (cfg.tap) clickable(el, cols, W, H);
+  }
+
+  // 视奏小曲：8 小节大谱表，带节奏、附点、休止、连梁、临时记号、力度、连线、跳音
+  // 画完把每个音的横坐标存在 el.__pos（给光标和成绩上色用），每小节的框存在 el.__bars
+  const PDUR = { 4: 'w', 3: 'hd', 2: 'h', 1.5: 'qd', 1: 'q', 0.75: '8d', 0.5: '8', 0.25: '16' };
+  function drawPiece(el, cfg, VF) {
+    const P = cfg.piece, W = Math.max(300, el.clientWidth || 360);
+    const perRow = cfg.perRow || (W >= 640 ? 4 : 2), rows = Math.ceil(P.bars.length / perRow);
+    const ROW_H = 220, TOP = 46, H = TOP + rows * ROW_H;
+    el.innerHTML = '';
+    const r = new VF.Renderer(el, VF.Renderer.Backends.SVG); r.resize(W, H);
+    const ctx = r.getContext();
+    const ink = css('--ink'), mute = css('--mute');
+    ctx.setFillStyle(ink); ctx.setStrokeStyle(ink);
+    const keySig = vexKeySig(P.key), ks = Math.abs(VF.keySignature(keySig).length);
+    const [num, den] = P.time.split('/').map(Number);
+    const headRow = 40 + ks * 10, head0 = headRow + 26;
+    ctx.save(); ctx.setFont('serif', 15, 'bold'); ctx.fillText(P.tempo.text, 16, 20); let tw = P.tempo.text.length * 8.6; try { tw = ctx.measureText(P.tempo.text).width; } catch (e) {} ctx.setFont('serif', 14, 'normal'); ctx.fillText(P.tempo.mark, 16 + tw + 10, 20); ctx.restore();
+    const pos = [], boxes = [];
+    const mkNote = (e, clef) => {
+      const keys = e.rest ? [clef === 'treble' ? 'b/4' : 'd/3'] : e.notes.map(n => n.vex);
+      const d = PDUR[e.d] || 'q';
+      const n = new VF.StaveNote({ keys, duration: d + (e.rest ? 'r' : ''), clef, auto_stem: !e.rest });
+      if (/d$/.test(d)) VF.Dot.buildAndAttach([n], { all: true });
+      if (e.stac) n.addModifier(new VF.Articulation('a.').setPosition(VF.Modifier.Position.ABOVE), 0);
+      return n;
+    };
+    for (let ri = 0; ri < rows; ri++) {
+      const y = TOP + ri * ROW_H, rowBars = P.bars.slice(ri * perRow, ri * perRow + perRow);
+      const extra = ri === 0 ? head0 : headRow, bw = (W - 18 - extra) / perRow;
+      let x = 14;
+      const rowRH = [];
+      rowBars.forEach((bar, k) => {
+        const bi = ri * perRow + k, w = k === 0 ? bw + extra : bw;
+        const tr = new VF.Stave(x, y, w), bs = new VF.Stave(x, y + 100, w);
+        if (k === 0) { tr.addClef('treble').addKeySignature(keySig); bs.addClef('bass').addKeySignature(keySig); if (ri === 0) { tr.addTimeSignature(P.time); bs.addTimeSignature(P.time); } }
+        if (bi === P.bars.length - 1) { tr.setEndBarType(VF.Barline.type.END); bs.setEndBarType(VF.Barline.type.END); }
+        [tr, bs].forEach(st => { st.setStyle({ strokeStyle: mute, fillStyle: ink }); st.setContext(ctx).draw(); });
+        if (k === 0) { new VF.StaveConnector(tr, bs).setType('brace').setContext(ctx).draw(); new VF.StaveConnector(tr, bs).setType('singleLeft').setContext(ctx).draw(); }
+        new VF.StaveConnector(tr, bs).setType(bi === P.bars.length - 1 ? 'boldDoubleRight' : 'singleRight').setContext(ctx).draw();
+        if (k === 0 && bi > 0) { ctx.save(); ctx.setFont('sans-serif', 10, 'normal'); ctx.setFillStyle(mute); ctx.fillText(String(bi + 1), x + 2, tr.getYForLine(0) - 8); ctx.restore(); }
+        const rn = bar.rh.map(e => mkNote(e, 'treble')), ln = bar.lh.map(e => mkNote(e, 'bass'));
+        const vr = new VF.Voice({ num_beats: num, beat_value: den }).setMode(VF.Voice.Mode.SOFT).addTickables(rn);
+        const vl = new VF.Voice({ num_beats: num, beat_value: den }).setMode(VF.Voice.Mode.SOFT).addTickables(ln);
+        VF.Accidental.applyAccidentals([vr], keySig); VF.Accidental.applyAccidentals([vl], keySig);
+        const grp = den === 8 ? { groups: [new VF.Fraction(3, 8)] } : {};
+        const beams = VF.Beam.generateBeams(rn.filter(n => !n.isRest()), grp).concat(VF.Beam.generateBeams(ln.filter(n => !n.isRest()), grp));
+        const sx = Math.max(tr.getNoteStartX(), bs.getNoteStartX()); tr.setNoteStartX(sx); bs.setNoteStartX(sx);
+        new VF.Formatter().joinVoices([vr]).joinVoices([vl]).format([vr, vl], tr.getNoteEndX() - sx - 14);
+        vr.draw(ctx, tr); vl.draw(ctx, bs); beams.forEach(b => b.setContext(ctx).draw());
+        bar.rh.forEach((e, i) => pos.push({ bar: bi, h: 'r', t: e.t, x: rn[i].getAbsoluteX(), rest: !!e.rest }));
+        bar.lh.forEach((e, i) => pos.push({ bar: bi, h: 'l', t: e.t, x: ln[i].getAbsoluteX() }));
+        const top = tr.getYForLine(0) - 14, bot = bs.getYForLine(4) + 14;
+        boxes.push({ bar: bi, x, w, y: top, h: bot - top, sx, ex: tr.getNoteEndX() });
+        // 力度（两行谱之间）、cresc.、rit.
+        const mid = tr.getYForLine(4) + 34;
+        if (P.dyn && P.dyn[bi]) { ctx.save(); ctx.setFont('serif', 17, 'bold italic'); ctx.fillText(P.dyn[bi], sx - 4, mid); ctx.restore(); }
+        if (P.cresc === bi) { ctx.save(); ctx.setFont('serif', 13, 'italic'); ctx.fillText('cresc.', sx, mid); ctx.restore(); }
+        if (P.rit && bi === P.bars.length - 1) { ctx.save(); ctx.setFont('serif', 13, 'italic'); ctx.fillText('rit.', sx, tr.getYForLine(0) - 22); ctx.restore(); }
+        rowRH.push({ bi, notes: rn.filter(n => !n.isRest()) });
+        x += w;
+      });
+      // 连线：两小节一句（在同一行里才画）
+      for (let k = 0; k + 1 < rowRH.length; k += 2) {
+        const a = rowRH[k], b = rowRH[k + 1];
+        if (a.bi % 2 || !a.notes.length || !b.notes.length) continue;
+        try { new VF.Curve(a.notes[0], b.notes[b.notes.length - 1], { cps: [{ x: 0, y: 14 }, { x: 0, y: 14 }] }).setContext(ctx).draw(); } catch (e) {}
+      }
+    }
+    const svg = el.querySelector('svg'); if (svg) { svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.style.width = '100%'; svg.style.height = 'auto'; el.style.width = el.style.height = ''; }
+    el.__pos = pos; el.__bars = boxes; el.__W = W; el.__H = H;
+    el.dispatchEvent(new CustomEvent('piecedrawn', { bubbles: true }));
   }
 
   // 五线谱日历：一周一行，一天一小节；音高 = 练习时长，实心 = 4 步完成，空心 = 部分，休止符 = 休息日，橙色双竖线 = 背下一首

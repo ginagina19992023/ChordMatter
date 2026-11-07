@@ -997,3 +997,38 @@ body.immersive #pbar { display: none; }
 .sres > div { flex: 1; border: 1px solid var(--line); border-radius: 12px; padding: 12px; text-align: center; }
 .sres b { display: block; font-size: 28px; font-weight: 600; }
 .sres small { color: var(--mute); font-size: 12.5px; }
+/* 视奏小曲 */
+.spcard { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin: 4px 0 16px; }
+.spcard-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.spcard-h b { font-size: 17px; }
+.spcard .btn { display: block; text-align: center; margin: 10px 0 4px; }
+.sprecent { list-style: none; padding: 0; margin: 10px 0 0; font-size: 13px; }
+.sprecent li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); color: var(--mute); }
+.sprecent b { color: var(--ink); font-weight: 500; white-space: nowrap; }
+.spbasic { margin: 6px 0 20px; }
+.spbasic summary { cursor: pointer; color: var(--mute); font-size: 14px; padding: 8px 0; }
+.spmeta { font-size: 13.5px; color: var(--mute); margin: 0 0 4px; }
+.spscore { position: relative; margin: 0 -6px; }
+.spcur { position: absolute; width: 22px; margin-left: -4px; border-radius: 6px; background: color-mix(in srgb, var(--acc) 22%, transparent); pointer-events: none; transition: left .06s linear; }
+.spbar { position: absolute; border-radius: 6px; pointer-events: none; }
+.spbar.good { background: color-mix(in srgb, var(--good) 9%, transparent); }
+.spbar.meh { background: color-mix(in srgb, #e0a100 16%, transparent); }
+.spbar.bad { background: color-mix(in srgb, var(--bad) 16%, transparent); }
+.spk { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin: 0 3px 0 8px; }
+.spk.good { background: color-mix(in srgb, var(--good) 30%, transparent); } .spk.meh { background: color-mix(in srgb, #e0a100 40%, transparent); } .spk.bad { background: color-mix(in srgb, var(--bad) 40%, transparent); }
+.sppanel { margin-top: 8px; }
+.spprev { display: flex; align-items: baseline; gap: 12px; }
+.spprev b { font-size: 30px; font-variant-numeric: tabular-nums; font-weight: 600; }
+.spprev span { color: var(--mute); font-size: 14px; }
+.spcheck { margin: 6px 0 0; padding-left: 20px; line-height: 1.7; }
+.spq > small { color: var(--mute); }
+.spq > b { display: block; font-size: 16px; margin-top: 4px; }
+.spq .btn.sm { margin-top: 8px; padding: 8px 18px; width: auto; display: inline-block; }
+.sprate { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
+.sprate small { color: var(--mute); }
+.spgo { display: grid; gap: 8px; }
+.spgo .row { display: flex; gap: 8px; } .spgo .row > * { flex: 1; }
+.sppads { display: flex; gap: 10px; margin: 6px 0 10px; position: sticky; bottom: calc(env(safe-area-inset-bottom) + 8px); }
+.sppad { flex: 1; height: 120px; border-radius: 16px; border: 1.5px solid var(--line); background: var(--bg); font-size: 17px; color: var(--mute); touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.sppad.hit { background: var(--acc); color: #fff; border-color: var(--acc); }
+.spnow { font-size: 15px; color: var(--ink); }

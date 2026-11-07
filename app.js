@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 68; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 69; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -527,7 +527,7 @@
       <ol class="steps">${steps.map(([k, t, s, h], i) => `<li><a href="${h}" class="${d[k] ? 'done' : ''}"><span class="dot">${d[k] ? '✓' : i + 1}</span><span><b>${t}</b><small>${esc(s)}${d[k] ? (d[k + 'M'] === 'away' ? ' · 今天在屏幕上完成' : d[k + 'M'] === 'piano' ? ' · 今天在琴上完成' : '') : ''}</small></span><span class="arr">→</span></a></li>`).join('')}</ol>
       ${todoBox()}
       <a class="unitbar" href="#unit-${cur.id}"><small>当前单元</small><b>${cur.n} ${cur.title}</b><span class="meter"><i style="width:${mastery(cur.id)}%"></i></span><small>${mastery(cur.id)}% · 达到 80% 自动解锁下一单元</small></a>
-      <section class="bonus${n === 4 ? ' ready' : ''}"><small>加练 · 即兴伴奏${d.acc ? ' · 今日已考 ✓' : ''}</small><div class="row"><a class="ghost" href="#sight-next">视奏一轮 · 约 1 分钟</a><a class="ghost" href="#acctest">考一段配和弦</a><a class="ghost" href="#sing-${SING[dayNum(today()) % SING.length].id}">跟弹 · 唱《${SING[dayNum(today()) % SING.length].title}》</a></div></section>`;
+      <section class="bonus${n === 4 ? ' ready' : ''}"><small>加练 · 即兴伴奏${d.acc ? ' · 今日已考 ✓' : ''}</small><div class="row"><a class="ghost" href="#sight-piece">视奏一条 · 约 2 分钟</a><a class="ghost" href="#acctest">考一段配和弦</a><a class="ghost" href="#sing-${SING[dayNum(today()) % SING.length].id}">跟弹 · 唱《${SING[dayNum(today()) % SING.length].title}》</a></div></section>`;
   }
   // 有钢琴 / 没钢琴：只在页眉右上角切换（全局），页面里不再单独放选择
   function modeSwitch() { return ''; }
@@ -571,7 +571,7 @@
       <a class="unitbar sym1" href="#sym"><small>先学这个 · ${SYMS.filter(x => symDone(x.id)).length}/${SYMS.length}</small><b>符号入门：一次学一个符号</b><span class="meter"><i style="width:${SYMS.filter(x => symDone(x.id)).length / SYMS.length * 100}%"></i></span><small>C、♯、m、7、/、级数、罗马数字……逐个看演示、在键盘上试</small></a>
       <a class="unitbar sym1" href="#inv"><small>${symAllDone() ? '接着学' : '学完符号入门后'} · ${INVS.filter(x => symDone(x.id)).length}/${INVS.length}</small><b>转位十课：先找最低音，不背形状</b><span class="meter"><i style="width:${INVS.filter(x => symDone(x.id)).length / INVS.length * 100}%"></i></span><small>最低音 → 根三五 → 原位 / 一转 / 二转 → 五线谱 → 写法 → 指法 → 手少移动</small></a>
       <a class="unitbar sym1" href="#logic"><small>第三门 · ${LOGICS.filter(x => symDone(x.id)).length}/${LOGICS.length}</small><b>读懂谱面逻辑：稳、走、紧、结尾、2–5–1……</b><span class="meter"><i style="width:${LOGICS.filter(x => symDone(x.id)).length / LOGICS.length * 100}%"></i></span><small>曲目页里看到的每个词，各有一课</small></a>
-      <a class="unitbar sym1" href="#sight"><small>视奏 · ${sightPassed()}/${Sight.LEVELS.length} 关</small><b>视奏：看到音符就能弹</b><span class="meter"><i style="width:${sightPassed() / Sight.LEVELS.length * 100}%"></i></span><small>从中央 C 开始，一关只加一个新东西；读得又准又快才过关</small></a>
+      <a class="unitbar sym1" href="#sight"><small>视奏 · 今天 ${(S.log || []).filter(e => e.t === 'sightp' && e.d === today()).length} 条</small><b>视奏：${S.sightGrade || 5} 级小曲，预读 30 秒后一口气弹</b><small>每次一首没见过的 8 小节双手小曲 · 收音按小节评音准和节奏 · 另有基础认音 14 关</small></a>
       <a class="unitbar sym1" href="#combo"><small>一串一串记</small><b>组合和弦：4536、1564、2–5–1……</b><small>把常用的一串和弦当成一个词记 · 抠掉一个换成「稳 / 走 / 紧」，变出新的进行</small></a>
       <a class="unitbar" href="#know"><small>看不懂符号？</small><b>知识点：从「C、G7 是什么」到「一级二级三级」</b></a>
       <ol class="path">${UNITS.map(u => {
@@ -2628,23 +2628,211 @@
   window.__sight = () => SR; // 自查用
   const sightSt = id => (S.sight = S.sight || {})[id] || null;
   const sightPassed = () => Sight.LEVELS.filter(l => (sightSt(l.id) || {}).pass).length;
-  const sightOpen = i => i === 0 || !!(sightSt(Sight.LEVELS[i - 1].id) || {}).pass || !!sightSt(Sight.LEVELS[i].id);
+  const sightOpen = () => true; // 基础认音全部开放（5 级的人按需挑着练）
   const sightNext = () => Sight.LEVELS.find((l, i) => sightOpen(i) && !(sightSt(l.id) || {}).pass) || Sight.LEVELS[Sight.LEVELS.length - 1];
   const sightUnit = lv => (lv.kind === 'chord' ? '个和弦' : lv.kind === 'two' ? '组' : '个音');
   function vSight() {
     if (route[1] === 'next') { location.replace('#sight-' + sightNext().id); return; }
+    if (route[1] === 'piece') return sightPiece(true);
     const lv = Sight.LEVELS.find(x => x.id === route[1]);
     if (lv) return sightIntro(lv);
     if (Listen.active()) Listen.stop();
-    const nx = sightNext(), pass = sightPassed();
-    view.innerHTML = `<header class="top"><div><a class="back" href="#path">←</a><small>看到没见过的音符，直接弹出来</small><h1>视奏</h1></div><a class="stat" href="#sight"><b>${pass}/${Sight.LEVELS.length}</b><small>过关</small></a></header>
-      <div class="cta"><a class="btn" href="#sight-${nx.id}">${pass ? '继续' : '开始'} · 第 ${nx.n} 关 ${esc(nx.name.split(' · ')[0])}</a></div>
-      <p class="fine">练法：每关一轮 12 个音，读到就弹。<b>第一次就弹对</b>才算对；正确率 ≥ 90%、速度也够，才过关、解锁下一关。先求对，再求快——读对了，速度自己会上来。</p>
-      <p class="fine">${place() === 'piano' ? '有钢琴：可以打开收音在琴上弹（收音只分得清音名，分不清高低八度），也可以点屏幕键盘。' : '没钢琴：点屏幕键盘，要点对是哪一个 C（八度也要对）。'}</p>
-      <ol class="path sightpath">${Sight.LEVELS.map((l, i) => {
-        const st = sightSt(l.id), open = sightOpen(i), done = st && st.pass;
-        return `<li class="${done ? 'done' : l === nx ? 'cur' : open ? '' : 'lock'}"><a href="${open ? '#sight-' + l.id : '#sight'}"${open ? '' : ' data-act="slock"'}><span class="node">${done ? '✓' : l.n}</span><span><b>${esc(l.name)}</b><small>${st ? `最好：${st.acc}% · 每分钟 ${st.spm} ${sightUnit(l)}${done ? '' : ` · 过关要 90% 和 ${l.spm}`}` : open ? `过关：90% · 每分钟 ${l.spm} ${sightUnit(l)}` : '未解锁'}</small></span></a></li>`;
-      }).join('')}</ol>`;
+    const g = S.sightGrade || 5, G = Sight.GRADE[g], pass = sightPassed();
+    const recent = (S.log || []).filter(e => e.t === 'sightp').slice(-5).reverse();
+    const nToday = (S.log || []).filter(e => e.t === 'sightp' && e.d === today()).length;
+    const maxAcc = Math.max(...G.keys.map(k => Math.abs(Vex.Flow.keySignature(k).length)));
+    view.innerHTML = `<header class="top"><div><a class="back" href="#path">←</a><small>看到没见过的谱，一口气弹下来</small><h1>视奏</h1></div><a class="stat" href="#sight"><b>${nToday}</b><small>今天几条</small></a></header>
+      <section class="spcard"><div class="spcard-h"><b>${g} 级视奏</b><span class="seg">${[4, 5, 6].map(x => `<button class="${x === g ? 'on' : ''}" data-act="spgrade" data-v="${x}">${x} 级</button>`).join('')}</span></div>
+        <p class="fine">每次生成一首没见过的 8 小节小曲：两只手；调号最多 ${maxAcc} 个升降号，大调小调都有；${G.times.join('、')} 拍；${g >= 5 ? '附点、切分、休止、临时记号；' : '附点、八分音符；'}左手${g >= 5 ? '柱式 / 阿尔贝蒂 / 华尔兹 / 分解和弦' : '单音低音 / 柱式 / 华尔兹'}；力度、连线、跳音都有。</p>
+        <p class="fine">流程和考级一样：<b>预读 30 秒</b> → 三个问题（调、临时记号、左手型）→ <b>跟着预备拍一口气弹下来</b>，中间错了也别停。${place() === 'piano' ? '收音听你弹，按小节给出音准和节奏。' : '没钢琴时用两只手在屏幕上打节奏，判节奏准不准。'}</p>
+        <a class="btn" href="#sight-piece">来一条新的</a>
+        ${recent.length ? `<ul class="sprecent">${recent.map(e => `<li><span>${e.d.slice(5)} · ${esc(e.k)} · ${esc(e.ts)} · ${e.g} 级</span><b>${e.m === 'mic' ? `音准 ${e.p}% · ` : '节奏 · '}节奏 ${e.r}%</b></li>`).join('')}</ul>` : ''}
+      </section>
+      <details class="spbasic"${pass ? '' : ''}><summary>基础认音 14 关（读得慢的音专门练，可跳过）· 过了 ${pass}/${Sight.LEVELS.length}</summary>
+      <ol class="path sightpath">${Sight.LEVELS.map(l => {
+        const st = sightSt(l.id), done = st && st.pass;
+        return `<li class="${done ? 'done' : ''}"><a href="#sight-${l.id}"><span class="node">${done ? '✓' : l.n}</span><span><b>${esc(l.name)}</b><small>${st ? `最好：${st.acc}% · 每分钟 ${st.spm} ${sightUnit(l)}` : `过关：90% · 每分钟 ${l.spm} ${sightUnit(l)}`}</small></span></a></li>`;
+      }).join('')}</ol></details>`;
+  }
+  // ---------------- 视奏小曲：预读 → 三问 → 一口气弹 → 成绩 ----------------
+  let SP = null;
+  window.__sp = () => SP; // 自查用
+  const spRate = () => S.sightRate || 0.8;
+  function sightPiece(fresh) {
+    if (Listen.active()) Listen.stop();
+    if (fresh || !SP) { spStop(); SP = { P: Sight.piece(S.sightGrade || 5), phase: 'preview', left: 30, qi: 0, qok: 0 }; SP.qs = Sight.questions(SP.P); }
+    const P = SP.P;
+    view.innerHTML = `<div class="qbar"><a href="#sight" class="x">×</a><span class="meter"><i id="spmeter" style="width:${{ preview: 15, q: 40, ready: 60, run: 80, done: 100 }[SP.phase] || 0}%"></i></span><small>${P.grade} 级</small></div>
+      <p class="spmeta" id="spmeta"></p>
+      <div class="spscore" id="spscore">${Staff.html({ piece: P })}<div class="spcur" id="spcur" hidden></div></div>
+      <div id="sppanel" class="sppanel"></div>`;
+    spPanel();
+  }
+  function spMeta() {
+    const P = SP.P, m = $('#spmeta'); if (!m) return;
+    m.innerHTML = SP.phase === 'preview' || SP.phase === 'q' ? `${P.grade} 级 · 8 小节 · 两只手` : `${P.keyZh} · ${P.time} · 左手${P.lhName}`;
+  }
+  function spPanel() {
+    const el = $('#sppanel'); if (!el || !SP) return;
+    spMeta();
+    const mt = $('#spmeter'); if (mt) mt.style.width = ({ preview: 15, q: 40, ready: 60, run: 80, done: 100 }[SP.phase] || 0) + '%';
+    const P = SP.P, bpm = Math.round(P.tempo.bpm * spRate());
+    if (SP.phase === 'preview') {
+      el.innerHTML = `<div class="spprev"><b id="spt">0:${String(SP.left).padStart(2, '0')}</b><span>预读：先别弹，按顺序看</span></div>
+        <ol class="fine spcheck"><li>调号、拍号——什么调？大调还是小调？</li><li>右手最高、最低的音；左手在哪个音区</li><li>临时记号（心里圈出来）</li><li>左手是什么伴奏型——认出型来就不用一个一个读</li><li>最难的那个节奏，心里先打一遍拍子</li></ol>
+        <div class="cta"><button class="btn" data-act="spready">我看好了</button></div>`;
+      clearInterval(SP.timer);
+      SP.timer = setInterval(() => { if (!SP || SP.phase !== 'preview' || route[1] !== 'piece') { clearInterval(SP && SP.timer); return; } SP.left--; const t = $('#spt'); if (t) t.textContent = '0:' + String(Math.max(0, SP.left)).padStart(2, '0'); if (SP.left <= 0) { clearInterval(SP.timer); SP.phase = 'q'; spPanel(); } }, 1000);
+      return;
+    }
+    if (SP.phase === 'q') {
+      const q = SP.qs[SP.qi];
+      el.innerHTML = `<div class="spq"><small>预读问题 ${SP.qi + 1}/${SP.qs.length}</small><b>${esc(q.q)}</b>
+        <div class="opts">${q.opts.map((o, i) => `<button class="opt" data-act="spans" data-v="${i}">${esc(o)}</button>`).join('')}</div><p class="fine" id="spwhy"></p></div>`;
+      return;
+    }
+    if (SP.phase === 'ready' || SP.phase === 'done') {
+      const res = SP.phase === 'done' ? SP.res : null;
+      el.innerHTML = `${res ? spResultHtml(res) : `<p class="fine">预读问题答对 ${SP.qok}/${SP.qs.length}。现在一口气弹下来：先有一小节预备拍，<b>中间错了也别停</b>——视奏练的就是不停。</p>`}
+        <div class="sprate"><small>速度</small><span class="seg">${[[0.6, '慢'], [0.8, '中'], [1, '原速']].map(([v, t]) => `<button class="${spRate() === v ? 'on' : ''}" data-act="sprate" data-v="${v}">${t}</button>`).join('')}</span><small>♩ = ${bpm}</small></div>
+        <div class="spgo">${place() === 'piano' ? `<button class="btn" data-act="spgo" data-v="mic">🎙 ${res ? '再弹一次' : '开始弹'}（收音打分）</button>` : ''}
+          <button class="${place() === 'piano' ? 'ghost' : 'btn'}" data-act="spgo" data-v="tap">👏 两只手打节奏</button>
+          <div class="row"><button class="ghost" data-act="spgo" data-v="listen">▶ 听一遍</button><button class="ghost" data-act="spnew">换一条新的</button></div></div>
+        <p class="fine">${place() === 'piano' ? '收音只分得清音名、分不清高低八度；手机放在琴上离琴弦近一点。弹的时候不响节拍器（会干扰收音），看谱上的光标走。' : '打节奏：左边按钮 = 左手，右边 = 右手，按谱上每个音开始的时刻点一下（休止不点、长音只点一下）。电脑上也可以用 F / J 键。'}</p>`;
+      return;
+    }
+    if (SP.phase === 'run') {
+      el.innerHTML = SP.run.mode === 'tap'
+        ? `<div class="sppads"><button class="sppad" data-h="l">左手</button><button class="sppad" data-h="r">右手</button></div><div class="row"><button class="ghost" data-act="spstop">■ 停</button></div>`
+        : `<p class="fine spnow" id="spnow">${SP.run.mode === 'mic' ? '预备拍……听到第 1 小节就开始弹' : '听：光标走到哪，弹到哪'}</p><div class="row"><button class="ghost" data-act="spstop">■ 停</button></div>`;
+      el.querySelectorAll('.sppad').forEach(b => b.addEventListener('pointerdown', ev => { ev.preventDefault(); spTap(b.dataset.h); b.classList.add('hit'); setTimeout(() => b.classList.remove('hit'), 90); }));
+    }
+  }
+  function spAnswer(i) {
+    const q = SP.qs[SP.qi]; if (SP.answered) return;
+    SP.answered = 1; const ok = q.opts[i] === q.a; if (ok) SP.qok++;
+    document.querySelectorAll('.spq .opt').forEach((b, k) => { b.disabled = true; if (q.opts[k] === q.a) b.classList.add('right'); else if (k === i) b.classList.add('wrong'); });
+    const w = $('#spwhy'); if (w) w.innerHTML = (ok ? '✓ ' : '') + esc(q.why) + `<br><button class="btn sm" data-act="spnextq">${SP.qi + 1 < SP.qs.length ? '下一题' : '开始弹 →'}</button>`;
+  }
+  function spClickAt(t, accent) { A.click(Math.max(0, t - A.ctx.currentTime), accent); }
+  async function spGo(mode) {
+    if (!SP) return;
+    spStop(); A.init();
+    const P = SP.P, spb = 60 / (P.tempo.bpm * spRate()), step = P.time === '6/8' ? 1.5 : 1, total = P.bars.length * P.bq;
+    if (mode === 'mic') {
+      try { await Listen.start(A.ctx, spEvent); if (!S.micOK) { S.micOK = 1; save(); } }
+      catch (e) { toast(e && e.name === 'NotAllowedError' ? '没有麦克风权限 · 先用「两只手打节奏」' : '这里用不了麦克风 · 先用「两只手打节奏」'); return; }
+    }
+    if (mode === 'selftest') { Listen.attach(A.bus, spEvent); }
+    const lead = P.bq * spb, start = A.ctx.currentTime + 0.25 + lead;
+    // 预备拍一小节；打节奏 / 听的时候整首都有节拍器，收音时只有预备拍（节拍器会干扰收音）
+    for (let b = -P.bq; b < (mode === 'mic' || mode === 'selftest' ? 0 : total); b += step) spClickAt(start + b * spb, ((b % P.bq) + P.bq) % P.bq === 0);
+    // 自查用 window.__spBug = { shift: [小节…], skip: [小节…], late: [小节…] }：故意弹错，确认评分抓得到
+    const bug = mode === 'selftest' && window.__spBug || {};
+    if (mode === 'listen' || mode === 'selftest') P.bars.forEach((bar, bi) => { if ((bug.skip || []).includes(bi)) return; bar.rh.concat(bar.lh).forEach(e => { if (!e.rest) e.notes.forEach(n => A.note(n.midi + ((bug.shift || []).includes(bi) ? 2 : 0), start + (e.t + ((bug.late || []).includes(bi) ? 0.3 : 0)) * spb - A.ctx.currentTime, Math.max(0.2, e.d * spb * 0.95), n.midi < 60 ? 0.5 : 0.62)); }); });
+    SP.run = { mode, spb, total, perf0: performance.now() + (start - A.ctx.currentTime) * 1000, det: [], taps: { r: [], l: [] }, row: -1 };
+    SP.phase = 'run'; spPanel();
+    const tl = Sight.onsets(P).all;
+    const loop = () => {
+      if (!SP || SP.phase !== 'run' || route[1] !== 'piece') return;
+      const beat = (performance.now() - SP.run.perf0) / 1000 / spb;
+      spCursor(beat, tl);
+      const now = $('#spnow'); if (now && beat >= 0) now.textContent = `第 ${Math.min(P.bars.length, Math.floor(beat / P.bq) + 1)} 小节`;
+      if (beat > total + 0.5) return spFinish();
+      SP.raf = requestAnimationFrame(loop);
+    };
+    SP.raf = requestAnimationFrame(loop);
+  }
+  function spCursor(beat, tl) {
+    const st = document.querySelector('#spscore .staff'), cur = $('#spcur'); if (!st || !cur || !st.__pos) return;
+    if (beat < 0) { cur.hidden = true; return; }
+    let o = null; for (const e of tl) { if (e.t <= beat + 1e-6) o = e; else break; }
+    if (!o) { cur.hidden = true; return; }
+    const p = st.__pos.find(q => q.t === o.t && q.h === 'r' && !q.rest) || st.__pos.find(q => q.t === o.t), bx = st.__bars[p.bar];
+    const k = st.clientWidth / st.__W;
+    cur.hidden = false;
+    Object.assign(cur.style, { left: (p.x - 3) * k + 'px', top: bx.y * k + 'px', height: bx.h * k + 'px' });
+    const row = Math.round(bx.y);
+    if (row !== SP.run.row) { SP.run.row = row; cur.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+  }
+  const SP_LAT = 0.18; // 收音起音检测的延迟（秒）：合成钢琴实测约 0.18 秒
+  function spEvent(ev) {
+    if (!SP || !SP.run || ev.type !== 'onset') return;
+    SP.run.det.push({ beat: ((performance.now() - SP.run.perf0) / 1000 - SP_LAT) / SP.run.spb, chroma: ev.chroma });
+  }
+  function spTap(h) {
+    if (!SP || !SP.run || SP.run.mode !== 'tap') return;
+    A.click(0, false);
+    SP.run.taps[h].push((performance.now() - SP.run.perf0) / 1000 / SP.run.spb);
+  }
+  document.addEventListener('keydown', e => { if (!SP || !SP.run || SP.phase !== 'run' || SP.run.mode !== 'tap' || e.repeat) return; if (e.key === 'f' || e.key === 'F') spTap('l'); if (e.key === 'j' || e.key === 'J') spTap('r'); });
+  window.addEventListener('resize', () => { if (SP && SP.phase === 'done') setTimeout(spBars, 300); });
+  function spStop() {
+    if (SP) { cancelAnimationFrame(SP.raf); clearInterval(SP.timer); }
+    if (Listen.active()) Listen.stop();
+    stopAll();
+  }
+  // 成绩：每个「该响的时刻」找最近的一次起音（前后 0.35 拍内）。音对 + 准时（±0.2 拍）= 对；音对但早 / 晚 = 节奏偏；音不对 = 错音；没有 = 漏
+  function spFinish() {
+    const run = SP.run, P = SP.P; cancelAnimationFrame(SP.raf);
+    if (Listen.active()) Listen.stop();
+    const $c = $('#spcur'); if ($c) $c.hidden = true;
+    if (run.mode === 'listen') { SP.phase = SP.res ? 'done' : 'ready'; spPanel(); return; }
+    const O = Sight.onsets(P);
+    let rows = [], extra = 0, pitch = null;
+    if (run.mode === 'tap') {
+      ['r', 'l'].forEach(h => {
+        const used = new Set();
+        O[h].forEach(e => {
+          let bj = -1, bd = 9; run.taps[h].forEach((t, j) => { const d = t - e.t; if (!used.has(j) && Math.abs(d) < 0.25 && Math.abs(d) < Math.abs(bd)) { bd = d; bj = j; } });
+          if (bj < 0) rows.push({ bar: e.bar, st: 'miss' }); else { used.add(bj); rows.push({ bar: e.bar, st: Math.abs(bd) <= 0.12 ? 'ok' : 'time', dt: bd }); }
+        });
+        extra += run.taps[h].length - used.size;
+      });
+    } else {
+      const used = new Set();
+      O.all.forEach(e => {
+        const pcs = [...new Set(e.ms.map(m => m % 12))];
+        let best = null;
+        run.det.forEach((d, j) => {
+          const dt = d.beat - e.t; if (used.has(j) || Math.abs(dt) > 0.35) return;
+          const ok = pcs.length === 1 ? Listen.bestNote(d.chroma) === pcs[0] || Listen.matchChord(d.chroma, pcs) >= 0.75 : Listen.matchChord(d.chroma, pcs) >= 0.6;
+          const sc = (ok ? 2 : 0) - Math.abs(dt); if (!best || sc > best.sc) best = { j, sc, ok, dt };
+        });
+        if (!best) rows.push({ bar: e.bar, st: 'miss' });
+        else { used.add(best.j); rows.push({ bar: e.bar, st: best.ok ? (Math.abs(best.dt) <= 0.2 ? 'ok' : 'time') : 'wrong', dt: best.dt }); }
+      });
+      const n = rows.length; pitch = Math.round(rows.filter(r => r.st === 'ok' || r.st === 'time').length / n * 100);
+    }
+    const n = rows.length;
+    // 节奏只看时间：音弹错了但时间对，节奏照样算对
+    const thr = run.mode === 'tap' ? 0.12 : 0.2;
+    const rhythm = Math.round(Math.max(0, rows.reduce((a, r) => a + (r.dt == null ? 0 : Math.abs(r.dt) <= thr ? 1 : 0.5), 0) - 0.5 * extra) / n * 100);
+    let stops = 0, run2 = 0; rows.slice().sort((a, b) => a.bar - b.bar).forEach(r => { if (r.st === 'miss') { run2++; if (run2 === 3) stops++; } else run2 = 0; });
+    const bars = P.bars.map((_, bi) => {
+      const rs = rows.filter(r => r.bar === bi), ok = rs.filter(r => r.st === 'ok').length / Math.max(1, rs.length);
+      const dts = rs.filter(r => r.dt != null).map(r => r.dt), avg = dts.length ? dts.reduce((a, b) => a + b, 0) / dts.length : 0;
+      const why = rs.filter(r => r.st === 'miss').length > rs.length / 3 ? '漏了 / 停了' : rs.filter(r => r.st === 'wrong').length >= 2 ? '错音' : avg > 0.12 ? '拖了' : avg < -0.12 ? '抢了' : rs.some(r => r.st !== 'ok') ? '有几个音不准' : '';
+      return { st: ok >= 0.85 ? 'good' : ok >= 0.6 ? 'meh' : 'bad', why };
+    });
+    const acc = pitch == null ? rhythm / 100 : (pitch * 0.6 + rhythm * 0.4) / 100;
+    const g = award(acc, 'sightp');
+    logEv('sightp', { g: P.grade, k: P.keyZh, ts: P.time, m: run.mode, p: pitch, r: rhythm, s: stops, q: SP.qok });
+    SP.res = { pitch, rhythm, stops, bars, g, mode: run.mode, extra };
+    SP.phase = 'done'; spPanel(); spBars();
+  }
+  function spBars() {
+    const st = document.querySelector('#spscore .staff'), box = $('#spscore'); if (!st || !st.__bars || !SP.res) return;
+    box.querySelectorAll('.spbar').forEach(x => x.remove());
+    const k = st.clientWidth / st.__W;
+    st.__bars.forEach((b, i) => { const r = SP.res.bars[i]; if (!r) return; const d = document.createElement('div'); d.className = 'spbar ' + r.st; Object.assign(d.style, { left: b.x * k + 'px', top: b.y * k + 'px', width: b.w * k + 'px', height: b.h * k + 'px' }); if (r.why) d.title = r.why; box.appendChild(d); });
+  }
+  function spResultHtml(r) {
+    const bad = r.bars.map((b, i) => ({ i, ...b })).filter(b => b.st !== 'good' && b.why);
+    return `${gradeHtml(r.g)}
+      <div class="sres">${r.pitch != null ? `<div><b>${r.pitch}%</b><small>音准</small></div>` : ''}<div><b>${r.rhythm}%</b><small>节奏</small></div><div><b>${r.stops}</b><small>停下来</small></div></div>
+      <p class="fine">谱上每小节：<span class="spk good"></span>稳 <span class="spk meh"></span>有点问题 <span class="spk bad"></span>要再练。${bad.length ? '<br>' + bad.slice(0, 4).map(b => `第 ${b.i + 1} 小节：${b.why}`).join('；') : ''}${r.extra > 2 ? `<br>多点了 ${r.extra} 下（不该响的地方）。` : ''}</p>
+      ${r.mode === 'tap' ? '<p class="fine">打节奏只判节奏。回到琴边用收音再弹一次，会加上音准。</p>' : ''}`;
   }
   // 每关开头：一句话 + 路标音（带音名，可点可听）
   function sightIntro(lv) {
@@ -3231,6 +3419,14 @@
       case 'sdel': S.custom = S.custom.filter(c => c.id !== el.dataset.id); save(); try { indexedDB.open('hexian-scores', 1).onsuccess = e => { const d = e.target.result; if (d.objectStoreNames.contains('pages')) d.transaction('pages', 'readwrite').objectStore('pages').delete(el.dataset.id); }; } catch (err) {} go('#songs'); break;
       case 'export': exportBackup(); break;
       case 'sgo': sightGo(); break;
+      case 'spgrade': S.sightGrade = +el.dataset.v; save(); vSight(); break;
+      case 'spready': if (SP) { clearInterval(SP.timer); SP.phase = 'q'; spPanel(); } break;
+      case 'spans': spAnswer(+el.dataset.v); break;
+      case 'spnextq': if (SP) { SP.answered = 0; SP.qi++; if (SP.qi >= SP.qs.length) SP.phase = 'ready'; spPanel(); } break;
+      case 'sprate': S.sightRate = +el.dataset.v; save(); spPanel(); break;
+      case 'spgo': spGo(el.dataset.v); break;
+      case 'spstop': spStop(); if (SP) { SP.phase = SP.res ? 'done' : 'ready'; spPanel(); const c = $('#spcur'); if (c) c.hidden = true; } break;
+      case 'spnew': sightPiece(true); break;
       case 'sagain': vSight(); break;
       case 'smarks': { const lv = Sight.LEVELS.find(x => x.id === route[1]); if (!lv) break; A.init(); lv.marks.forEach((m, i) => A.note(m, i * 0.7, 1, 0.65)); break; }
       case 'shint': sightHint(); break;
