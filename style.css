@@ -956,3 +956,26 @@ body.immersive #pbar { display: none; }
 #pbar { justify-content: space-between; gap: 10px; }
 #pbar .pcur { pointer-events: auto; flex: 1; min-width: 0; font-size: 12.5px; color: var(--mute); opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none; }
 #pbar .pbadge { flex: none; }
+/* 卡册：按钮一行固定在卡片底部，标题 / 说明太长就省略，不再把按钮挤出框 */
+.tcard .tc-staff { flex: 0 1 auto; min-height: 0; overflow: hidden; }
+.tc-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; flex: none; }
+.tc-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; }
+.tc-note { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; flex: none; }
+.tcard .tc-staff { flex: 1 1 0; }
+.tc-acts { flex-wrap: nowrap; flex: none; }
+.tc-acts .sm { min-width: 0; padding: 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 今天页的卡册入口 */
+.cardbox { display: block; border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; margin: 0 0 16px; color: inherit; text-decoration: none; }
+.cardbox-h { display: flex; align-items: baseline; gap: 8px; }
+.cardbox-h b { font-size: 16px; font-weight: 600; }
+.cardbox-h small { flex: 1; }
+.cardbox-h .arr { color: var(--mute); }
+.minicards { display: flex; gap: 8px; margin: 10px 0 10px; }
+.mini { flex: 0 0 calc((100% - 32px) / 5); aspect-ratio: 5 / 7; border: 1px solid var(--line); border-radius: 8px; padding: 5px; display: flex; flex-direction: column; justify-content: space-between; min-width: 0; background: var(--bg); }
+.mini small { font-size: 9px; }
+.mini b { font: 600 11.5px/1.2 "Times New Roman", "Songti SC", serif; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.mini.r2 { border: 3px double var(--ink); }
+.mini.r3 { border: 1.5px solid var(--acc); box-shadow: inset 0 0 0 2px var(--bg), inset 0 0 0 3px var(--acc); }
+.mini.locked { border-style: dashed; align-items: center; justify-content: center; color: var(--mute); font: 26px "Times New Roman", serif; }
+.cardbox .meter { display: block; margin-bottom: 4px; }
+.cardgrid .tcard { aspect-ratio: 5 / 8.4; }

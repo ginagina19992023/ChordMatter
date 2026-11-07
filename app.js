@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 65; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 66; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -523,10 +523,10 @@
       <section class="calcard"><div class="calcard-h"><b>练琴日历</b><small>一天一小节 · 越高练得越久</small><a class="pill" href="#me-cal">看整个月 →</a></div>
         <a class="calweek" href="#me-cal">${calHtml(calWeeks(new Date().getFullYear(), new Date().getMonth(), today()), true)}</a>
         <div class="pills"><button class="pill" data-act="shareday" data-v="${today()}">导出今天的音符 · 分享卡片</button></div></section>
+      ${cardBox()}
       <ol class="steps">${steps.map(([k, t, s, h], i) => `<li><a href="${h}" class="${d[k] ? 'done' : ''}"><span class="dot">${d[k] ? '✓' : i + 1}</span><span><b>${t}</b><small>${esc(s)}${d[k] ? (d[k + 'M'] === 'away' ? ' · 今天在屏幕上完成' : d[k + 'M'] === 'piano' ? ' · 今天在琴上完成' : '') : ''}</small></span><span class="arr">→</span></a></li>`).join('')}</ol>
       ${todoBox()}
       <a class="unitbar" href="#unit-${cur.id}"><small>当前单元</small><b>${cur.n} ${cur.title}</b><span class="meter"><i style="width:${mastery(cur.id)}%"></i></span><small>${mastery(cur.id)}% · 达到 80% 自动解锁下一单元</small></a>
-      <a class="ptsline" href="#cards"><span class="meter"><i style="width:${Math.min(100, (1 - ((S.ptsNext || PTS_STEP) - (S.pts || 0)) / PTS_STEP) * 100)}%"></i></span><small>${S.pts || 0} 分 · 再得 ${Math.max(0, (S.ptsNext || PTS_STEP) - (S.pts || 0))} 分抽一张曲谱卡 · 卡册 ${ownedCards().length}/${CARDS.length}</small></a>
       <section class="bonus${n === 4 ? ' ready' : ''}"><small>加练 · 即兴伴奏${d.acc ? ' · 今日已考 ✓' : ''}</small><div class="row"><a class="ghost" href="#acctest">考一段配和弦</a><a class="ghost" href="#sing-${SING[dayNum(today()) % SING.length].id}">跟弹 · 唱《${SING[dayNum(today()) % SING.length].title}》</a></div></section>`;
   }
   // 有钢琴 / 没钢琴：只在页眉右上角切换（全局），页面里不再单独放选择
@@ -2576,6 +2576,14 @@
     document.body.appendChild(ov);
     A.init(); [0, 0.12, 0.24].forEach((t, i) => A.note([72, 76, 79][i], t, 1.2, 0.5));
     setTimeout(() => ov.classList.add('open'), 50);
+  }
+  // 今天页上的卡册入口：最近得到的几张卡（缩小版）+ 积分进度
+  function cardBox() {
+    const own = ownedCards(), pct = Math.min(100, (1 - ((S.ptsNext || PTS_STEP) - (S.pts || 0)) / PTS_STEP) * 100);
+    const show = own.slice().sort((a, b) => ((S.cards && S.cards[b.id] && S.cards[b.id].at) || '').localeCompare((S.cards && S.cards[a.id] && S.cards[a.id].at) || '') || b.rare - a.rare).slice(0, 4);
+    return `<a class="cardbox" href="#cards"><div class="cardbox-h"><b>我的卡册</b><small>${own.length}/${CARDS.length} 张</small><span class="arr">→</span></div>
+      <div class="minicards">${show.map(c => `<span class="mini r${c.rare}"><small>${RARE[c.rare]}</small><b>${esc((cardSong(c.id) || { title: c.title || c.id }).title)}</b></span>`).join('')}${own.length < CARDS.length ? '<span class="mini locked">?</span>' : ''}</div>
+      <span class="meter"><i style="width:${pct}%"></i></span><small>${S.pts || 0} 分 · 再得 ${Math.max(0, (S.ptsNext || PTS_STEP) - (S.pts || 0))} 分抽一张新曲谱卡</small></a>`;
   }
   function vCards() {
     const own = ownedCards();
