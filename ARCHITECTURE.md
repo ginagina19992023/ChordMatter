@@ -44,6 +44,7 @@ flowchart TD
 | `listen.js` | 弹奏识别 `Listen`：麦克风频谱 → 起音检测 → 音级（chroma）→ 和弦模板匹配 / 单音判断 | Web Audio |
 | `score.js` | 原曲完整乐谱 `Score`：Verovio 渲染 Humdrum 乐谱，学习段落高亮，每小节上方标和弦与级数，可播放、可点音符 | Verovio（运行时） |
 | `ocr.js` | 识谱 `OCR`：截图 / PDF → 识别印出来的和弦字母 → 猜调；`aiRecognize` 把图片交给 Claude 读（印的和弦照抄、纯五线谱判断和弦并标 src）；原谱图片存 IndexedDB | Tesseract.js、pdf.js（运行时）、Claude API / artifact `sample` |
+| `sight.js` | 视奏 `Sight`：14 关（`LEVELS`：谱表、音域、路标音 `marks`、过关速度 `spm`、一句话 `tip`）、每轮出题 `round()`（单音 / 短旋律 / 三和弦 / 双手）、拼写（C、G、F 三个调） | — |
 | `data.js` | 单元课程 `UNITS`、曲库 `SONGS`、跟唱曲 `SING`、伴奏型 `PATTERNS`、知识点 `KNOW`、参考视频搜索词 | — |
 | `symbols.js` / `inversions.js` / `logic.js` | 三门入门课的卡片：`SYMS`（符号 20 课）、`INVS`（转位 10 课）、`LOGICS`（谱面逻辑 12 课）。每张卡 = `say` 一句话 + `demo` 演示 + `task(i)` 第 i 次练习 + 可选 `why` 讲解 | `T` |
 | `cards.js` | 卡册 `CARDS`、积分解锁的曲目 `GIFT_SONGS` | — |
@@ -89,6 +90,7 @@ flowchart TD
 | `#quiz-<id>` / `#quiz-today` | 测验 | `#arp-<和弦>` | 琶音热身 |
 | `#chords` | 和弦库 | `#know` `#know-<id>` | 知识点 |
 | `#me` | 记录、日历、数据 | `#cards` | 卡册 |
+| `#sight` / `#sight-<关id>` / `#sight-next` | 视奏：关卡列表 / 一关（开头讲路标 → 一轮 12 个音 → 成绩） | | |
 
 带 `-today` 后缀的路由属于「今天」的练习流，完成后显示「继续」。
 
@@ -225,6 +227,12 @@ flowchart TD
 **评级与抽卡**：每个练习结束 `award(正确率)` → S/A/B/C/D 与积分 → 达到门槛随机解锁一张未拥有的卡（集齐后给闪卡）→ 卡存为 `pendingGift`，只在结果页当场或回到非练习页时弹出，不打断练习。
 
 **全局下划线**：`MutationObserver` 监听 `#view` 变化 → `linkChords` 把和弦名包成 `.chordref`，`linkTerms` 把术语包成 `.termref`（课自己的词不链接自己；音名、调名、「A 段」「B 站」不误标）→ 点击弹出浮窗。
+
+### 视奏（`#sight`，数据在 `sight.js`）
+- 一关只加一个新东西：中央 C → 五指 → 一个八度 → 低音谱表 → 大谱表 → 全部线和间 → 加线 → 调号 → 短旋律 → 三和弦 → 双手。每关开头先认 2–5 个「路标音」（带音名、可听），之后的提示都是「从路标往上 / 往下数几格」。
+- 一轮 12 个音（和弦 / 双手 6 组），一次画一行（Staff 的 `sight` 模式：全音符，当前橙色，弹完的变灰并在下面写音名）。
+- 判定：屏幕键盘要点对八度；收音（有钢琴时可开）只分得清音名。错一次给路标提示，错两次在键盘上亮出答案；点「提示」也算没有第一次弹对。
+- 成绩：第一次就弹对的比例 + 每分钟几个音；正确率 ≥ 90% 且速度 ≥ 这关的 `spm` 才过关，解锁下一关（直接打开链接也能练，只是列表里显示未解锁）。`S.sight[关id] = { acc, spm, n, pass }` 记最好成绩，`log` 里记 `sight`，走 `award` 拿积分抽卡。
 
 ## 7. 自查与工具
 

@@ -71,6 +71,7 @@ const Staff = (() => {
     const cfg = JSON.parse(el.dataset.staff);
     if (cfg.pattern) return drawPattern(el, cfg, VF);
     if (cfg.calendar) return drawCalendar(el, cfg, VF);
+    if (cfg.sight) return drawSight(el, cfg, VF);
     const W = Math.max(260, el.clientWidth || 340);
     const keySig = vexKeySig(cfg.key);
     const ksCount = Math.abs(VF.keySignature(keySig).length);
@@ -216,6 +217,48 @@ const Staff = (() => {
     clickable(el, pcols, W, H);
   }
 
+
+  // 视奏：一行（高音 / 低音）或大谱表，一组全音符；cfg.ev = [{t:['c/4'], b:['g/2']}]，
+  // cfg.mark = 正在读的那个（橙色），cfg.done = 已经弹对的个数（变灰并在下面写音名），cfg.names = 音名
+  function drawSight(el, cfg, VF) {
+    const grand = cfg.clef === 'grand', W = Math.max(260, el.clientWidth || 340), H = grand ? 290 : 150;
+    el.innerHTML = '';
+    const r = new VF.Renderer(el, VF.Renderer.Backends.SVG); r.resize(W, H);
+    const ctx = r.getContext();
+    const ink = css('--ink'), mute = css('--mute'), acc = css('--acc');
+    ctx.setFillStyle(ink); ctx.setStrokeStyle(ink);
+    const ks = cfg.key && cfg.key !== 'C' ? cfg.key : null;
+    const mk = (y, clef) => { const st = new VF.Stave(14, y, W - 18).addClef(clef); if (ks) st.addKeySignature(ks); st.setStyle({ strokeStyle: mute, fillStyle: ink }); return st; };
+    const top = mk(grand ? 44 : 34, grand || cfg.clef === 'treble' ? 'treble' : 'bass');
+    const bot = grand ? mk(154, 'bass') : null;
+    top.setContext(ctx).draw(); if (bot) {
+      bot.setContext(ctx).draw();
+      new VF.StaveConnector(top, bot).setType('brace').setContext(ctx).draw();
+      new VF.StaveConnector(top, bot).setType('singleLeft').setContext(ctx).draw();
+      new VF.StaveConnector(top, bot).setType('singleRight').setContext(ctx).draw();
+    }
+    const evs = cfg.ev || [];
+    const color = (n, i) => { const c = i < (cfg.done || 0) ? mute : i === cfg.mark ? acc : ink; n.setStyle({ fillStyle: c, strokeStyle: c }); };
+    const mkNotes = (side, clef) => evs.map((e, i) => {
+      const keys = e[side] || [];
+      if (!keys.length) return new VF.GhostNote({ duration: 'w' });
+      const n = new VF.StaveNote({ keys, duration: 'w', clef });
+      color(n, i);
+      if (cfg.names && i < (cfg.done || 0) && (side === 'b' || !grand || !(e.b || []).length)) n.addModifier(new VF.Annotation(cfg.names[i]).setFont('sans-serif', 13, 'normal').setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM), 0);
+      return n;
+    });
+    const voices = [], staves = [];
+    const tn = mkNotes(grand ? 't' : (cfg.clef === 'bass' ? 'b' : 't'), grand || cfg.clef === 'treble' ? 'treble' : 'bass');
+    voices.push(new VF.Voice({ num_beats: 4 * Math.max(1, evs.length), beat_value: 4 }).setMode(VF.Voice.Mode.SOFT).addTickables(tn)); staves.push(top);
+    if (grand) { const bn = mkNotes('b', 'bass'); voices.push(new VF.Voice({ num_beats: 4 * Math.max(1, evs.length), beat_value: 4 }).setMode(VF.Voice.Mode.SOFT).addTickables(bn)); staves.push(bot); }
+    voices.forEach(v => VF.Accidental.applyAccidentals([v], ks || 'C'));
+    const fm = new VF.Formatter(); voices.forEach(v => fm.joinVoices([v]));
+    fm.format(voices, W - 18 - top.getNoteStartX() - 24);
+    voices.forEach((v, i) => v.draw(ctx, staves[i]));
+    const cols = []; voices.forEach(v => v.getTickables().forEach(n => collect(cols, n)));
+    const svg = el.querySelector('svg'); if (svg) { svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.style.width = '100%'; svg.style.height = 'auto'; el.style.width = el.style.height = ''; }
+    if (cfg.tap) clickable(el, cols, W, H);
+  }
 
   // 五线谱日历：一周一行，一天一小节；音高 = 练习时长，实心 = 4 步完成，空心 = 部分，休止符 = 休息日，橙色双竖线 = 背下一首
   const CAL_KEYS = ['e/4', 'f/4', 'g/4', 'a/4', 'b/4', 'c/5', 'd/5', 'e/5', 'f/5'];

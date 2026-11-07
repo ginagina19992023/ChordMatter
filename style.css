@@ -983,3 +983,17 @@ body.immersive #pbar { display: none; }
 .scanmode { display: flex; justify-content: flex-end; margin: 2px 0 10px; }
 .drop.off { opacity: .4; pointer-events: none; }
 .aibox .pills { margin-top: 4px; }
+/* 视奏 */
+.sight-h { font-size: 17px; margin: 0 0 8px; font-weight: 600; }
+.sight-st { max-width: 560px; margin: 4px auto 6px; }
+.sfb { min-height: 44px; font-size: 14.5px; line-height: 1.5; color: var(--mute); margin: 4px 0 10px; }
+.sfb .ok { color: var(--ink); } .sfb .no { color: var(--acc); }
+.skb { max-width: 640px; margin: 0 auto 12px; }
+.skb.wide { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.skb.wide .kb { width: 720px; max-width: none; }
+.sctl { justify-content: center; }
+.sctl .pill.on { border-color: var(--acc); color: var(--acc); }
+.sres { display: flex; gap: 12px; margin: 14px 0; }
+.sres > div { flex: 1; border: 1px solid var(--line); border-radius: 12px; padding: 12px; text-align: center; }
+.sres b { display: block; font-size: 28px; font-weight: 600; }
+.sres small { color: var(--mute); font-size: 12.5px; }

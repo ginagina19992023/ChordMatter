@@ -19,6 +19,8 @@ server.listen(8781, async () => {
     ['#chords', '.chip', 10, '和弦页选项'],
     ['#browse', '.brchips .chip', 10, '和弦浏览'],
     ['#today', '.steps li', 4, '今天的 4 步'],
+    ['#sight', '.sightpath li', 14, '视奏关卡'],
+    ['#sight-t1', '.sight-st svg .vf-stavenote', 1, '视奏开头的路标音'],
   ];
   let bad = 0;
   for (const [h, sel, min, name] of checks) {
@@ -37,6 +39,11 @@ server.listen(8781, async () => {
   await p.goto('http://localhost:8781/index.html#song-alwayson'); await p.waitForTimeout(500);
   await p.$eval('[data-act="songtab"][data-v="shape"]', e => e.click()); await p.waitForTimeout(400);
   const hs = await p.$$eval('.hstrip .hbar', e => e.length); if (hs < 70) bad++; console.log(`${hs >= 70 ? '✓' : '✗'} 和声色带格子：${hs}（至少 70）`);
+  // 视奏：开始一轮后五线谱上有音、键盘可点；点对第一个音进到第 2 个
+  await p.goto('http://localhost:8781/index.html#sight-t2'); await p.waitForTimeout(500);
+  await p.$eval('[data-act="sgo"]', e => e.click()); await p.waitForTimeout(500);
+  const sv = await p.evaluate(() => { const r = window.__sight(); const n = document.querySelectorAll('#sst .vf-stavenote').length, k = document.querySelectorAll('#skb [data-act="key"]').length; document.querySelector(`#skb [data-m="${r.items[0].ms[0]}"]`).dispatchEvent(new MouseEvent('click', { bubbles: true })); return { n, k, i: window.__sight().i }; });
+  const sok = sv.n === 4 && sv.k >= 14 && sv.i === 1; if (!sok) bad++; console.log(`${sok ? '✓' : '✗'} 视奏一轮：一行 ${sv.n} 个音、键盘 ${sv.k} 个键、点对后到第 ${sv.i + 1} 个`);
   console.log(errs.length ? '页面错误：' + errs.slice(0, 3).join(' | ') : '没有页面错误');
   console.log(bad || errs.length ? `✗ ${bad} 处为空` : '✓ 关键界面都有内容');
   await b.close(); server.close(); process.exit(bad || errs.length ? 1 : 0);
