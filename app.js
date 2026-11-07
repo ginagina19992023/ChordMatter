@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 64; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 65; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -538,7 +538,8 @@
     let bar = document.getElementById('pbar');
     if (!bar) { bar = document.createElement('div'); bar.id = 'pbar'; (document.getElementById('phone') || document.body).prepend(bar); }
     const on = place() === 'piano';
-    bar.innerHTML = `<button class="pbadge${on ? ' on' : ''}" data-act="placetoggle" aria-label="切换有没有钢琴">${on ? '🎹 有钢琴' : '没钢琴'}</button>`;
+    const cu = currentUnit();
+    bar.innerHTML = `${cu ? `<a class="pcur" href="#unit-${cu.id}">当前单元：${cu.n} ${esc(cu.title)} ›</a>` : ''}<button class="pbadge${on ? ' on' : ''}" data-act="placetoggle" aria-label="切换有没有钢琴">${on ? '🎹 有钢琴' : '没钢琴'}</button>`;
   }
 
   function todoBox() {
