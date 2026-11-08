@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 72; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 74; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -2646,13 +2646,12 @@
       ${nrCard()}
       ${famCard()}
       <section class="spcard"><div class="spcard-h"><b>${g} 级视奏</b><span class="seg">${[4, 5, 6].map(x => `<button class="${x === g ? 'on' : ''}" data-act="spgrade" data-v="${x}">${x} 级</button>`).join('')}</span></div>
-        <p class="fine">每次生成一首没见过的 8 小节小曲：两只手；调号最多 ${maxAcc} 个升降号，大调小调都有；${G.times.join('、')} 拍；${g >= 5 ? '附点、切分、休止、临时记号；' : '附点、八分音符；'}左手${g >= 5 ? '柱式 / 阿尔贝蒂 / 华尔兹 / 分解和弦' : '单音低音 / 柱式 / 华尔兹'}；力度、连线、跳音都有。</p>
-        <p class="fine">流程和考级一样：<b>预读 30 秒</b> → 三个问题（调、临时记号、左手型）→ <b>跟着预备拍一口气弹下来</b>，中间错了也别停。${place() === 'piano' ? '收音听你弹，按小节给出音准和节奏。' : '没钢琴时用两只手在屏幕上打节奏，判节奏准不准。'}</p>
+        <p class="fine">每次一首新的 8 小节双手小曲 · 预读 → 三问 → 一口气弹，错了别停 · 调号 ≤ ${maxAcc} 个 · ${G.times.join(' ')} 拍 · ${place() === 'piano' ? '收音打分' : '打节奏'}</p>
         <div class="sprate"><small>预读</small><span class="seg">${[10, 30, 60].map(x => `<button class="${(S.sightPrev || 30) === x ? 'on' : ''}" data-act="spprev" data-v="${x}">${x} 秒</button>`).join('')}</span><small>已练 ${S.sightPN || 0} 条</small></div>
         <a class="btn" href="#sight-piece">来一条新的 · No.${(S.sightPN || 0) + 1}</a>
         ${recent.length ? `<ul class="sprecent">${recent.map(e => `<li><span>${e.d.slice(5)} · ${esc(e.k)} · ${esc(e.ts)} · ${e.g} 级</span><b>${e.m === 'mic' ? `音准 ${e.p}% · ` : '节奏 · '}节奏 ${e.r}%</b></li>`).join('')}</ul>` : ''}
       </section>
-      <details class="spbasic"${pass ? '' : ''}><summary>基础认音 14 关（读得慢的音专门练，可跳过）· 过了 ${pass}/${Sight.LEVELS.length}</summary>
+      <details class="spbasic"><summary>基础认音 14 关 · ${pass}/${Sight.LEVELS.length}</summary>
       <ol class="path sightpath">${Sight.LEVELS.map(l => {
         const st = sightSt(l.id), done = st && st.pass;
         return `<li class="${done ? 'done' : ''}"><a href="#sight-${l.id}"><span class="node">${done ? '✓' : l.n}</span><span><b>${esc(l.name)}</b><small>${st ? `最好：${st.acc}% · 每分钟 ${st.spm} ${sightUnit(l)}` : `过关：90% · 每分钟 ${l.spm} ${sightUnit(l)}`}</small></span></a></li>`;
@@ -2671,7 +2670,9 @@
       SP = { P, no: S.sightPN, phase: 'preview', left: S.sightPrev || 30, qi: 0, qok: 0, hint: S.hintStart == null ? 1 : S.hintStart, hintMax: 0, opened: new Set() };
       SP.hintMax = SP.hint;
       SP.mk = spMarks(P).map(x => Object.assign({ lv: famLv(x.id) }, x));
+      SP.openIdx = SP.mk.findIndex(x => x.lv === 0); // 新的东西：第一个自动展开完整解释，其余圆点标出，点开再看
       SP.tag = tag.map(([id, t]) => ({ id, label: t, lv: famLv(id) }));
+      SP.autoShown = SP.openIdx >= 0 ? SP.mk[SP.openIdx].id : '';
       SP.mk.forEach(x => famShown(x.id, x.label, x.long)); SP.tag.forEach(x => famShown(x.id, x.label));
       // 预读问题：已经「熟练」的概念不再问；「会了」以上的调性问题改问「凭什么判断」
       const all = Sight.questions(P).map(q => Object.assign({ lv: famLv(q.id) }, q));
@@ -2692,15 +2693,12 @@
   }
   function spMeta() {
     const P = SP.P, m = $('#spmeta'); if (!m) return;
-    const pre = SP.phase === 'preview' || SP.phase === 'q';
-    const mk = SP.mk, visible = mk.filter(x => x.lv < 3 || SP.showAll);
-    const hidden = mk.length - mk.filter(x => x.lv < 3).length;
-    const newOnes = mk.filter(x => x.lv === 0), seenOnes = mk.filter(x => x.lv === 1 && !SP.opened.has(x.id));
-    m.innerHTML = (pre ? `${P.grade} 级视奏 No.${SP.no} · 8 小节 · 两只手` : `No.${SP.no} · ${P.keyZh} · ${P.time} · 左手${P.lhName}`)
-      + `<span class="sphint"><small>提示</small><span class="seg">${HINT_TXT.map((t, i) => `<button class="${(SP.hint || 0) === i ? 'on' : ''}" data-act="sphint" data-v="${i}">${i === 0 ? '无' : i}</button>`).join('')}</span><small>${HINT_TXT[SP.hint || 0]}</small></span>`
-      + `<span class="spmarks">${visible.map(x => `<button class="chip sm fl${x.lv}${SP.opened.has(x.id) ? ' on' : ''}" data-act="spmark" data-v="${mk.indexOf(x)}">${x.lv === 0 ? '<i class="newdot"></i>' : ''}${esc(x.label)}</button>`).join('')}${hidden ? `<button class="chip sm ghostchip" data-act="spmarkall">${SP.showAll ? '收起熟练的' : `… 已熟练 ${hidden} 个`}</button>` : ''}</span>`
-      + (pre && (newOnes.length || seenOnes.length) ? `<span class="spnewmk">${newOnes.slice(0, 3).map(x => `<span class="nm"><b>${esc(x.label)}</b> ${esc(x.long.replace(x.label, '').replace(/^[（(].*?[）)]/, '').replace(/^[：:，, ]+/, ''))}<em>新</em></span>`).join('')}${newOnes.length > 3 || seenOnes.length ? `<span class="nm one">${newOnes.slice(3).concat(seenOnes).map(x => `<b>${esc(x.label)}</b> = ${esc(x.short)}`).join(' · ')}<small>（点上面的标签看完整解释）</small></span>` : ''}</span>` : '')
-      + '<span class="fine spmarkx" id="spmarkx"></span>';
+    const pre = SP.phase === 'preview' || SP.phase === 'q', mk = SP.mk, h = SP.hint || 0;
+    const live = mk.filter(x => x.lv < 3), shown = SP.showAll ? mk : live.slice(0, SP.phase === 'done' ? 3 : 6), visible = mk.filter(x => shown.includes(x)), hidden = mk.length - visible.length, open = mk[SP.openIdx];
+    m.innerHTML = (pre ? `${P.grade} 级视奏 No.${SP.no}` : `No.${SP.no} · ${P.keyZh} · ${P.time} · 左手${P.lhName}`)
+      + `<span class="sphint"><button class="pill sm" data-act="sphint" data-v="up"${h >= 3 ? ' disabled' : ''}>再提示一层</button><small>${h ? `第 ${h} 层 · ${HINT_TXT[h]}` : '纯谱'}</small>${h ? '<button class="linkbtn" data-act="sphint" data-v="down">少一层</button>' : ''}</span>`
+      + `<span class="spmarks">${visible.map(x => `<button class="chip sm fl${x.lv}${SP.openIdx === mk.indexOf(x) ? ' on' : ''}" data-act="spmark" data-v="${mk.indexOf(x)}">${x.lv === 0 ? '<i class="newdot"></i>' : ''}${esc(x.label)}${x.lv === 1 && !SP.opened.has(x.id) ? `<em>${esc(x.short)}</em>` : ''}</button>`).join('')}${hidden ? `<button class="chip sm ghostchip" data-act="spmarkall">${SP.showAll ? '收起' : `+${hidden}`}</button>` : ''}</span>`
+      + `<span class="fine spmarkx" id="spmarkx">${open ? `<b>${esc(open.label)}</b> ${esc(open.long)}` : ''}</span>`;
   }
   function spPanel() {
     const el = $('#sppanel'); if (!el || !SP) return;
@@ -2710,7 +2708,7 @@
     if (SP.phase === 'preview') {
       el.innerHTML = `<div class="spprev"><b id="spt">0:${String(SP.left).padStart(2, '0')}</b><span>预读：先别弹，按顺序看</span></div>
         ${spUnfam()}
-        <ol class="fine spcheck"><li>调号、拍号——什么调？大调还是小调？</li><li>右手最高、最低的音；左手在哪个音区</li><li>临时记号（心里圈出来）</li><li>左手是什么伴奏型——认出型来就不用一个一个读</li><li>最难的那个节奏，心里先打一遍拍子</li></ol>
+        <p class="fine">看：调号拍号 · 音域 · 临时记号 · 左手型 · 最难的节奏</p>
         <div class="cta"><button class="btn" data-act="spready">我看好了</button></div>`;
       clearInterval(SP.timer);
       SP.timer = setInterval(() => { if (!SP || SP.phase !== 'preview' || route[1] !== 'piece') { clearInterval(SP && SP.timer); return; } SP.left--; const t = $('#spt'); if (t) t.textContent = '0:' + String(Math.max(0, SP.left)).padStart(2, '0'); if (SP.left <= 0) { clearInterval(SP.timer); SP.phase = 'q'; spPanel(); } }, 1000);
@@ -2739,16 +2737,17 @@
       el.innerHTML = SP.run.mode === 'tap'
         ? `<div class="sppads"><button class="sppad" data-h="l">左手</button><button class="sppad" data-h="r">右手</button></div><div class="row"><button class="ghost" data-act="spstop">■ 停</button></div>`
         : `<p class="fine spnow" id="spnow">${SP.run.mode === 'mic' ? '预备拍……听到第 1 小节就开始弹' : '听：光标走到哪，弹到哪'}</p><div class="row"><button class="ghost" data-act="spstop">■ 停</button></div>`;
+      if (SP.hint >= 3) { const all = SP.P.bars.flatMap(b => b.rh.concat(b.lh)).filter(e => !e.rest).flatMap(e => e.notes.map(n => n.midi)); el.insertAdjacentHTML('beforeend', `<div class="spkb" id="spkb">${kb([], { lo: Math.min(...all), hi: Math.max(...all) })}</div>`); }
       el.querySelectorAll('.sppad').forEach(b => b.addEventListener('pointerdown', ev => { ev.preventDefault(); spTap(b.dataset.h); b.classList.add('hit'); setTimeout(() => b.classList.remove('hit'), 90); }));
     }
   }
   // 这首里你还不熟的：新 / 见过的记号、调、左手型，还有认得慢的音位
   function spUnfam() {
-    const items = SP.mk.filter(x => x.lv <= 1 && !/^(term:(p|mp|mf|f)|mark:bpm)$/.test(x.id)).map(x => x.label).concat(SP.tag.filter(x => x.lv <= 1).map(x => x.label));
-    let slow = 0; const names = new Set();
-    SP.P.bars.forEach(b => [[b.rh, 't'], [b.lh, 'b']].forEach(([evs, cl]) => evs.forEach(e => { if (!e.rest) e.notes.forEach(n => { const st = nrSt(cl, n.midi); if (st && nrLevel(st) === 'slow') { slow++; names.add(n.name + n.oct); } }); })));
-    if (names.size) items.push('认得慢的音 ' + [...names].slice(0, 4).join(' '));
-    return items.length ? `<p class="fine spunfam">这首里有 <b>${items.length}</b> 个你还不熟的：${items.map(esc).join('、')}。已用橙色 / 说明标出来。</p>` : '<p class="fine spunfam">这首里的东西你都见过了，靠眼睛读。</p>';
+    const items = SP.mk.filter(x => x.lv <= 1).map(x => x.label).concat(SP.tag.filter(x => x.lv <= 1).map(x => x.label));
+    const names = new Set();
+    SP.P.bars.forEach(b => [[b.rh, 't'], [b.lh, 'b']].forEach(([evs, cl]) => evs.forEach(e => { if (!e.rest) e.notes.forEach(n => { const st = nrSt(cl, n.midi); if (st && nrLevel(st) === 'slow') names.add(n.name + n.oct); }); })));
+    if (names.size) items.push('认得慢的 ' + [...names].slice(0, 3).join(' '));
+    return items.length ? `<p class="fine spunfam">还不熟（${items.length}）：${items.slice(0, 5).map(esc).join('、')}${items.length > 5 ? '…' : ''}</p>` : '';
   }
   function spAnswer(i) {
     const q = SP.qs[SP.qi]; if (SP.answered) return;
@@ -2798,6 +2797,7 @@
     if (!o) { cur.hidden = true; return; }
     const p = st.__pos.find(q => q.t === o.t && q.h === 'r' && !q.rest) || st.__pos.find(q => q.t === o.t), bx = st.__bars[p.bar];
     const k = st.clientWidth / st.__W;
+    const kbe = $('#spkb'); if (kbe) kbe.querySelectorAll('.k').forEach(k => k.classList.toggle('on', o.ms.includes(+k.dataset.m)));
     cur.hidden = false;
     Object.assign(cur.style, { left: (p.x - 3) * k + 'px', top: bx.y * k + 'px', height: bx.h * k + 'px' });
     const row = Math.round(bx.y);
@@ -2829,14 +2829,17 @@
     if (ks) m('mark:keysig', '调号', `谱号旁边的 ${ks} 个${sharp ? '升号' : '降号'}管整首：写在哪条线 / 哪个间，那个音名在所有八度都要${sharp ? '升' : '降'}半音。先说出是什么调，再看最后一个低音确认。`, `${ks} 个${sharp ? '升' : '降'}号管整首`);
     const [n, d] = P.time.split('/');
     m('time:' + P.time, P.time, d === '8' ? '6/8 拍：每小节 6 个八分音符，按两大拍数（1-2-3 4-5-6），每大拍是一个附点四分音符。' : `${n}/4 拍：每小节 ${n} 拍，四分音符一拍。${n === '3' ? '第一拍重，后两拍轻。' : n === '4' ? '第一拍最重，第三拍次重。' : '强、弱交替。'}`, d === '8' ? '两大拍，每拍 3 个八分' : `每小节 ${n} 拍`);
-    m('term:' + P.tempo.text, P.tempo.text, (TEMPO_ZH[P.tempo.text] || '速度术语') + '。', (TEMPO_ZH[P.tempo.text] || '速度').split('：')[0]);
-    const bn = P.tempo.mark.replace(/\D/g, '');
-    m('mark:bpm', P.tempo.mark, P.time === '6/8' ? `每分钟 ${bn} 个附点四分音符（也就是一大拍）。练的时候可以先慢下来。` : `每分钟 ${bn} 个四分音符。练的时候可以先慢下来。`, `每分钟 ${bn} 拍`);
-    const DZ = { p: ['p（piano）：弱', '弱'], mp: ['mp（mezzo piano）：中弱', '中弱'], mf: ['mf（mezzo forte）：中强', '中强'], f: ['f（forte）：强', '强'] };
-    [...new Set(Object.values(P.dyn || {}))].forEach(x => m('term:' + x, x, DZ[x][0] + '。从这里开始一直这样弹，直到出现下一个力度记号。', DZ[x][1]));
+    const bn = P.tempo.mark.replace(/\D/g, ''), tz = TEMPO_ZH[P.tempo.text] || '速度术语';
+    m('term:' + P.tempo.text, P.tempo.text + ' ' + P.tempo.mark, tz + `。${P.tempo.mark}：每分钟 ${bn} 个${P.time === '6/8' ? '附点四分音符（一大拍）' : '四分音符'}。练的时候可以先慢下来。`, tz.split('：')[0]);
+    const DZ = { p: ['p 弱', '弱'], mp: ['mp 中弱', '中弱'], mf: ['mf 中强', '中强'], f: ['f 强', '强'] }, dyn = [...new Set(Object.values(P.dyn || {}))];
+    m('term:dyn', dyn.join(' '), dyn.map(x => DZ[x][0]).join('；') + '。从这里开始一直这样弹，直到出现下一个力度记号。', dyn.map(x => DZ[x][1]).join(' → '));
     if (P.cresc != null) m('term:cresc', 'cresc.', 'crescendo，渐强：从这里开始一点一点弹响，不要一下子变响。', '渐强');
     if (P.rit) m('term:rit', 'rit.', 'ritardando，渐慢：最后一点一点放慢，像要停下来。', '渐慢');
+    const ev = P.bars.flatMap(b => b.rh);
+    if (ev.some(e => !e.rest && [0.75, 1.5, 3].includes(e.d))) m('rhy:dot', '附点', '音符后面的点 = 把这个音延长一半：附点四分 = 一拍半，附点二分 = 三拍。数拍时多数一个「和」：1-2-和-3。', '点 = 多半拍');
+    if (ev.some(e => !e.rest && e.t % 1 === 0.5 && e.d >= 1)) m('rhy:sync', '切分', '音从拍子中间（「和」）开始、拉过下一个拍点：重音落在弱拍上。数拍时在「和」上进来，拍点上不要再弹。', '从「和」开始，拉过拍点');
     m('mark:slur', '连线', '音符上下的弧线（连奏线）：弧线下的音连贯地弹，手指一个接一个，不要断开；弧线结束的那个音轻轻抬手。', '连贯地弹');
+    if (P.minor && P.bars.some(b => b.rh.concat(b.lh).some(e => !e.rest && e.notes.some(x => x.alt)))) { const k = T.parseKey(P.key).tonic, up = T.noteAt(k.li + 6, k.pc + 11).name, dn = T.noteAt(k.li + 6, k.pc + 10).name; m('concept:leading', '导音', `小调里第 7 级 ${T.disp(dn)} 要升高成 ${T.disp(up)}：离主音只差半音，非常想往上走回主音。谱上用临时升号（或还原号）写出来。`, `${T.disp(dn)} → ${T.disp(up)}`); }
     if (P.bars.some(b => b.lh.some(e => e.stac))) m('mark:stac', '跳音', '音符上的小圆点：短而轻，弹下去马上放开。', '短而轻');
     if (P.bars.some(b => b.rh.concat(b.lh).some(e => e.rest))) m('mark:rest', '休止符', '这里不弹，但拍子照数。8 字形的是八分休止（半拍），闪电形的是四分休止（一拍）。', '不弹，但数拍');
     if (P.bars.some(b => b.rh.concat(b.lh).some(e => !e.rest && e.notes.some(x => x.alt)))) m('mark:accidental', '临时记号', '音符前面的 ♯ ♭ ♮ 只管这一小节里、这个位置的音；过了小节线就回到调号。♮ 是还原：取消升降。', '只管这一小节');
@@ -2860,17 +2863,27 @@
   const FAM_W = [3, 2, 1, 0.4]; // 出题权重：越不熟出得越多
   // 提示层：0 纯谱 → 1 圈出要注意的 → 2 写出难点音名 → 3 全部音名
   function spHintCfg(P, layer) {
-    const hot = [], nk = [];
-    if (!layer) return { hot, nameKeys: nk, names: [] };
-    P.bars.forEach((b, bi) => [['r', b.rh, 't'], ['l', b.lh, 'b']].forEach(([h, evs, cl]) => evs.forEach((e, i) => {
+    if (!layer) return { hot: [], nameKeys: [], names: [] };
+    const hot = new Set(), nk = new Set(), sigL = new Set(T.scale(T.parseKey(P.key)).filter(n => n.name.length > 1).map(n => n.name[0])), seenL = new Set();
+    const cx = e => (e.rest ? 1 : 0) + ([0.25, 0.75, 1.5].includes(e.d) ? 1 : 0) + (e.t % 1 === 0.5 && e.d >= 1 ? 1 : 0);
+    const hard = P.bars.map(b => b.rh.concat(b.lh).reduce((a, e) => a + cx(e), 0));
+    const hb = Math.max(...hard) >= 2 ? hard.indexOf(Math.max(...hard)) : -1;
+    P.bars.forEach((b, bi) => [['r', b.rh, 't'], ['l', b.lh, 'b']].forEach(([h, evs, cl]) => { let prev = null; evs.forEach((e, i) => {
       if (e.rest) return;
+      const key = bi + ':' + h + ':' + i, mid = e.notes[0].midi;
       const ledger = cl === 't' ? e.notes.some(x => x.midi <= 60 || x.midi >= 81) : e.notes.some(x => x.midi >= 60 || x.midi <= 40);
       const acc = e.notes.some(x => x.alt), slow = e.notes.some(x => { const st = nrSt(cl, x.midi); return st && nrLevel(st) === 'slow'; });
-      if (acc || ledger || slow) { hot.push(bi + ':' + h + ':' + i); nk.push(bi + ':' + h + ':' + i); }
-    })));
-    return { hot, nameKeys: layer >= 2 ? nk : [], names: layer >= 3 ? P.bars.map((_, i) => i) : [] };
+      const shift = prev != null && Math.abs(mid - prev) >= 7;                      // 换手位：跳了五度以上
+      const sig = e.notes.some(x => sigL.has(x.name[0]) && !x.alt) && !seenL.has(e.notes[0].name[0]) && (seenL.add(e.notes[0].name[0]), true); // 调号影响的音：每个字母只圈第一次
+      const rhy = bi === hb && cx(e) > 0;                                           // 最难的那一小节里的难节奏
+      if (acc || ledger || slow || shift || sig || rhy) hot.add(key);
+      if (acc || ledger || slow) nk.add(key + (acc ? '|0' : slow ? '|1' : '|2'));
+      prev = mid;
+    }); }));
+    const names = [...nk].sort((a, b) => a.split('|')[1] - b.split('|')[1]).slice(0, 6).map(x => x.split('|')[0]);   // 最多写 6 个，先写临时记号、再写认得慢的、最后加线音
+    return { hot: [...hot], nameKeys: layer >= 2 ? names : [], names: layer >= 3 ? P.bars.map((_, i) => i) : [] };
   }
-  const HINT_TXT = ['纯谱', '圈出注意点', '+ 难点音名', '全部音名'];
+  const HINT_TXT = ['纯谱', '圈出注意点', '难点音名', '全部音名 + 键盘'];
   const HINT_WHY = ['像考试一样，什么提示都没有。', '橙色的音 = 要注意的：临时记号、加线音、你认得慢的音。', '橙色的音下面写出了音名。', '每个音下面都写了音名。'];
 
   // 换一份谱面（显示某几小节的音名）
@@ -3010,21 +3023,19 @@
   }
   // 我的熟悉度：不懂的东西永远找得到，点开看解释；越熟的越往后排
   function famCard() {
-    const F = S.fam || {}, ids = Object.keys(F);
-    const grp = [['concept:', '概念'], ['term:', '力度和术语'], ['mark:', '记号'], ['time:', '拍号'], ['key:', '调'], ['lh:', '左手伴奏型']];
-    const nrs = Object.keys(S.nrs || {}), cnt = [0, 0, 0, 0];
-    nrs.forEach(k => { const l = nrLevel(S.nrs[k]); cnt[{ none: 0, slow: 1, mid: 2, fast: 3 }[l]]++; });
+    const F = S.fam || {}, ids = Object.keys(F), nrs = Object.keys(S.nrs || {});
+    if (!ids.length && !nrs.length) return '';
+    const grp = [['concept:', '概念'], ['term:', '术语'], ['mark:', '记号'], ['rhy:', '节奏'], ['time:', '拍号'], ['key:', '调'], ['lh:', '左手型']];
+    const cnt = [0, 0, 0, 0]; nrs.forEach(k => { cnt[{ none: 0, slow: 1, mid: 2, fast: 3 }[nrLevel(S.nrs[k])]]++; });
     const weak = ids.filter(id => F[id].lv <= 1).length;
-    if (!ids.length && !nrs.length) return `<section class="spcard famcard"><div class="spcard-h"><b>我的熟悉度</b></div><p class="fine">练过的记号、调、拍号、左手伴奏型、每个音位，都会记在这里。越熟，谱上给你的提示越少；不懂的随时可以回来点开看。</p></section>`;
-    return `<section class="spcard famcard"><div class="spcard-h"><b>我的熟悉度</b><small>${ids.length ? `还不熟 ${weak} 个` : ''}</small></div>
-      <p class="fine">●○○ 见过 · ●●○ 会了 · ●●● 熟练。点一项看解释。解释看多了会退回「见过」，不看解释做对会升级。</p>
-      ${grp.map(([pre, name]) => { const rows = ids.filter(id => id.startsWith(pre)).sort((a, b) => F[a].lv - F[b].lv); return rows.length ? `<details class="famg"><summary>${name} <small>${rows.length} 项 · 不熟 ${rows.filter(id => F[id].lv <= 1).length}</small></summary><ul class="famlist">${rows.map(id => `<li><button class="famrow" data-act="famshow"><span>${esc(F[id].t || id)}</span><i class="fd fd${F[id].lv}">${famDots(F[id].lv)}</i><small>${FAM_NAME[F[id].lv]}</small></button><div class="famx" hidden>${esc(F[id].long || '（这一项还没有解释，下次在谱上遇到会记下来）')}</div></li>`).join('')}</ul></details>` : ''; }).join('')}
-      ${nrs.length ? `<details class="famg"><summary>音位（认音反应） <small>${nrs.length} 个音 · 慢 ${cnt[1]}</small></summary><p class="fine">快（绿）${cnt[3]} 个 · 一般 ${cnt[2]} 个 · 慢或常错 ${cnt[1]} 个。<a href="#sight-react">去看每个音有多快 →</a></p></details>` : ''}</section>`;
+    return `<details class="spcard famcard"><summary><b>我的熟悉度</b><small>${ids.length} 项 · 不熟 ${weak}</small></summary>
+      ${grp.map(([pre, name]) => { const rows = ids.filter(id => id.startsWith(pre)).sort((a, b) => F[a].lv - F[b].lv); return rows.length ? `<details class="famg"><summary>${name} <small>${rows.length} · 不熟 ${rows.filter(id => F[id].lv <= 1).length}</small></summary><ul class="famlist">${rows.map(id => `<li><button class="famrow" data-act="famshow"><span>${esc(F[id].t || id)}</span><i class="fd fd${F[id].lv}">${famDots(F[id].lv)}</i></button><div class="famx" hidden>${esc(F[id].long || '遇到时会记下来')}</div></li>`).join('')}</ul></details>` : ''; }).join('')}
+      ${nrs.length ? `<p class="fine">音位：快 ${cnt[3]} · 一般 ${cnt[2]} · 慢 ${cnt[1]} <a href="#sight-react">看每个音 →</a></p>` : ''}
+      <p class="fine">●●● 熟练　●●○ 会了　●○○ 见过。点一项看解释；看解释会退回「见过」，不看解释做对会升级。</p></details>`;
   }
   function nrCard() {
-    return `<section class="spcard nrcard"><div class="spcard-h"><b>认音反应 · 一眼认出</b><a class="pill" href="#sight-react">练 →</a></div>
-      <p class="fine">看到音就知道是谁，不从中央 C 往下数格子。每个音记反应时间：慢的、错的会多出几次，直到每个都在 1 秒内。</p>
-      <p class="fine">低音谱表：${nrSummary('b')}<br>高音谱表：${nrSummary('t')}</p></section>`;
+    return `<section class="spcard nrcard"><div class="spcard-h"><b>认音反应</b><a class="pill" href="#sight-react">练 →</a></div>
+      <p class="fine">低音：${nrSummary('b')}　高音：${nrSummary('t')}</p></section>`;
   }
   function nrIntro() {
     if (Listen.active()) Listen.stop();
@@ -3165,7 +3176,7 @@
       <div class="sres">${r.pitch != null ? `<div><b>${r.pitch}%</b><small>音准</small></div>` : ''}<div><b>${r.rhythm}%</b><small>节奏</small></div><div><b>${r.stops}</b><small>停下来</small></div></div>
       <p class="fine">谱上每小节：<span class="spk good"></span>稳 <span class="spk meh"></span>有点问题 <span class="spk bad"></span>要再练。${bad.length ? '<br>' + bad.slice(0, 4).map(b => `第 ${b.i + 1} 小节：${b.why}`).join('；') : ''}${r.extra > 2 ? `<br>多点了 ${r.extra} 下（不该响的地方）。` : ''}</p>
       ${r.mode === 'tap' ? '<p class="fine">打节奏只判节奏。回到琴边用收音再弹一次，会加上音准。</p>' : ''}
-      <p class="fine">提示：这次用到第 ${r.hint} 层（${HINT_TXT[r.hint]}）。${r.next < r.hint ? `弹得不错，<b>下一条从第 ${r.next} 层开始</b>。` : r.next > r.hint ? `这条有点吃力，<b>下一条从第 ${r.next} 层开始</b>，多给一点帮助。` : `下一条仍从第 ${r.next} 层开始。`}谱上方的「提示」随时可以自己调。</p>
+      <p class="fine">提示用到第 ${r.hint} 层 · 下一条从第 ${r.next} 层开始${r.next < r.hint ? '（弹得不错，少一层）' : r.next > r.hint ? '（有点吃力，多一层）' : ''}</p>
       ${spFamChanges()}`;
   }
   // 每关开头：一句话 + 路标音（带音名，可点可听）
@@ -3762,8 +3773,8 @@
       case 'spstop': spStop(); if (SP) { SP.phase = SP.res ? 'done' : 'ready'; spPanel(); const c = $('#spcur'); if (c) c.hidden = true; } break;
       case 'spnew': sightPiece(true); break;
       case 'spprev': S.sightPrev = +el.dataset.v; save(); vSight(); break;
-      case 'spmark': { const x = SP.mk[+el.dataset.v], box = $('#spmarkx'); if (box && x) { const same = box.dataset.v === el.dataset.v && box.innerHTML; box.dataset.v = same ? '' : el.dataset.v; box.innerHTML = same ? '' : `<b>${esc(x.label)}</b>：${esc(x.long)}`; document.querySelectorAll('.spmarks .chip').forEach(c => c.classList.remove('on')); if (!same) { el.classList.add('on'); SP.opened.add(x.id); famSee(x.id, x.label, x.long); } } break; }
-      case 'sphint': { SP.hint = +el.dataset.v; SP.hintMax = Math.max(SP.hintMax || 0, SP.hint); const bn = SP.bd ? SP.bd.names : []; spRedraw(bn); spMeta(); if (SP.phase === 'bars') setTimeout(bdCursor, 60); break; }
+      case 'spmark': { const i = +el.dataset.v, x = SP.mk[i]; if (!x) break; if (SP.openIdx === i) SP.openIdx = -1; else { SP.openIdx = i; if (!SP.autoShown || SP.autoShown !== x.id) { SP.opened.add(x.id); famSee(x.id, x.label, x.long); } } spMeta(); break; }
+      case 'sphint': { SP.hint = Math.max(0, Math.min(3, (SP.hint || 0) + (el.dataset.v === 'up' ? 1 : -1))); SP.hintMax = Math.max(SP.hintMax || 0, SP.hint); spRedraw(SP.bd ? SP.bd.names : []); spMeta(); if (SP.phase === 'bars') setTimeout(bdCursor, 60); if (SP.phase === 'run') spPanel(); break; }
       case 'spmarkall': SP.showAll = !SP.showAll; spMeta(); break;
       case 'famshow': { const x = el.nextElementSibling; if (x && x.classList.contains('famx')) x.hidden = !x.hidden; break; }
       case 'bdstart': bdStart(); break;
