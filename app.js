@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 74; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 75; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -2729,7 +2729,7 @@
           <button class="${place() === 'piano' ? 'ghost' : 'btn'}" data-act="spgo" data-v="tap">👏 两只手打节奏</button>
           <button class="ghost" data-act="bdstart">🔁 逐小节练${res && res.bars.some(b => b.st !== 'good') ? `（先练没过的 ${res.bars.filter(b => b.st !== 'good').length} 小节）` : ''}</button>
           <div class="row"><button class="ghost" data-act="spgo" data-v="listen">▶ 听一遍</button><button class="ghost" data-act="spnew">换一条新的</button></div></div>
-        <p class="fine">${place() === 'piano' ? '收音只分得清音名、分不清高低八度；手机放在琴上离琴弦近一点。弹的时候不响节拍器（会干扰收音），看谱上的光标走。' : '打节奏：左边按钮 = 左手，右边 = 右手，按谱上每个音开始的时刻点一下（休止不点、长音只点一下）。电脑上也可以用 F / J 键。'}</p>`;
+        ${res ? '' : `<p class="fine">${place() === 'piano' ? '收音只分得清音名、分不清高低八度；手机放在琴上离琴弦近一点。弹的时候不响节拍器（会干扰收音），看谱上的光标走。' : '打节奏：左边按钮 = 左手，右边 = 右手，按谱上每个音开始的时刻点一下（休止不点、长音只点一下）。电脑上也可以用 F / J 键。'}</p>`}`;
       return;
     }
     if (SP.phase === 'bars') return bdPanel();
@@ -3176,7 +3176,7 @@
       <div class="sres">${r.pitch != null ? `<div><b>${r.pitch}%</b><small>音准</small></div>` : ''}<div><b>${r.rhythm}%</b><small>节奏</small></div><div><b>${r.stops}</b><small>停下来</small></div></div>
       <p class="fine">谱上每小节：<span class="spk good"></span>稳 <span class="spk meh"></span>有点问题 <span class="spk bad"></span>要再练。${bad.length ? '<br>' + bad.slice(0, 4).map(b => `第 ${b.i + 1} 小节：${b.why}`).join('；') : ''}${r.extra > 2 ? `<br>多点了 ${r.extra} 下（不该响的地方）。` : ''}</p>
       ${r.mode === 'tap' ? '<p class="fine">打节奏只判节奏。回到琴边用收音再弹一次，会加上音准。</p>' : ''}
-      <p class="fine">提示用到第 ${r.hint} 层 · 下一条从第 ${r.next} 层开始${r.next < r.hint ? '（弹得不错，少一层）' : r.next > r.hint ? '（有点吃力，多一层）' : ''}</p>
+      <p class="fine">${r.hint ? `用了 ${r.hint} 层提示` : '没用提示'} · 下一条从第 ${r.next} 层开始${r.next < r.hint ? '（少一层）' : r.next > r.hint ? '（多一层）' : ''}</p>
       ${spFamChanges()}`;
   }
   // 每关开头：一句话 + 路标音（带音名，可点可听）
