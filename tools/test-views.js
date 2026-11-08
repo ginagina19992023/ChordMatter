@@ -21,6 +21,8 @@ server.listen(8781, async () => {
     ['#today', '.steps li', 4, '今天的 4 步'],
     ['#sight', '.sightpath li', 14, '视奏关卡'],
     ['#sight-piece', '.spscore .vf-stavenote', 24, '视奏小曲的音符'],
+    ['#sight-piece', '.spmarks .chip', 5, '视奏小曲的记号说明'],
+    ['#sight-react', '.sight-st svg, .staff svg', 3, '认音反应的快慢图'],
     ['#sight-t1', '.sight-st svg .vf-stavenote', 1, '视奏开头的路标音'],
   ];
   let bad = 0;

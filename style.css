@@ -1032,3 +1032,16 @@ body.immersive #pbar { display: none; }
 .sppad { flex: 1; height: 120px; border-radius: 16px; border: 1.5px solid var(--line); background: var(--bg); font-size: 17px; color: var(--mute); touch-action: manipulation; user-select: none; -webkit-user-select: none; }
 .sppad.hit { background: var(--acc); color: #fff; border-color: var(--acc); }
 .spnow { font-size: 15px; color: var(--ink); }
+/* 视奏：记号、逐小节、认音反应 */
+.spmarks { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 2px; }
+.chip.sm { height: 26px; padding: 0 10px; font-size: 12.5px; }
+.spmarkx { display: block; margin: 4px 0 0; line-height: 1.55; }
+.spmarkx b { color: var(--ink); }
+.bdh { display: flex; align-items: baseline; justify-content: space-between; margin-top: 4px; }
+.bdh b { font-size: 16px; } .bdh small { color: var(--mute); }
+.nrset { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 10px; }
+.nrst { max-width: 260px; }
+.nrnames { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.nrnames .opt { min-height: 58px; font-size: 20px; font-weight: 600; padding: 0; }
+.nrlab { margin: 10px 0 0; }
+.nrcard .pill { text-decoration: none; }
