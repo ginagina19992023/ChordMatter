@@ -144,9 +144,11 @@ const Sight = (() => {
   };
   const LHNAME = { bass: '单音低音', block: '柱式（两个音一起）', alberti: '阿尔贝蒂（低-高-中-高）', waltz: '华尔兹（低音 + 和弦）', broken: '分解和弦' };
   const TEMPO = { '4/4': [['Andante', 76], ['Moderato', 92], ['Allegretto', 104]], '2/4': [['Andante', 76], ['Moderato', 96], ['Allegretto', 108]], '3/4': [['Andantino', 84], ['Moderato', 100], ['Grazioso', 92]], '6/8': [['Andante', 50], ['Allegretto', 60]] };
-  function piece(grade = 5) {
+  // bias：按熟悉度加权（不熟的调、不熟的左手型出得多）
+  const wpick = (a, w) => { if (!w) return pick(a); const ws = a.map(x => Math.max(0.1, w(x))); let r = Math.random() * ws.reduce((x, y) => x + y, 0); for (let i = 0; i < a.length; i++) { r -= ws[i]; if (r <= 0) return a[i]; } return a[a.length - 1]; };
+  function piece(grade = 5, bias = {}) {
     const G = GRADE[grade] || GRADE[5];
-    const ki = keyInfo(pick(G.keys)), time = pick(G.times), BQ = BARQ[time], prog = pick(PROG), lht = pick(LHT[time][grade] || LHT[time][5] || ['bass']);
+    const ki = keyInfo(wpick(G.keys, bias.key)), time = pick(G.times), BQ = BARQ[time], prog = pick(PROG), lht = wpick(LHT[time][grade] || LHT[time][5] || ['bass'], bias.lh);
     const altFor = (L, cd) => (ki.minor && (cd === 4 || cd === 6) && degOf(L, ki) === 6 ? 1 : 0);
     const ct = cd => [cd, (cd + 2) % 7, (cd + 4) % 7];
     const pool = RH[time].filter(([g]) => g <= grade).map(x => x[1]);
@@ -226,21 +228,21 @@ const Sight = (() => {
       + `① 第一个和最后一个低音：${D(firstB.name)} … ${D(lastB.name)}，${ki.minor ? `落在 ${D(minN.name)}，是 ${D(minN.name)} 小调的主音` : `落在 ${D(majName)}，是 ${D(majName)} 大调的主音`}；`
       + `② 有没有 ${LT}：${D(minN.name)} 小调会把第 7 级 ${D(lt0)} 临时升高成 ${LT}（导音）。${ki.minor ? (ltBars.length ? `这首第 ${ltBars.join('、')} 小节就有 ${LT}` : `这首正好没用到，主要看第 ① 条`) : `这首一次也没有出现 ${LT}`}。`
       + `所以是 ${kz(P.key)}。`;
-    qs.push({ q: '这首是什么调？', a: kz(P.key), opts: shuffle([kz(P.key), kz(rel), kz(par), kz(dom)].filter((x, i, a) => a.indexOf(x) === i)), why });
+    qs.push({ id: 'concept:relkey', t: '大调还是关系小调', key: 'key:' + P.key, short: `${sigTxt} → 看最后的低音（${D(lastB.name)}）和有没有 ${LT} → ${kz(P.key)}`, q: '这首是什么调？', a: kz(P.key), opts: shuffle([kz(P.key), kz(rel), kz(par), kz(dom)].filter((x, i, a) => a.indexOf(x) === i)), why });
     const chromBar = P.bars.findIndex(b => b.rh.some(e => e.chrom) || b.rh.concat(b.lh).some(e => !e.rest && e.notes.some(n => n.alt)));
     if (chromBar >= 0) {
       const bars = P.bars.map((b, i) => i).filter(i => P.bars[i].rh.concat(P.bars[i].lh).some(e => !e.rest && e.notes.some(n => n.alt))).map(i => i + 1);
       const others = shuffle([1, 2, 3, 4, 5, 6, 7, 8].filter(x => !bars.includes(x))).slice(0, 3);
       const a = '第 ' + bars[0] + ' 小节';
-      qs.push({ q: '最先出现临时记号（调号以外的升降号）的是哪一小节？', a, opts: shuffle([a].concat(others.map(x => '第 ' + x + ' 小节'))), why: `第 ${bars.join('、')} 小节有临时记号。弹之前先圈出来，弹到那里手才不会按成调号里的音。` });
+      qs.push({ id: 'concept:accidental', t: '预读时先找临时记号', short: `第 ${bars.join('、')} 小节有临时记号`, q: '最先出现临时记号（调号以外的升降号）的是哪一小节？', a, opts: shuffle([a].concat(others.map(x => '第 ' + x + ' 小节'))), why: `第 ${bars.join('、')} 小节有临时记号。弹之前先圈出来，弹到那里手才不会按成调号里的音。` });
     } else {
       const top = P.bars.flatMap(b => b.rh).filter(e => !e.rest).reduce((a, e) => (e.notes[0].midi > a.notes[0].midi ? e : a)).notes[0];
       const kiN = keyInfo(P.key), alt = [-2, -1, 1].map(d => noteL(top.L + d, kiN)).map(n => n.name + n.oct);
       const a = top.name + top.oct;
-      qs.push({ q: '右手最高的音是哪个？（预读时先找音域，手才知道要伸多远）', a, opts: shuffle([a].concat(alt)), why: `最高是 ${a}。` });
+      qs.push({ id: 'concept:range', t: '预读时先找音域', short: `最高是 ${a}`, q: '右手最高的音是哪个？（预读时先找音域，手才知道要伸多远）', a, opts: shuffle([a].concat(alt)), why: `最高是 ${a}。` });
     }
     const all = Object.keys(LHNAME).map(k => LHNAME[k]);
-    qs.push({ q: '左手是什么伴奏型？', a: P.lhName, opts: shuffle([P.lhName].concat(shuffle(all.filter(x => x !== P.lhName)).slice(0, 3))), why: `左手是${P.lhName}。认出型来，左手就不用一个音一个音读，只看每小节的和弦换没换。` });
+    qs.push({ id: 'lh:' + P.lht, t: '左手' + P.lhName, short: `左手是${P.lhName}`, q: '左手是什么伴奏型？', a: P.lhName, opts: shuffle([P.lhName].concat(shuffle(all.filter(x => x !== P.lhName)).slice(0, 3))), why: `左手是${P.lhName}。认出型来，左手就不用一个音一个音读，只看每小节的和弦换没换。` });
     return qs;
   }
   function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }

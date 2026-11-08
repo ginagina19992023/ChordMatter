@@ -278,14 +278,17 @@ const Staff = (() => {
     const headRow = 40 + ks * 10, head0 = headRow + 26;
     ctx.save(); ctx.setFont('serif', 15, 'bold'); ctx.fillText(P.tempo.text, 16, 20); let tw = P.tempo.text.length * 8.6; try { tw = ctx.measureText(P.tempo.text).width; } catch (e) {} ctx.setFont('serif', 14, 'normal'); ctx.fillText(P.tempo.mark, 16 + tw + 10, 20); ctx.restore();
     const pos = [], boxes = [];
-    const showNames = new Set(cfg.names || []);
-    const mkNote = (e, clef, bi) => {
+    const showNames = new Set(cfg.names || []), hot = new Set(cfg.hot || []), nameKeys = new Set(cfg.nameKeys || []);
+    const accC = css('--acc');
+    const mkNote = (e, clef, bi, i) => {
+      const key = bi + ':' + (clef === 'treble' ? 'r' : 'l') + ':' + i;
       const keys = e.rest ? [clef === 'treble' ? 'b/4' : 'd/3'] : e.notes.map(n => n.vex);
       const d = PDUR[e.d] || 'q';
       const n = new VF.StaveNote({ keys, duration: d + (e.rest ? 'r' : ''), clef, auto_stem: !e.rest });
       if (/d$/.test(d)) VF.Dot.buildAndAttach([n], { all: true });
       if (e.stac) n.addModifier(new VF.Articulation('a.').setPosition(VF.Modifier.Position.ABOVE), 0);
-      if (!e.rest && showNames.has(bi)) n.addModifier(new VF.Annotation(e.notes.map(x => x.name + x.oct).join(' ')).setFont('sans-serif', 10, 'normal').setVerticalJustification(clef === 'treble' ? VF.Annotation.VerticalJustify.TOP : VF.Annotation.VerticalJustify.BOTTOM), 0);
+      if (!e.rest && hot.has(key)) n.setStyle({ fillStyle: accC, strokeStyle: accC });
+      if (!e.rest && (showNames.has(bi) || nameKeys.has(key))) n.addModifier(new VF.Annotation(e.notes.map(x => x.name + x.oct).join(' ')).setFont('sans-serif', 10, 'normal').setVerticalJustification(clef === 'treble' ? VF.Annotation.VerticalJustify.TOP : VF.Annotation.VerticalJustify.BOTTOM), 0);
       return n;
     };
     for (let ri = 0; ri < rows; ri++) {
@@ -302,7 +305,7 @@ const Staff = (() => {
         if (k === 0) { new VF.StaveConnector(tr, bs).setType('brace').setContext(ctx).draw(); new VF.StaveConnector(tr, bs).setType('singleLeft').setContext(ctx).draw(); }
         new VF.StaveConnector(tr, bs).setType(bi === P.bars.length - 1 ? 'boldDoubleRight' : 'singleRight').setContext(ctx).draw();
         if (k === 0 && bi > 0) { ctx.save(); ctx.setFont('sans-serif', 10, 'normal'); ctx.setFillStyle(mute); ctx.fillText(String(bi + 1), x + 2, tr.getYForLine(0) - 8); ctx.restore(); }
-        const rn = bar.rh.map(e => mkNote(e, 'treble', bi)), ln = bar.lh.map(e => mkNote(e, 'bass', bi));
+        const rn = bar.rh.map((e, i) => mkNote(e, 'treble', bi, i)), ln = bar.lh.map((e, i) => mkNote(e, 'bass', bi, i));
         const vr = new VF.Voice({ num_beats: num, beat_value: den }).setMode(VF.Voice.Mode.SOFT).addTickables(rn);
         const vl = new VF.Voice({ num_beats: num, beat_value: den }).setMode(VF.Voice.Mode.SOFT).addTickables(ln);
         VF.Accidental.applyAccidentals([vr], keySig); VF.Accidental.applyAccidentals([vl], keySig);
