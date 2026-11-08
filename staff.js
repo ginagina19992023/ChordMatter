@@ -265,7 +265,7 @@ const Staff = (() => {
   // 画完把每个音的横坐标存在 el.__pos（给光标和成绩上色用），每小节的框存在 el.__bars
   const PDUR = { 4: 'w', 3: 'hd', 2: 'h', 1.5: 'qd', 1: 'q', 0.75: '8d', 0.5: '8', 0.25: '16' };
   function drawPiece(el, cfg, VF) {
-    const P = cfg.piece, W = Math.max(300, el.clientWidth || 360);
+    const P = cfg.piece, hide = new Set(cfg.hide || []), W = Math.max(300, el.clientWidth || 360);
     const perRow = cfg.perRow || (W >= 640 ? 4 : 2), rows = Math.ceil(P.bars.length / perRow);
     const ROW_H = 220, TOP = 46, H = TOP + rows * ROW_H;
     el.innerHTML = '';
@@ -286,7 +286,7 @@ const Staff = (() => {
       const d = PDUR[e.d] || 'q';
       const n = new VF.StaveNote({ keys, duration: d + (e.rest ? 'r' : ''), clef, auto_stem: !e.rest });
       if (/d$/.test(d)) VF.Dot.buildAndAttach([n], { all: true });
-      if (e.stac) n.addModifier(new VF.Articulation('a.').setPosition(VF.Modifier.Position.ABOVE), 0);
+      if (e.stac && !hide.has('stac')) n.addModifier(new VF.Articulation('a.').setPosition(VF.Modifier.Position.ABOVE), 0);
       if (!e.rest && hot.has(key)) n.setStyle({ fillStyle: accC, strokeStyle: accC });
       if (!e.rest && (showNames.has(bi) || nameKeys.has(key))) n.addModifier(new VF.Annotation(e.notes.map(x => x.name + x.oct).join(' ')).setFont('sans-serif', 10, 'normal').setVerticalJustification(clef === 'treble' ? VF.Annotation.VerticalJustify.TOP : VF.Annotation.VerticalJustify.BOTTOM), 0);
       return n;
@@ -320,14 +320,14 @@ const Staff = (() => {
         boxes.push({ bar: bi, x, w, y: top, h: bot - top, sx, ex: tr.getNoteEndX() });
         // 力度（两行谱之间）、cresc.、rit.
         const mid = tr.getYForLine(4) + 34;
-        if (P.dyn && P.dyn[bi]) { ctx.save(); ctx.setFont('serif', 17, 'bold italic'); ctx.fillText(P.dyn[bi], sx - 4, mid); ctx.restore(); }
-        if (P.cresc === bi) { ctx.save(); ctx.setFont('serif', 13, 'italic'); ctx.fillText('cresc.', sx, mid); ctx.restore(); }
-        if (P.rit && bi === P.bars.length - 1) { ctx.save(); ctx.setFont('serif', 13, 'italic'); ctx.fillText('rit.', sx, tr.getYForLine(0) - 22); ctx.restore(); }
+        if (P.dyn && P.dyn[bi] && !hide.has('dyn')) { ctx.save(); ctx.setFont('serif', 17, 'bold italic'); ctx.fillText(P.dyn[bi], sx - 4, mid); ctx.restore(); }
+        if (P.cresc === bi && !hide.has('cresc')) { ctx.save(); ctx.setFont('serif', 13, 'italic'); ctx.fillText('cresc.', sx, mid); ctx.restore(); }
+        if (P.rit && bi === P.bars.length - 1 && !hide.has('rit')) { ctx.save(); ctx.setFont('serif', 13, 'italic'); ctx.fillText('rit.', sx, tr.getYForLine(0) - 22); ctx.restore(); }
         rowRH.push({ bi, notes: rn.filter(n => !n.isRest()) });
         x += w;
       });
       // 连线：两小节一句（在同一行里才画）
-      for (let k = 0; k + 1 < rowRH.length; k += 2) {
+      for (let k = 0; k + 1 < rowRH.length && !hide.has('slur'); k += 2) {
         const a = rowRH[k], b = rowRH[k + 1];
         if (a.bi % 2 || !a.notes.length || !b.notes.length) continue;
         try { new VF.Curve(a.notes[0], b.notes[b.notes.length - 1], { cps: [{ x: 0, y: 14 }, { x: 0, y: 14 }] }).setContext(ctx).draw(); } catch (e) {}

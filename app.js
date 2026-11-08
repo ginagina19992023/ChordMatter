@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 76; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 77; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -2683,7 +2683,7 @@
     const P = SP.P;
     view.innerHTML = `<div class="qbar"><a href="#sight" class="x">×</a><span class="meter"><i id="spmeter" style="width:${{ preview: 15, q: 40, ready: 60, run: 80, done: 100 }[SP.phase] || 0}%"></i></span><small>${P.grade} 级</small></div>
       <p class="spmeta" id="spmeta"></p>
-      <div class="spscore" id="spscore">${Staff.html({ piece: P })}<div class="spcur" id="spcur" hidden></div></div>
+      <div class="spscore" id="spscore">${spStaffHtml([])}<div class="spcur" id="spcur" hidden></div></div>
       <div id="sppanel" class="sppanel"></div>`;
     spPanel();
   }
@@ -2889,10 +2889,16 @@
   const HINT_WHY = ['像考试一样，什么提示都没有。', '橙色的音 = 要注意的：临时记号、加线音、你认得慢的音。', '橙色的音下面写出了音名。', '每个音下面都写了音名。'];
 
   // 换一份谱面（显示某几小节的音名）
+  // 谱面：熟练的记号（连线、力度、cresc.、rit.、跳音）在「纯谱」层不印；要提示一层、或点开过它的解释，就印回来
+  const HIDE_MK = { 'mark:slur': 'slur', 'term:dyn': 'dyn', 'term:cresc': 'cresc', 'term:rit': 'rit', 'mark:stac': 'stac' };
+  function spStaffHtml(names) {
+    const h = spHintCfg(SP.P, SP.hint || 0);
+    const hide = SP.hint ? [] : SP.mk.filter(x => HIDE_MK[x.id] && x.lv >= 3 && !SP.opened.has(x.id)).map(x => HIDE_MK[x.id]);
+    return Staff.html({ piece: SP.P, names: [...new Set([...(names || []), ...h.names])], hot: h.hot, nameKeys: h.nameKeys, hide });
+  }
   function spRedraw(names) {
     const box = $('#spscore'); if (!box) return;
-    const h = spHintCfg(SP.P, SP.hint || 0);
-    box.innerHTML = Staff.html({ piece: SP.P, names: [...new Set([...(names || []), ...h.names])], hot: h.hot, nameKeys: h.nameKeys }) + '<div class="spcur" id="spcur" hidden></div>';
+    box.innerHTML = spStaffHtml(names) + '<div class="spcur" id="spcur" hidden></div>';
     if (SP.res && SP.phase === 'done') setTimeout(spBars, 40);
   }
 
@@ -3778,7 +3784,7 @@
       case 'spstop': spStop(); if (SP) { SP.phase = SP.res ? 'done' : 'ready'; spPanel(); const c = $('#spcur'); if (c) c.hidden = true; } break;
       case 'spnew': sightPiece(true); break;
       case 'spprev': S.sightPrev = +el.dataset.v; save(); vSight(); break;
-      case 'spmark': { const i = +el.dataset.v, x = SP.mk[i]; if (!x) break; if (SP.openIdx === i) SP.openIdx = -1; else { SP.openIdx = i; if (!SP.autoShown || SP.autoShown !== x.id) { SP.opened.add(x.id); famSee(x.id, x.label, x.long); } } spMeta(); break; }
+      case 'spmark': { const i = +el.dataset.v, x = SP.mk[i]; if (!x) break; if (SP.openIdx === i) SP.openIdx = -1; else { SP.openIdx = i; if (!SP.autoShown || SP.autoShown !== x.id) { SP.opened.add(x.id); famSee(x.id, x.label, x.long); if (HIDE_MK[x.id]) spRedraw(SP.bd ? SP.bd.names : []); } } spMeta(); break; }
       case 'sphint': { SP.hint = Math.max(0, Math.min(3, (SP.hint || 0) + (el.dataset.v === 'up' ? 1 : -1))); SP.hintMax = Math.max(SP.hintMax || 0, SP.hint); spRedraw(SP.bd ? SP.bd.names : []); spMeta(); if (SP.phase === 'bars') setTimeout(bdCursor, 60); if (SP.phase === 'run') spPanel(); break; }
       case 'spmarkall': SP.showAll = !SP.showAll; spMeta(); break;
       case 'famshow': { const x = el.nextElementSibling; if (x && x.classList.contains('famx')) x.hidden = !x.hidden; break; }
