@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 78; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 79; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -2891,11 +2891,11 @@
   const HINT_WHY = ['像考试一样，什么提示都没有。', '橙色的音 = 要注意的：临时记号、加线音、你认得慢的音。', '橙色的音下面写出了音名。', '每个音下面都写了音名。'];
 
   // 换一份谱面（显示某几小节的音名）
-  // 谱面：熟练的记号（连线、力度、cresc.、rit.、跳音）在「纯谱」层不印；要提示一层、或点开过它的解释，就印回来
+  // 谱面：熟练的记号（连线、力度、cresc.、rit.、跳音）在所有提示层都不印；点开它的解释（同时退回「见过」）就印回来
   const HIDE_MK = { 'mark:slur': 'slur', 'term:dyn': 'dyn', 'term:cresc': 'cresc', 'term:rit': 'rit', 'mark:stac': 'stac' };
   function spStaffHtml(names) {
     const h = spHintCfg(SP.P, SP.hint || 0);
-    const hide = SP.hint ? [] : SP.mk.filter(x => HIDE_MK[x.id] && x.lv >= 3 && !SP.opened.has(x.id)).map(x => HIDE_MK[x.id]);
+    const hide = SP.mk.filter(x => HIDE_MK[x.id] && x.lv >= 3 && !SP.opened.has(x.id)).map(x => HIDE_MK[x.id]);
     return Staff.html({ piece: SP.P, names: [...new Set([...(names || []), ...h.names])], hot: h.hot, nameKeys: h.nameKeys, hide });
   }
   function spRedraw(names) {
