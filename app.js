@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 79; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 80; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -2838,6 +2838,7 @@
     const ev = P.bars.flatMap(b => b.rh);
     if (ev.some(e => !e.rest && [0.75, 1.5, 3].includes(e.d))) m('rhy:dot', '附点', '音符后面的点 = 把这个音延长一半：附点四分 = 一拍半，附点二分 = 三拍。数拍时多数一个「和」：1-2-和-3。', '点 = 多半拍');
     if (ev.some(e => !e.rest && e.t % 1 === 0.5 && e.d >= 1)) m('rhy:sync', '切分', '音从拍子中间（「和」）开始、拉过下一个拍点：重音落在弱拍上。数拍时在「和」上进来，拍点上不要再弹。', '从「和」开始，拉过拍点');
+    if (P.bars.some(b => [b.rh, b.lh].some(evs => { let pv = null; return evs.some(e => { if (e.rest) return false; const v = e.notes[0].midi, hit = pv != null && Math.abs(v - pv) >= 7; pv = v; return hit; }); }))) m('concept:handshift', '换手位', '手要跳到另一个位置（跳了五度以上）：先看落点，提前把手移过去，别等到弹的时候才去找。', '先看落点');
     m('mark:slur', '连线', '音符上下的弧线（连奏线）：弧线下的音连贯地弹，手指一个接一个，不要断开；弧线结束的那个音轻轻抬手。', '连贯地弹');
     if (P.minor && P.bars.some(b => b.rh.concat(b.lh).some(e => !e.rest && e.notes.some(x => x.alt)))) { const k = T.parseKey(P.key).tonic, up = T.noteAt(k.li + 6, k.pc + 11).name, dn = T.noteAt(k.li + 6, k.pc + 10).name; m('concept:leading', '导音', `小调里第 7 级 ${T.disp(dn)} 要升高成 ${T.disp(up)}：离主音只差半音，非常想往上走回主音。谱上用临时升号（或还原号）写出来。`, `${T.disp(dn)} → ${T.disp(up)}`); }
     if (P.bars.some(b => b.lh.some(e => e.stac))) m('mark:stac', '跳音', '音符上的小圆点：短而轻，弹下去马上放开。', '短而轻');
@@ -2875,7 +2876,7 @@
       const ledger = cl === 't' ? e.notes.some(x => x.midi <= 60 || x.midi >= 81) : e.notes.some(x => x.midi >= 60 || x.midi <= 40);
       const quick = e.notes.every(x => { const st = nrSt(cl, x.midi); return st && nrLevel(st) === 'fast'; });   // 这个位置你认得很快
       const acc = e.notes.some(x => x.alt) && !done('mark:accidental'), slow = e.notes.some(x => { const st = nrSt(cl, x.midi); return st && nrLevel(st) === 'slow'; });
-      const shift = prev != null && Math.abs(mid - prev) >= 7;                      // 换手位：跳了五度以上
+      const shift = !done('concept:handshift') && prev != null && Math.abs(mid - prev) >= 7;                      // 换手位：跳了五度以上
       const sig = !done('mark:keysig') && e.notes.some(x => sigL.has(x.name[0]) && !x.alt) && !seenL.has(e.notes[0].name[0]) && (seenL.add(e.notes[0].name[0]), true); // 调号影响的音：每个字母只圈第一次
       const rhy = bi === hb && cx(e) > 0 && !(done('rhy:dot') && done('rhy:sync'));                                           // 最难的那一小节里的难节奏
       const led = ledger && !quick;
