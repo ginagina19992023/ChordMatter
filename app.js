@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 77; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 78; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -2873,12 +2873,14 @@
       if (e.rest) return;
       const key = bi + ':' + h + ':' + i, mid = e.notes[0].midi;
       const ledger = cl === 't' ? e.notes.some(x => x.midi <= 60 || x.midi >= 81) : e.notes.some(x => x.midi >= 60 || x.midi <= 40);
+      const quick = e.notes.every(x => { const st = nrSt(cl, x.midi); return st && nrLevel(st) === 'fast'; });   // 这个位置你认得很快
       const acc = e.notes.some(x => x.alt) && !done('mark:accidental'), slow = e.notes.some(x => { const st = nrSt(cl, x.midi); return st && nrLevel(st) === 'slow'; });
       const shift = prev != null && Math.abs(mid - prev) >= 7;                      // 换手位：跳了五度以上
       const sig = !done('mark:keysig') && e.notes.some(x => sigL.has(x.name[0]) && !x.alt) && !seenL.has(e.notes[0].name[0]) && (seenL.add(e.notes[0].name[0]), true); // 调号影响的音：每个字母只圈第一次
       const rhy = bi === hb && cx(e) > 0 && !(done('rhy:dot') && done('rhy:sync'));                                           // 最难的那一小节里的难节奏
-      if (acc || ledger || slow || shift || sig || rhy) hot.add(key);
-      if (acc || ledger || slow) nk.add(key + (acc ? '|0' : slow ? '|1' : '|2'));
+      const led = ledger && !quick;
+      if (acc || led || slow || shift || sig || rhy) hot.add(key);
+      if (acc || led || slow) nk.add(key + (acc ? '|0' : slow ? '|1' : '|2'));
       prev = mid;
     }); }));
     const names = [...nk].sort((a, b) => a.split('|')[1] - b.split('|')[1]).slice(0, 6).map(x => x.split('|')[0]);   // 最多写 6 个，先写临时记号、再写认得慢的、最后加线音
@@ -3535,7 +3537,15 @@
   window.__glossOf = id => GLOSS.filter(g => g[1] === id).map(g => g[0]); // 审计用
   // 术语和账本的对应：账本里「熟练」的，正文里不再给下划线；点开解释就退回「见过」，下划线回来
   const TERM_FAM = { '导音': () => ['concept:leading'], '伴奏型': () => Object.keys(S.fam || {}).filter(k => k.startsWith('lh:')) };
-  const termDone = t => { const ids = TERM_FAM[t] ? TERM_FAM[t]() : ['gloss:' + t]; return ids.length > 0 && ids.every(id => famLv(id) >= 3); };
+  const dstr = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const termDone = t => {
+    if (TERM_FAM[t]) { const ids = TERM_FAM[t](); return ids.length > 0 && ids.every(id => famLv(id) >= 3); }
+    // 其余术语：对应的课已经学完（做对），而且是以前的日子学的（隔天），近 3 天又没点开过解释
+    const g = GLOSS.find(x => x[0] === t); if (!g) return false;
+    const sy = S.sym && S.sym[g[1]], rec = S.pk && S.pk['sym:' + g[1]];
+    if (!sy || sy === 'skip' || !rec || !/^\d{4}-/.test(rec.a || '') || rec.a >= today()) return false;
+    const tap = (S.gt || {})[t]; return !tap || tap < dstr(new Date(Date.now() - 3 * 864e5));
+  };
   function linkTerms(root) {
     const own = route[0] === 'sym' ? route[1] : null; // 当前这一课自己的词不再链接
     const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => (!n.nodeValue.trim() || (n.parentElement && n.parentElement.closest(SKIP + ', .termref, h2, .tag, .fx'))) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
@@ -3750,7 +3760,7 @@
       case 'prog': playProg(el, el.dataset.k, el.dataset.c.split(','), 84, 2); break;
       case 'flow': nextStep(); break;
       case 'chordpop': e.preventDefault(); chordPop(el.dataset.s); break;
-      case 'termpop': e.preventDefault(); if (TERM_FAM[el.textContent]) TERM_FAM[el.textContent]().forEach(id => famSee(id)); termPop(el.dataset.id, el.textContent, el); break;
+      case 'termpop': e.preventDefault(); if (TERM_FAM[el.textContent]) TERM_FAM[el.textContent]().forEach(id => famSee(id)); S.gt = S.gt || {}; S.gt[el.textContent] = today(); save(); termPop(el.dataset.id, el.textContent, el); break;
       case 'termplay': termPlay(); break;
       case 'tpopclose': tpopClose(); break;
       case 'tpopstay': break;
