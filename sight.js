@@ -212,7 +212,21 @@ const Sight = (() => {
     const rel = ki.minor ? sc[2].name : sc[5].name + 'm', par = ki.minor ? ki.k.tonic.name : ki.k.tonic.name + 'm';
     const dom = sc[4].name + (ki.minor ? 'm' : '');
     const kz = k => T.parseKey(k).zh;
-    qs.push({ q: '这首是什么调？', a: kz(P.key), opts: shuffle([kz(P.key), kz(rel), kz(par), kz(dom)].filter((x, i, a) => a.indexOf(x) === i)), why: `看调号${ki.minor ? '，再看结尾落在哪个音、有没有升高的导音（小调的 V 和弦里会出现临时升号）' : '，再看第一个和最后一个低音'}：${kz(P.key)}。` });
+    // 讲清楚为什么：同一个调号有一个大调、一个关系小调；看最后的低音和有没有升高的导音来分
+    const D = x => T.disp(x), majK = T.parseKey(ki.minor ? sc[2].name : ki.k.tonic.name), msc = T.scale(majK);
+    const cnt = msc.filter(n => n.name.length > 1).length, sharp = msc.some(n => n.name.includes('#'));
+    const majName = majK.tonic.name, minN = T.parseNote(ki.minor ? ki.k.tonic.name : sc[5].name);
+    const lt = T.noteAt(minN.li + 6, minN.pc + 11).name, lt0 = T.noteAt(minN.li + 6, minN.pc + 10).name;
+    const low = e => e.notes.reduce((a, n) => (n.midi < a.midi ? n : a));
+    const lastB = low(P.bars[P.bars.length - 1].lh[0]), firstB = low(P.bars[0].lh[0]);
+    const ltBars = P.bars.map((b, i) => (b.rh.concat(b.lh).some(e => !e.rest && e.notes.some(n => n.alt && ((n.midi - minN.pc) % 12 + 12) % 12 === 11)) ? i + 1 : 0)).filter(Boolean);
+    const LT = lt.length === 1 ? lt + '♮' : D(lt); // 升高后是白键时，谱上写的是还原记号
+    const sigTxt = cnt ? `调号是 ${cnt} 个${sharp ? '升' : '降'}号` : '调号没有升降号';
+    const why = `${sigTxt}：可能是 ${D(majName)} 大调，也可能是它的关系小调 ${D(minN.name)} 小调（这两个调共用同一个调号）。要分出来看两处：`
+      + `① 第一个和最后一个低音：${D(firstB.name)} … ${D(lastB.name)}，${ki.minor ? `落在 ${D(minN.name)}，是 ${D(minN.name)} 小调的主音` : `落在 ${D(majName)}，是 ${D(majName)} 大调的主音`}；`
+      + `② 有没有 ${LT}：${D(minN.name)} 小调会把第 7 级 ${D(lt0)} 临时升高成 ${LT}（导音）。${ki.minor ? (ltBars.length ? `这首第 ${ltBars.join('、')} 小节就有 ${LT}` : `这首正好没用到，主要看第 ① 条`) : `这首一次也没有出现 ${LT}`}。`
+      + `所以是 ${kz(P.key)}。`;
+    qs.push({ q: '这首是什么调？', a: kz(P.key), opts: shuffle([kz(P.key), kz(rel), kz(par), kz(dom)].filter((x, i, a) => a.indexOf(x) === i)), why });
     const chromBar = P.bars.findIndex(b => b.rh.some(e => e.chrom) || b.rh.concat(b.lh).some(e => !e.rest && e.notes.some(n => n.alt)));
     if (chromBar >= 0) {
       const bars = P.bars.map((b, i) => i).filter(i => P.bars[i].rh.concat(P.bars[i].lh).some(e => !e.rest && e.notes.some(n => n.alt))).map(i => i + 1);
