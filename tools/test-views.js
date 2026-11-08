@@ -23,7 +23,7 @@ server.listen(8781, async () => {
     ['#sight-piece', '.spscore .vf-stavenote', 24, '视奏小曲的音符'],
     ['#sight-piece', '.spmarks .chip', 5, '视奏小曲的记号说明'],
     ['#sight-react', '.sight-st svg, .staff svg', 3, '认音反应的快慢图'],
-    ['#sight-piece', '[data-act="sphint"]', 1, '「再提示一层」按钮'],
+    ['#sight-piece', '[data-act="sphint"]', 1, '提示滑条'],
     ['#sight-t1', '.sight-st svg .vf-stavenote', 1, '视奏开头的路标音'],
   ];
   let bad = 0;

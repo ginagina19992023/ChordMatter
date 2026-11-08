@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 80; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 81; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -2682,34 +2682,43 @@
     }
     const P = SP.P;
     view.innerHTML = `<div class="qbar"><a href="#sight" class="x">×</a><span class="meter"><i id="spmeter" style="width:${{ preview: 15, q: 40, ready: 60, run: 80, done: 100 }[SP.phase] || 0}%"></i></span><small>${P.grade} 级</small></div>
-      <p class="spmeta" id="spmeta"></p>
+      <div class="spwrap" id="spwrap" data-ph="pre"><p class="spmeta" id="spmeta"></p>
       <div class="spscore" id="spscore">${spStaffHtml([])}<div class="spcur" id="spcur" hidden></div></div>
-      <div id="sppanel" class="sppanel"></div>`;
+      <div id="sppanel" class="sppanel"></div></div>`;
     spPanel();
   }
   function spEvidence(q) {
     const opts = ['只看调号就够了', '最后的低音，加上有没有升高的导音', '看右手第一个音', '看拍号'].sort(() => Math.random() - 0.5);
     return Object.assign({}, q, { q: '你是凭什么分出大调还是小调的？', a: '最后的低音，加上有没有升高的导音', opts, ev: 1 });
   }
+  // 提示滑条：拖到哪一层就是哪一层（拖的时候不重画滑条本身，免得中断）
+  document.addEventListener('input', e => {
+    const el = e.target; if (!SP || !el.matches || !el.matches('input[data-act="sphint"]')) return;
+    SP.hint = +el.value; SP.hintMax = Math.max(SP.hintMax || 0, SP.hint);
+    const cap = $('#sphintcap'); if (cap) cap.textContent = SP.hint ? `第 ${SP.hint} 层 · ${HINT_TXT[SP.hint]}` : '纯谱';
+    spRedraw(SP.bd ? SP.bd.names : []);
+    if (SP.phase === 'bars') setTimeout(bdCursor, 60);
+    if (SP.phase === 'run') { const k = $('#spkb'); if (k) k.remove(); if (SP.hint >= 3) { const all = SP.P.bars.flatMap(b => b.rh.concat(b.lh)).filter(x => !x.rest).flatMap(x => x.notes.map(n => n.midi)); $('#sppanel').insertAdjacentHTML('beforeend', `<div class="spkb" id="spkb">${kb([], { lo: Math.min(...all), hi: Math.max(...all) })}</div>`); } }
+  });
   function spMeta() {
     const P = SP.P, m = $('#spmeta'); if (!m) return;
     const pre = SP.phase === 'preview' || SP.phase === 'q', mk = SP.mk, h = SP.hint || 0;
     const live = mk.filter(x => x.lv < 3), shown = SP.showAll ? mk : live.slice(0, SP.phase === 'done' ? 3 : 6), visible = mk.filter(x => shown.includes(x)), hidden = mk.length - visible.length, open = mk[SP.openIdx];
     m.innerHTML = (pre ? `${P.grade} 级视奏 No.${SP.no}` : `No.${SP.no} · ${P.keyZh} · ${P.time} · 左手${P.lhName}`)
-      + `<span class="sphint"><button class="pill sm" data-act="sphint" data-v="up"${h >= 3 ? ' disabled' : ''}>再提示一层</button><small>${h ? `第 ${h} 层 · ${HINT_TXT[h]}` : '纯谱'}</small>${h ? '<button class="linkbtn" data-act="sphint" data-v="down">少一层</button>' : ''}</span>`
+      + `<span class="sphint"><small>提示</small><input type="range" min="0" max="3" step="1" value="${h}" data-act="sphint" aria-label="提示层数"><small id="sphintcap">${h ? `第 ${h} 层 · ${HINT_TXT[h]}` : '纯谱'}</small></span>`
       + `<span class="spmarks">${visible.map(x => `<button class="chip sm fl${x.lv}${SP.openIdx === mk.indexOf(x) ? ' on' : ''}" data-act="spmark" data-v="${mk.indexOf(x)}">${x.lv === 0 ? '<i class="newdot"></i>' : ''}${esc(x.label)}${x.lv === 1 && !SP.opened.has(x.id) ? `<em>${esc(x.short)}</em>` : ''}</button>`).join('')}${hidden ? `<button class="chip sm ghostchip" data-act="spmarkall">${SP.showAll ? '收起' : `+${hidden}`}</button>` : ''}</span>`
       + `<span class="fine spmarkx" id="spmarkx">${open ? `<b>${esc(open.label)}</b> ${esc(open.long)}` : ''}</span>`;
   }
   function spPanel() {
     const el = $('#sppanel'); if (!el || !SP) return;
+    const wr = $('#spwrap'); if (wr) wr.dataset.ph = SP.phase === 'preview' || SP.phase === 'q' ? 'pre' : 'main';   // 预读 / 答题时，面板放在谱的上面
     spMeta();
     const mt = $('#spmeter'); if (mt) mt.style.width = ({ preview: 15, q: 40, ready: 60, run: 80, done: 100 }[SP.phase] || 0) + '%';
     const P = SP.P, bpm = Math.round(P.tempo.bpm * spRate());
     if (SP.phase === 'preview') {
-      el.innerHTML = `<div class="spprev"><b id="spt">0:${String(SP.left).padStart(2, '0')}</b><span>预读：先别弹，按顺序看</span></div>
+      el.innerHTML = `<div class="spprev"><b id="spt">0:${String(SP.left).padStart(2, '0')}</b><span>预读：先别弹</span><button class="btn sm" data-act="spready">我看好了</button></div>
         ${spUnfam()}
-        <p class="fine">看：调号拍号 · 音域 · 临时记号 · 左手型 · 最难的节奏</p>
-        <div class="cta"><button class="btn" data-act="spready">我看好了</button></div>`;
+        <p class="fine">看：调号拍号 · 音域 · 临时记号 · 左手型 · 最难的节奏</p>`;
       clearInterval(SP.timer);
       SP.timer = setInterval(() => { if (!SP || SP.phase !== 'preview' || route[1] !== 'piece') { clearInterval(SP && SP.timer); return; } SP.left--; const t = $('#spt'); if (t) t.textContent = '0:' + String(Math.max(0, SP.left)).padStart(2, '0'); if (SP.left <= 0) { clearInterval(SP.timer); SP.phase = 'q'; spPanel(); } }, 1000);
       return;
@@ -3796,7 +3805,6 @@
       case 'spnew': sightPiece(true); break;
       case 'spprev': S.sightPrev = +el.dataset.v; save(); vSight(); break;
       case 'spmark': { const i = +el.dataset.v, x = SP.mk[i]; if (!x) break; if (SP.openIdx === i) SP.openIdx = -1; else { SP.openIdx = i; if (!SP.autoShown || SP.autoShown !== x.id) { SP.opened.add(x.id); famSee(x.id, x.label, x.long); if (HIDE_MK[x.id]) spRedraw(SP.bd ? SP.bd.names : []); } } spMeta(); break; }
-      case 'sphint': { SP.hint = Math.max(0, Math.min(3, (SP.hint || 0) + (el.dataset.v === 'up' ? 1 : -1))); SP.hintMax = Math.max(SP.hintMax || 0, SP.hint); spRedraw(SP.bd ? SP.bd.names : []); spMeta(); if (SP.phase === 'bars') setTimeout(bdCursor, 60); if (SP.phase === 'run') spPanel(); break; }
       case 'spmarkall': SP.showAll = !SP.showAll; spMeta(); break;
       case 'famshow': { const x = el.nextElementSibling; if (x && x.classList.contains('famx')) x.hidden = !x.hidden; break; }
       case 'bdstart': bdStart(); break;

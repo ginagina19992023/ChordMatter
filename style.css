@@ -1081,3 +1081,11 @@ body.immersive #pbar { display: none; }
 .famcard > :not(summary) { margin-left: 14px; margin-right: 14px; }
 .spkb { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; padding: 6px 12px calc(env(safe-area-inset-bottom) + 6px); background: var(--bg); border-top: 1px solid var(--line); } .spkb .kb { max-height: 78px; }
 .sppanel:has(.spkb) { padding-bottom: 96px; }
+
+/* 视奏：预读面板放在谱上面，提示用滑条 */
+.spwrap { display: flex; flex-direction: column; }
+.spwrap[data-ph="pre"] #sppanel { order: -1; margin: 0 0 6px; }
+.spwrap[data-ph="pre"] .spmeta { order: 0; }
+.spwrap[data-ph="pre"] .spscore { order: 1; }
+.spprev .btn.sm { margin-left: auto; width: auto; padding: 8px 16px; }
+.sphint input[type=range] { flex: 1; max-width: 150px; min-width: 90px; accent-color: var(--acc); height: 28px; }
