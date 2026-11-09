@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 95; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 96; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -490,8 +490,8 @@
     document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.dataset.r === r || (r === 'song' && a.dataset.r === 'songs') || (r === 'unit' && a.dataset.r === 'path')));
     drillStop(); alStop(); stopAll(); Roll.stop(); SELB.on = false; { const ov = document.querySelector('.rollfs'); if (ov) { ov.remove(); document.body.classList.remove('immersive'); } } document.querySelectorAll('.giftov, .cpop, .tpop').forEach(x => x.remove());
     document.body.classList.toggle('focus', ['quiz', 'arp', 'mem', 'sing', 'acctest'].includes(r) || (['sym', 'inv', 'logic', 'sight'].includes(r) && route[1]));
-    document.querySelectorAll('nav a').forEach(x => { if ((r === 'sing' || r === 'acctest') && x.dataset.r === 'acc') x.classList.add('on'); if (['know', 'sym', 'inv', 'logic', 'sight'].includes(r) && x.dataset.r === 'path') x.classList.add('on'); if ((r === 'score' || r === 'scan') && x.dataset.r === 'songs') x.classList.add('on'); });
-    ({ today: vToday, path: vPath, unit: vUnit, chords: vChords, songs: vSongs, song: vSong, edit: vEdit, quiz: vQuiz, arp: vArp, mem: vMem, me: vMe, acc: vAcc, sing: vSing, acctest: vAccTest, know: vKnow, score: vScore, scan: vScan, pk: vPk, browse: vBrowse, along: vAlong, cmp: vCmp, combo: vCombo, sym: vSym, inv: vInv, cards: vCards, logic: vLogic, sight: vSight }[r] || vToday)();
+    document.querySelectorAll('nav a').forEach(x => { if (['know', 'sym', 'inv', 'logic', 'sight'].includes(r) && x.dataset.r === 'path') x.classList.add('on'); if ((r === 'score' || r === 'scan' || r === 'acc' || r === 'sing' || r === 'acctest') && x.dataset.r === 'songs') x.classList.add('on'); if (r === 'me' && x.dataset.r === 'set') x.classList.add('on'); });
+    ({ today: vToday, path: vPath, unit: vUnit, chords: vChords, songs: vSongs, song: vSong, edit: vEdit, quiz: vQuiz, arp: vArp, mem: vMem, me: vMe, acc: vAcc, sing: vSing, acctest: vAccTest, know: vKnow, score: vScore, scan: vScan, pk: vPk, browse: vBrowse, along: vAlong, cmp: vCmp, combo: vCombo, sym: vSym, inv: vInv, cards: vCards, logic: vLogic, sight: vSight, set: vSet }[r] || vToday)();
     if (!['chords', 'combo'].includes(r)) document.body.classList.remove('cxdark'); else if (r === 'combo') cxTheme(null);
     try { linkChords(view); linkTerms(view); } catch (e) {} // 立即给文字加下划线，不等谱面画完
     document.body.classList.toggle('nolab', S.lab === false);
@@ -699,9 +699,10 @@
   const hueVars = h => `--h:${h[0]};--hm:${h[1]};--hs0:${h[2]};--hs1:${h[3]};--hs2:${h[4]};--ha:${h[5]}`;
   const darkMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : { matches: false };
   // 和弦相关页面：深色跟着手机主题；整页的色彩跟着和弦走（body 上的变量会渐变）
+  const isDarkTheme = () => S.theme === 'dark' || (S.theme !== 'light' && !!darkMQ.matches);
   function cxTheme(q) {
     const b = document.body, h = q == null ? ['#555555', '#cccccc', '#26231f', '#1c1a17', '#141210', '#e8e0d4'] : cxHue(q);
-    b.classList.toggle('cxdark', !!darkMQ.matches && ['chords', 'combo'].includes(route[0]));
+    b.classList.toggle('cxdark', isDarkTheme() && ['chords', 'combo'].includes(route[0]));
     ['--h', '--hm', '--hs0', '--hs1', '--hs2', '--ha'].forEach((k, n) => b.style.setProperty(k, h[n]));
   }
   const CX_PATS = () => [PATTERNS[4][0], PATTERNS[4][2], PATTERNS[4][3], PATTERNS[3][1], PATTERNS[4][1]];
@@ -723,9 +724,9 @@
     for (let bar = 0; bar < 2; bar++) evs.forEach(e => {
       const t = (bar * beats + e.t) * spb + 0.03;
       A.chord(e.keys.map(k => k.midi), t, pat.id === 'block' ? 0.012 : 0.005, e.d * spb * 1.05);
-      later(() => document.querySelectorAll('.cxview .kb .k.on').forEach(k => k.classList.toggle('on-play', e.keys.some(x => x.midi % 12 === (+k.dataset.m) % 12))), t * 1000);
+      later(() => document.querySelectorAll('.cxview .kb .k.on, .cxmini .kb .k.on').forEach(k => k.classList.toggle('on-play', e.keys.some(x => x.midi % 12 === (+k.dataset.m) % 12))), t * 1000);
     });
-    later(() => document.querySelectorAll('.cxview .kb .k.on-play').forEach(k => k.classList.remove('on-play')), (2 * beats * spb + 0.3) * 1000);
+    later(() => document.querySelectorAll('.cxview .kb .k.on-play, .cxmini .kb .k.on-play').forEach(k => k.classList.remove('on-play')), (2 * beats * spb + 0.3) * 1000);
     if (el) { el.classList.add('flash'); later(() => el.classList.remove('flash'), 300); }
   }
   function vChords() {
@@ -1356,7 +1357,7 @@
     const prog = s => { const l = (S.songs[s.id] || {}).level || 0, a = (S.songs[s.id] || {}).away || 0; return `<span class="lv">${[0, 1, 2, 3].map(i => `<i class="${i < l ? 'on' : i < a ? 'half' : ''}"></i>`).join('')}</span>`; };
     const card = s => `<a class="scard" href="#song-${s.id}"><span class="stype">${typeOf(s)}</span><b>${esc(s.title)}</b><small>${esc(s.sub || '')}</small>${miniStrip(s)}<span class="smeta">${s.key ? kz(s.key) : '未设调'} · ${srcLabel(s)}</span><span class="sfoot">${prog(s)}<button class="tagbtn" data-act="tagedit" data-id="${s.id}">标签</button></span></a>`;
     const row = s => `<li><a href="#song-${s.id}"><span><b>${esc(s.title)}</b><small>${typeOf(s)} · ${s.key ? kz(s.key) : '未设调'} · ${srcLabel(s)}</small>${miniStrip(s)}</span><span class="lv2">${prog(s)}<button class="tagbtn" data-act="tagedit" data-id="${s.id}">标签</button></span></a></li>`;
-    view.innerHTML = `<header class="top"><div><small>弹一首曲子：看谱 → 认和弦 → 弹下来</small><h1>曲目</h1></div><a class="stat" href="#scan"><b>⌗</b><small>识谱</small></a><a class="stat" href="#edit-new"><b>＋</b><small>手动</small></a></header>
+    view.innerHTML = `<header class="top"><div><small>弹一首曲子：看谱 → 认和弦 → 弹下来</small><h1>曲目</h1></div><a class="stat" href="#scan"><b>⌗</b><small>识谱</small></a><a class="stat" href="#edit-new"><b>＋</b><small>手动</small></a></header><div class="seg2"><a class="on" href="#songs">曲目</a><a class="" href="#acc">伴奏</a></div>
       <div class="listbar"><div class="chips scroll">${['全部'].concat(types, allTags).map(t => `<button class="chip${f === t ? ' on' : ''}" data-act="sfilter" data-v="${esc(t)}">${t}${t === '全部' ? '' : ` <small>${songs.filter(s => tagsOf(s).includes(t)).length}</small>`}</button>`).join('')}</div>${viewToggle('songs')}</div>
       ${lv === 'card' ? `<div class="cards">${shown.map(card).join('')}</div>` : `<ul class="list slist">${shown.map(row).join('')}</ul>`}
       ${drafts.length ? `<ul class="list">${drafts.map(d => `<li class="draft"><a href="#edit-new-${SONG_DRAFTS.indexOf(d)}"><span><b>${esc(d.title)}</b><small>${esc(d.sub)}</small></span><span class="arr">＋</span></a></li>`).join('')}</ul>` : ''}
@@ -1381,7 +1382,7 @@
     const patName = x => { const pats = PATTERNS[x.beats]; const p = pats.find(q => q.id === SG.pat[x.id]); return p ? p.name : '还没选伴奏型'; };
     const card = x => `<a class="scard acard" href="#sing-${x.id}"><span class="stype">${x.beats}/4 拍</span><b>${esc(x.title)}</b><small>${esc(x.sub)}</small><span class="jpprev">${firstMel(x)}</span><span class="chordset">${chordsOf(x).map(c => `<i class="f${chordFunc(c, x.key)}">${D(c)}</i>`).join('')}</span><span class="smeta">${patName(x)}</span></a>`;
     const row = x => `<li><a href="#sing-${x.id}"><span><b>${esc(x.title)}</b><small>${x.beats}/4 拍 · ${chordsOf(x).map(D).join(' ')} · ${patName(x)}</small></span><span class="arr">→</span></a></li>`;
-    view.innerHTML = `<header class="top"><div><small>给旋律配伴奏：一首歌 × 一种伴奏型</small><h1>伴奏</h1></div></header>
+    view.innerHTML = `<header class="top"><div><small>给旋律配伴奏：一首歌 × 一种伴奏型</small><h1>伴奏</h1></div></header><div class="seg2"><a class="" href="#songs">曲目</a><a class="on" href="#acc">伴奏</a></div>
       <a class="unitbar" href="#acctest"><small>每日一考${d.acc ? ' · 今天已完成 ✓' : ''}</small><b>给一段旋律配和弦</b><small>4 小节 · 选 I / IV / V · 弹给你听对不对</small></a>
       <div class="listbar"><div class="chips scroll">${['全部'].concat(tags).map(t => `<button class="chip${f === t ? ' on' : ''}" data-act="afilter" data-v="${esc(t)}">${t}</button>`).join('')}</div>${viewToggle('acc')}</div>
       ${lv === 'card' ? `<div class="cards">${shown.map(card).join('')}</div>` : `<ul class="list">${shown.map(row).join('')}</ul>`}
@@ -1653,6 +1654,17 @@
     const file = new File([JSON.stringify(S)], name, { type: 'application/json' });
     try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'ChordMatter 备份' }); storInfo(); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
     const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name; a.click(); storInfo();
+  }
+  function vSet() {
+    const th = S.theme || 'auto';
+    view.innerHTML = `<header class="top"><div><small>外观和数据</small><h1>设置</h1></div></header>
+      <h3 class="h3">外观</h3>
+      <p class="fine">深色模式。目前只用在「和弦」「组合和弦」页面，其他页面还是浅色。</p>
+      <div class="chips">${[['auto', '跟随手机'], ['light', '始终浅色'], ['dark', '始终深色']].map(([v, t]) => `<button class="chip${th === v ? ' on' : ''}" data-act="theme" data-v="${v}">${t}</button>`).join('')}</div>
+      <h3 class="h3">记录和数据</h3>
+      <a class="link" href="#me"><small>记录</small><b>练琴日历、进度、备份、云端同步</b><span>→</span></a>
+      <a class="link" href="#cards"><small>卡册</small><b>曲谱卡</b><span>→</span></a>
+      <p class="fine">版本 ${APPV}</p>`;
   }
   function vMe() {
     CAL = CAL || { y: new Date().getFullYear(), m: new Date().getMonth() };
@@ -3844,6 +3856,7 @@
       case 'info': { const sg = allSongs().find(x => x.id === route[1]); if (!sg) break; const [t, h] = songInfo(sg, el.dataset.k); infoPop(el, t, h); break; }
       case 'mytoggle': S.myOpen = !S.myOpen; save(); { const b = document.querySelector('.mybox'); if (b) b.hidden = !S.myOpen; } el.textContent = '我的原谱 ' + (S.myOpen ? '⌃' : '⌄'); break;
       case 'lvset': S.lv = S.lv || {}; S.lv[el.dataset.k] = el.dataset.v; save(); render(); break;
+      case 'theme': S.theme = el.dataset.v; save(); cxTheme(null); vSet(); break;
       case 'sfilter': S.songFilter = el.dataset.v; save(); render(); break;
       case 'afilter': S.accFilter = el.dataset.v; save(); render(); break;
       case 'tagedit': e.preventDefault(); e.stopPropagation(); tagPop(el, el.dataset.id); break;
