@@ -1365,3 +1365,15 @@ body.cxpage:not(.cxdark) .cxdock { background: color-mix(in srgb, var(--bg) 55%,
 .seg2.cmode { margin: 2px 8px 8px 0; }
 .seg2 a[data-act] { cursor: pointer; }
 .cmode a { padding: 4px 12px; font-size: 13px; }
+/* 磨砂：顶部小条、名字栏、底部滑条、底部菜单都是半透明 + 模糊，内容从下面滑过时不会透出清晰的字，顶部仍和整页的颜色连成一片 */
+body.cxpage #pbar, body.cxpage nav, body.cxpage .cxsticky, body.cxpage .cxdock {
+  -webkit-backdrop-filter: blur(22px) saturate(1.3); backdrop-filter: blur(22px) saturate(1.3);
+  background: color-mix(in srgb, var(--bg) 84%, transparent);
+}
+body.cxpage.cxdark #pbar, body.cxpage.cxdark nav, body.cxpage.cxdark .cxsticky, body.cxpage.cxdark .cxdock {
+  background: color-mix(in srgb, var(--hs1) 84%, transparent);
+}
+body.cxpage:not(.cxdark) .cxsticky, body.cxpage:not(.cxdark) .cxsticky.stuck { background: color-mix(in srgb, color-mix(in srgb, var(--hm) 32%, var(--bg)) 84%, transparent); }
+body.cxpage.cxdark .cxsticky.stuck { background: color-mix(in srgb, var(--hs0) 86%, transparent); }
+body.cxpage nav { border-top: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); }
+body.cxpage .cxsticky { z-index: 7; }
