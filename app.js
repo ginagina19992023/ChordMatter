@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 119; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 120; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -493,7 +493,7 @@
     drillStop(); alStop(); stopAll(); Roll.stop(); SELB.on = false; { const ov = document.querySelector('.rollfs'); if (ov) { ov.remove(); document.body.classList.remove('immersive'); } } document.querySelectorAll('.giftov, .cpop, .tpop').forEach(x => x.remove());
     document.body.classList.toggle('focus', ['quiz', 'arp', 'mem', 'sing', 'acctest'].includes(r) || (['sym', 'inv', 'logic', 'sight'].includes(r) && route[1]));
     document.querySelectorAll('nav a').forEach(x => { if (['know', 'sym', 'inv', 'logic', 'sight'].includes(r) && x.dataset.r === 'path') x.classList.add('on'); if ((r === 'score' || r === 'scan' || r === 'acc' || r === 'sing' || r === 'acctest') && x.dataset.r === 'songs') x.classList.add('on'); if (r === 'me' && x.dataset.r === 'set') x.classList.add('on'); });
-    ({ today: vToday, path: vPath, unit: vUnit, chords: vChords, songs: vSongs, song: vSong, edit: vEdit, quiz: vQuiz, arp: vArp, mem: vMem, me: vMe, acc: vAcc, sing: vSing, acctest: vAccTest, know: vKnow, score: vScore, scan: vScan, pk: vPk, browse: vBrowse, along: vAlong, cmp: vCmp, combo: vCombo, sym: vSym, inv: vInv, cards: vCards, logic: vLogic, sight: vSight, set: vSet }[r] || vToday)();
+    ({ today: vToday, path: vPath, unit: vUnit, chords: vChords, songs: vSongs, song: vSong, edit: vEdit, quiz: vQuiz, arp: vArp, mem: vMem, me: vMe, acc: vAcc, sing: vSing, acctest: vAccTest, know: vKnow, score: vScore, scan: vScan, pk: vPk, browse: vBrowse, along: vAlong, cmp: vCmp, combo: vCombo, sym: vSym, inv: vInv, cards: vCards, logic: vLogic, sight: vSight, set: vSet, scorelist: vScoreList }[r] || vToday)();
     cxGlobalDark(); if (!['chords', 'combo'].includes(r)) document.body.classList.remove('cxdark'); else if (r === 'combo') cxTheme(null);
     try { linkChords(view); linkTerms(view); } catch (e) {} // 立即给文字加下划线，不等谱面画完
     document.body.classList.toggle('nolab', S.lab === false);
@@ -916,7 +916,7 @@
     document.addEventListener('pointerup', end, true); document.addEventListener('pointercancel', () => { D2 = null; document.body.classList.remove('drag-rail', 'drag-root'); }, true);
   })();
   // ---- 底部每个标签都记住「上次停在哪一页、滚到哪里」：切到别的标签再点回来，回到原处；已在这个标签里再点一下，回到这个标签的首页 ----
-  const TAB_OF = { today: 'today', pk: 'today', path: 'path', unit: 'path', sym: 'path', inv: 'path', logic: 'path', know: 'path', sight: 'path', chords: 'chords', combo: 'chords', browse: 'chords', songs: 'songs', song: 'songs', acc: 'songs', sing: 'songs', score: 'songs', scan: 'songs', cmp: 'songs', edit: 'songs', set: 'set', me: 'set', cards: 'set' };
+  const TAB_OF = { scorelist: 'songs', today: 'today', pk: 'today', path: 'path', unit: 'path', sym: 'path', inv: 'path', logic: 'path', know: 'path', sight: 'path', chords: 'chords', combo: 'chords', browse: 'chords', songs: 'songs', song: 'songs', acc: 'songs', sing: 'songs', score: 'songs', scan: 'songs', cmp: 'songs', edit: 'songs', set: 'set', me: 'set', cards: 'set' };
   const navTabNow = () => ((route[0] === 'sight' && route[1]) ? null : TAB_OF[route[0]] || null);
   const scrollerNow = () => { const box = document.getElementById('phone'); return box && getComputedStyle(box).overflowY === 'auto' ? box : document.scrollingElement; };
   let NAV_RESTORE = null;
@@ -1422,6 +1422,18 @@
   function miniStrip(s) { return `<span class="mstrip">${songFlat(s).map(x => `<i class="f${chordFunc(x, s.key)}"></i>`).join('')}</span>`; }
   const LV = { songs: 'card', acc: 'card' };
   function viewToggle(k) { const v = (S.lv && S.lv[k]) || 'card'; return `<div class="vtoggle"><button class="${v === 'card' ? 'on' : ''}" data-act="lvset" data-k="${k}" data-v="card" aria-label="卡片">▦</button><button class="${v === 'list' ? 'on' : ''}" data-act="lvset" data-k="${k}" data-v="list" aria-label="条状">☰</button></div>`; }
+  // 找谱清单：每首一行，一键复制「歌名 艺人 钢琴谱」，或直接打开小红书搜索
+  const scoreQuery = s => {
+    const t = String(s.title).replace(/[（(].*?[）)]/g, '').trim(), a = String(s.sub || '').split(' · ')[0].replace(/[（(].*?[）)]/g, '').trim();
+    return [t, a && a !== t && !/小节|弹琴吧|改编|简易/.test(a) ? a : '', '钢琴谱'].filter(Boolean).join(' ');
+  };
+  function vScoreList() {
+    const list = allSongs().filter(s => s.copy && !hasFull(s.id) && !s.melody);
+    view.innerHTML = `<header class="top"><div><a class="back" href="#songs">←</a><small>有版权的歌，原谱要你来找</small><h1>找谱清单</h1></div></header>
+      <p class="fine">每一行右边的「复制」会复制这一行的搜索词；「小红书」直接打开小红书搜这个词。找到谱后截图发给我，我转成曲目的原谱（旋律 + 左手）。</p>
+      <ul class="list sclist">${list.map(s => { const q = scoreQuery(s); return `<li><span class="scq"><b>${esc(s.title)}</b><small>${esc(q)}</small></span><span class="scbtns"><button class="pill" data-act="copyq" data-q="${esc(q)}">复制</button><a class="pill" href="https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(q)}" target="_blank" rel="noopener">小红书</a></span></li>`; }).join('') || '<li class="fine">没有需要找谱的曲子。</li>'}</ul>
+      <p class="pageend">— ${list.length} 首 —</p>`;
+  }
   function vSongs() {
     const songs = allSongs(), drafts = SONG_DRAFTS.filter(d => !songs.some(s => s.title === d.title));
     const lv = (S.lv && S.lv.songs) || 'card', f = S.songFilter || '全部';
@@ -1431,7 +1443,7 @@
     const prog = s => { const l = (S.songs[s.id] || {}).level || 0, a = (S.songs[s.id] || {}).away || 0; return `<span class="lv">${[0, 1, 2, 3].map(i => `<i class="${i < l ? 'on' : i < a ? 'half' : ''}"></i>`).join('')}</span>`; };
     const card = s => `<a class="scard" href="#song-${s.id}"><span class="stype">${typeOf(s)}</span><b>${esc(s.title)}</b><small>${esc(s.sub || '')}</small>${miniStrip(s)}<span class="smeta">${s.key ? kz(s.key) : '未设调'} · ${srcLabel(s)}</span><span class="sfoot">${prog(s)}<button class="tagbtn" data-act="tagedit" data-id="${s.id}">标签</button></span></a>`;
     const row = s => `<li><a href="#song-${s.id}"><span><b>${esc(s.title)}</b><small>${typeOf(s)} · ${s.key ? kz(s.key) : '未设调'} · ${srcLabel(s)}</small>${miniStrip(s)}</span><span class="lv2">${prog(s)}<button class="tagbtn" data-act="tagedit" data-id="${s.id}">标签</button></span></a></li>`;
-    view.innerHTML = `<header class="top"><div><small>弹一首曲子：看谱 → 认和弦 → 弹下来</small><h1>曲目</h1></div><a class="stat" href="#scan"><b>⌗</b><small>识谱</small></a><a class="stat" href="#edit-new"><b>＋</b><small>手动</small></a></header><div class="seg2"><a class="on" href="#songs">曲目</a><a class="" href="#acc">伴奏</a></div>
+    view.innerHTML = `<header class="top"><div><small>弹一首曲子：看谱 → 认和弦 → 弹下来</small><h1>曲目</h1></div><a class="stat" href="#scorelist"><b>☰</b><small>找谱</small></a><a class="stat" href="#scan"><b>⌗</b><small>识谱</small></a><a class="stat" href="#edit-new"><b>＋</b><small>手动</small></a></header><div class="seg2"><a class="on" href="#songs">曲目</a><a class="" href="#acc">伴奏</a></div>
       <div class="listbar"><div class="chips scroll">${['全部'].concat(types, allTags).map(t => `<button class="chip${f === t ? ' on' : ''}" data-act="sfilter" data-v="${esc(t)}">${t}${t === '全部' ? '' : ` <small>${songs.filter(s => tagsOf(s).includes(t)).length}</small>`}</button>`).join('')}</div>${viewToggle('songs')}</div>
       ${lv === 'card' ? `<div class="cards">${shown.map(card).join('')}</div>` : `<ul class="list slist">${shown.map(row).join('')}</ul>`}
       ${drafts.length ? `<ul class="list">${drafts.map(d => `<li class="draft"><a href="#edit-new-${SONG_DRAFTS.indexOf(d)}"><span><b>${esc(d.title)}</b><small>${esc(d.sub)}</small></span><span class="arr">＋</span></a></li>`).join('')}</ul>` : ''}
@@ -3952,6 +3964,10 @@
       case 'theme': S.theme = el.dataset.v; save(); cxGlobalDark(); vSet(); break;
       case 'colormode': S.colorMode = el.dataset.v; save(); render(); break;
       case 'gridmode': { S.gridMode = el.dataset.v; save(); const g = document.getElementById('grid'); if (g) g.dataset.mode = S.gridMode; document.querySelectorAll('.gmode button').forEach(x => x.classList.toggle('on', x.dataset.v === S.gridMode)); break; }
+      case 'copyq': { const q = el.dataset.q || ''; const done = () => { el.textContent = '已复制'; setTimeout(() => (el.textContent = '复制'), 1400); };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(q).then(done, () => { const t = document.createElement('textarea'); t.value = q; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (e) {} t.remove(); done(); });
+        else { const t = document.createElement('textarea'); t.value = q; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (e) {} t.remove(); done(); }
+        break; }
       case 'sfilter': S.songFilter = el.dataset.v; save(); render(); break;
       case 'afilter': S.accFilter = el.dataset.v; save(); render(); break;
       case 'tagedit': e.preventDefault(); e.stopPropagation(); tagPop(el, el.dataset.id); break;

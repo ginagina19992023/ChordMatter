@@ -1403,3 +1403,10 @@ body.drag-dial .fifths::before { border-color: color-mix(in srgb, var(--ink) 40%
 body.dark.drag-rail .cxrail .qthumb, body.dark.drag-root .cxroot .rthumb { box-shadow: 0 0 30px 8px color-mix(in srgb, var(--ha) 50%, transparent), 0 0 12px 2px color-mix(in srgb, var(--ha) 75%, transparent); }
 body.dark.drag-rail .cxrail::before { border-left-color: color-mix(in srgb, var(--ha) 50%, var(--line)); }
 body.dark.drag-root .cxroot .rtrack { border-top-color: color-mix(in srgb, var(--ha) 50%, var(--line)); }
+
+.sclist li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); list-style: none; }
+.sclist { padding: 0; }
+.scq { min-width: 0; } .scq b { display: block; font-size: 16px; font-weight: 600; } .scq small { display: block; font-size: 12.5px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: text; -webkit-user-select: text; }
+.scbtns { display: flex; gap: 6px; flex: none; }
+.scbtns .pill { padding: 6px 14px; font-size: 14px; border: 1px solid var(--line); border-radius: 999px; }
+.scbtns button.pill { background: var(--ink); color: var(--bg); border-color: var(--ink); }
