@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 117; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 118; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -721,13 +721,23 @@
   const CX_INV = ['原位', '一转', '二转', '三转'];
   // 一个音是「根音 / 没动 / 挪了」：和大三和弦（1-3-5）比，七音一律算新加的
   function cxRole(c, i) { if (i === 0) return 'rt'; const se = c.quality.ints[i][1]; return (i >= 3 || se !== [0, 4, 7][i]) ? 'mv' : 'st'; }
+  // 点一下选项时的试听：跟着当前手（左手低八度 / 双手一起）出一个柱式和弦
+  function cxPreview() {
+    try {
+      const c = T.build(CX.root, CX.q, Math.min(CX.inv, T.Q[CX.q].ints.length - 1)), m = T.voicing(c, 48).map(n => n.midi);
+      const sh = CX.hand === 'L' ? [0] : CX.hand === 'B' ? [0, 12] : [12];
+      A.init(); A.chord(sh.flatMap(d => m.map(x => x + d)), 0, 0.012);
+    } catch (e) {}
+  }
   function cxPlay(el) {
     const c = T.build(CX.root, CX.q, Math.min(CX.inv, T.Q[CX.q].ints.length - 1));
     const pat = CX_PATS().find(p => p.id === CX.pat) || PATTERNS[4][0], beats = pat.id === 'waltz' ? 3 : 4, spb = 60 / 84;
     stopAll(); A.init();
     // 按当前转位弹：最低的音就是这个转位的低音，其余的音按显示的排法
     const m = T.voicing(c, 48).map(n => n.midi), pick = { R: [m[0]], 3: [m[1]], 5: [m[2]], 8: [m[0] + 12], 10: [m[1] + 12], C: m, RC: [m[0] - 12].concat(m) };
-    const evs = pat.ev.map(([t, code, d]) => ({ t, d, keys: (pick[code] || [m[0]]).map(x => ({ midi: x })) }));
+    // 左手：低一个八度，和键盘上显示的左手位置一样；双手：左右一起
+    const shifts = CX.hand === 'L' ? [0] : CX.hand === 'B' ? [0, 12] : [12];
+    const evs = pat.ev.map(([t, code, d]) => ({ t, d, keys: shifts.flatMap(sh => (pick[code] || [m[0]]).map(x => x + sh).filter(x => sh === 0 || x >= 57).map(x => ({ midi: x }))) }));
     for (let bar = 0; bar < 2; bar++) evs.forEach(e => {
       const t = (bar * beats + e.t) * spb + 0.03;
       A.chord(e.keys.map(k => k.midi), t, pat.id === 'block' ? 0.012 : 0.005, e.d * spb * 1.05);
@@ -902,7 +912,7 @@
       D2 = { vertical: el.id === 'cxrail' }; document.body.classList.add(D2.vertical ? 'drag-rail' : 'drag-root'); apply(e);
     }, true);
     document.addEventListener('pointermove', e => { if (D2) apply(e); }, true);
-    const end = () => { if (!D2) return; D2 = null; document.body.classList.remove('drag-rail', 'drag-root'); try { playChord(T.build(CX.root, CX.q, Math.min(CX.inv, T.Q[CX.q].ints.length - 1)).sym); } catch (err) {} };
+    const end = () => { if (!D2) return; D2 = null; document.body.classList.remove('drag-rail', 'drag-root'); try { cxPreview(); } catch (err) {} };
     document.addEventListener('pointerup', end, true); document.addEventListener('pointercancel', () => { D2 = null; document.body.classList.remove('drag-rail', 'drag-root'); }, true);
   })();
   // ---- 底部每个标签都记住「上次停在哪一页、滚到哪里」：切到别的标签再点回来，回到原处；已在这个标签里再点一下，回到这个标签的首页 ----
@@ -949,9 +959,9 @@
       if (h.m) h.m.remove();
       if (cancel) return;
       if (h.open) {
-        if (h.kind === 'inv') { CX.inv = h.idx; playChord(T.build(CX.root, CX.q, CX.inv).sym); }
+        if (h.kind === 'inv') { CX.inv = h.idx; cxPreview(); }
         else { CX.pat = CX_PATS()[h.idx].id; vChords(); cxPlay(document.querySelector('.cxhold.go')); }
-      } else if (h.kind === 'inv') { CX.inv = (cur('inv') + 1) % T.Q[CX.q].ints.length; vChords(); playChord(T.build(CX.root, CX.q, CX.inv).sym); }
+      } else if (h.kind === 'inv') { CX.inv = (cur('inv') + 1) % T.Q[CX.q].ints.length; vChords(); cxPreview(); }
       else cxPlay(h.b);
     };
     document.addEventListener('pointerup', e => end(e, false), true);
@@ -4049,7 +4059,7 @@
       case 'ans': answer(el.dataset.v); break;
       case 'next': Z.i++; quizStep(); break;
       case 'libroot': CX.root = el.dataset.v; vLib(); playChord(CX.root); break;
-      case 'cx': CX[el.dataset.k] = el.dataset.k === 'inv' ? +el.dataset.v : el.dataset.v; if (el.dataset.k === 'q') CX.inv = 0; vChords(); if (el.dataset.k !== 'hand') playChord(T.build(CX.root, CX.q, CX.inv).sym); break;
+      case 'cx': CX[el.dataset.k] = el.dataset.k === 'inv' ? +el.dataset.v : el.dataset.v; if (el.dataset.k === 'q') CX.inv = 0; vChords(); cxPreview(); break;
       case 'ahand': ARP.hand = el.dataset.v; vArp(); break;
       case 'bpm': { const sym = route[1]; const st = S.arp[sym]; st.bpm = Math.max(40, Math.min(160, st.bpm + +el.dataset.v)); save(); $('#bpm').textContent = st.bpm; if (metro) startMetro(st.bpm); break; }
       case 'ademo': arpDemo(el.dataset.s); break;
