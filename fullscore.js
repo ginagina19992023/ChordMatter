@@ -100,15 +100,16 @@ const FullScore = (() => {
     const acc = (sub.slice(m.index + n).match(/^[#\-n]*/) || [''])[0];
     return 12 * (oct + 1) + pc + (acc.split('#').length - 1) - (acc.split('-').length - 1);
   }
-  function events(kern) {
-    const ms = parse(kern), out = [], open = {};
+  function events(kern, ova) {
+    const ms = parse(kern), out = [], open = {}, ovaSet = new Set(ova || []); // ova：这些小节左手谱上写的比实际低一个八度（8va），发声时升高
+
     let off = 0;
     ms.forEach(m => {
       m.rows.filter(r => r.f).forEach(r => r.f.forEach((tok, sp) => {
         if (!tok || tok === '.' || /^[*!=]/.test(tok)) return;
         tok.split(' ').forEach(sub => {
           if (/r/.test(sub) || /q/.test(sub)) return;
-          const midi = kernMidi(sub), d = dur(sub); if (midi == null || !d) return;
+          let midi = kernMidi(sub); const d = dur(sub); if (midi == null || !d) return; if (sp === 0 && ovaSet.has(m.n)) midi += 12;
           const key = sp + ':' + midi;
           if (/[\]_]/.test(sub) && open[key]) { open[key].d += d; if (/\]/.test(sub)) delete open[key]; return; }
           const e = { t: off + r.t, d, midi, hand: sp === 0 ? 'L' : 'R', bar: m.n }; out.push(e);

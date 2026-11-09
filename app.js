@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 120; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 121; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -2377,7 +2377,7 @@
   }
   // 完整扒谱：两只手真实的音；和弦标签按小节
   function rollFromFull(s) {
-    const { events, barStart, lens } = FullScore.events(FULL[s.id].kern), bm = songBarMap(s), chords = [];
+    const { events, barStart, lens } = FullScore.events(FULL[s.id].kern, FULL[s.id].ova), bm = songBarMap(s), chords = [];
     Object.keys(barStart).forEach(n => { const ch = bm[n]; if (!ch) return; const L = lens[n], d = L / ch.length; ch.forEach((sym, i) => chords.push({ t: barStart[n] + i * d, d, sym, label: n + ' · ' + chordLabel(sym, s.key), func: chordFunc(sym, s.key), bar: +n })); });
     const firstBar = Math.min(...Object.keys(barStart).map(Number));
     return { events, chords, beats: 4, barNo: b => { let best = firstBar; Object.entries(barStart).forEach(([n, st]) => { if (st <= b + 1e-6) best = +n; }); return best; } };
