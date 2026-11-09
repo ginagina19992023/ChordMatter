@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 114; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 115; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -180,6 +180,8 @@
     ctx: null,
     init() {
       try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+      // 离开 App 再回来，iPhone 会把声音通道挂起/打断，有时怎么叫都叫不醒：回来后的第一次触摸，直接换一个全新的声音通道
+      if (this.ctx && (this.stale || this.ctx.state === 'closed' || this.ctx.state === 'interrupted')) { try { this.ctx.close(); } catch (e) {} this.ctx = null; this.stale = false; }
       if (!this.ctx) {
         const C = window.AudioContext || window.webkitAudioContext;
         this.ctx = new C();
@@ -4093,6 +4095,9 @@
     }
   });
 
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') A.stale = true; });
+  window.addEventListener('pagehide', () => { A.stale = true; });
+  window.addEventListener('pageshow', e => { if (e.persisted) A.stale = true; });
   // iPhone 要在手指抬起 / 点击这类动作里才允许出声：每次触摸都顺手把声音通道叫醒（并放一个无声小片段），按住拖选这类自定义手势也不会没声音
   ['touchstart', 'touchend', 'pointerup', 'click'].forEach(t => document.addEventListener(t, () => {
     try { A.init(); const c = A.ctx; if (c) { const b = c.createBuffer(1, 1, 22050), n = c.createBufferSource(); n.buffer = b; n.connect(c.destination); n.start(0); } } catch (e) {}
