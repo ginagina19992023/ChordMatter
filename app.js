@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 99; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 100; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -777,11 +777,9 @@
         <div class="cxview">${kb(bigN, { lo: CX.hand === 'R' ? 60 : 48, hi: CX.hand === 'R' ? 83 : CX.hand === 'L' ? 71 : 83 })}</div>
         <div class="cxnbs"><span>只动一点，就变成</span>${nbrs.map(x => `<button class="nb" data-act="cx" data-k="q" data-v="${x.q}"><i class="qd" style="background:${QHUE[x.q][0]}"></i><b>${D(CX.root + x.q)}</b><small>${x.note}</small></button>`).join('')}</div>
         <div class="cxroot" id="cxroot" aria-label="根音滑条：左右拖动换根音"><span class="rhint">左右拖动，换根音</span><div class="rtrack"></div>${ROOT_MAJ.map((r, i) => `<i class="rt" style="left:calc(19px + (100% - 38px) * ${(i / 11).toFixed(4)})">${D(r)}</i>`).join('')}<b class="rthumb" style="left:calc(19px + (100% - 38px) * ${(ROOT_MAJ.indexOf(CX.root) / 11).toFixed(4)})">${D(CX.root)}</b></div>
-        <p class="cxline">${CX.hand !== 'R' ? '<span class="lhc">左手 ' + fgL.join('-') + '</span> ' : ''}${CX.hand !== 'L' ? '右手 ' + fgR.join('-') : ''} · ${c.quality.f}</p>
+        <p class="cxline"><span class="cxlt">${CX.hand !== 'R' ? '<span class="lhc">左手 ' + fgL.join('-') + '</span> ' : ''}${CX.hand !== 'L' ? '右手 ' + fgR.join('-') : ''} · ${c.quality.f}</span><span class="hseg" role="group" aria-label="左右手">${[['L', '左'], ['R', '右'], ['B', '双']].map(([v, t]) => `<button class="${CX.hand === v ? 'on' : ''}" data-act="cx" data-k="hand" data-v="${v}" aria-label="${t}手">${t}</button>`).join('')}</span></p>
         <details class="cxstaff"><summary>看谱</summary>${Staff.html({ bars: [[c.sym]], numerals: false, perRow: 1, minBar: 60, exact: true, notes: showN.map(n => ({ name: n.name, midi: n.midi, lh: n.lh ? 1 : 0 })) })}</details>
       </section>
-      <div class="cxrow"><p><b>③ 手</b> 看哪只手的指法 · 转位在右上角「↻」</p>
-      <div class="chips"><button class="chip${CX.hand === 'R' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="R">右手</button><button class="chip${CX.hand === 'L' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="L">左手</button><button class="chip${CX.hand === 'B' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="B">双手</button></div></div>
       <p class="explain"><b>${D(c.sym)}</b>：以 ${D(c.root.name)} 为根音的${c.quality.zh}，${qi[2]}，听起来${qi[1]}。${invi ? `${INV[invi][0]}：最下面弹 ${D(bottom.name)}（${INV[invi][1]}），所以写成 ${D(c.sym)}，斜线后面就是最低音。` : '原位：根音 ' + D(c.root.name) + ' 在最下面。'}键盘上的数字是手指（1 = 拇指，5 = 小指）${CX.hand === 'B' ? '，蓝色是左手（低八度），橙色是右手' : CX.hand === 'L' ? '，左手在低八度' : ''}。<a href="#know-k0">看不懂？</a></p>
       ${pager('chord', [
         ['小进行', `${(() => { const ctx = chordContext(c); return ctx ? `<h3>先在小进行里听它</h3><p class="fine">${ctx[1]} · 点一下听，跟着弹</p>${progRow(c.root.name, ctx[0])}<div class="pills"><button class="pill rlprog" data-act="rollprog" data-k="${esc(c.root.name)}" data-c="${esc(ctx[0].join(','))}" data-t="${esc(ctx[0].map(D).join(' → '))}">▶ 跟练这个小进行 · 全屏</button></div>` : '<p class="fine">这个和弦没有常用的小进行。</p>'; })()}`],

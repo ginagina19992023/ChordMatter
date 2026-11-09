@@ -1284,3 +1284,15 @@ body.dark .cxhold { background: transparent; }
 body.dark .holdmenu, body.dark .cxnb .nb { background: var(--card); }
 body.dark .thumbs img, body.dark .myscore img, body.dark .sharecard img { background: #fff; }
 body.dark .lk.w { background: #efe6dc; border-color: #2a2420; }
+
+.cxline { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 14px; }
+.cxline .cxlt { min-width: 0; }
+.hseg { display: inline-flex; flex: none; border: 1px solid var(--line); border-radius: 999px; padding: 2px; }
+.hseg button { width: 30px; height: 26px; border-radius: 999px; font-size: 13px; color: var(--mute); }
+.hseg button.on { background: var(--ink); color: var(--bg); font-weight: 600; }
+.cxnbs { margin-top: 10px; }
+.cxnbs .nb { height: auto; min-height: 66px; padding: 7px 8px; }
+.cxroot { margin-top: 22px; height: 70px; }
+.cxstaff { margin-top: 12px; }
+.cxroot { height: 84px; }
+.cxroot .rthumb { top: 24px; } .cxroot .rtrack { top: 43px; } .cxroot .rt { top: 62px; }
