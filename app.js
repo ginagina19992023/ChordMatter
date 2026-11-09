@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 96; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 97; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -492,7 +492,7 @@
     document.body.classList.toggle('focus', ['quiz', 'arp', 'mem', 'sing', 'acctest'].includes(r) || (['sym', 'inv', 'logic', 'sight'].includes(r) && route[1]));
     document.querySelectorAll('nav a').forEach(x => { if (['know', 'sym', 'inv', 'logic', 'sight'].includes(r) && x.dataset.r === 'path') x.classList.add('on'); if ((r === 'score' || r === 'scan' || r === 'acc' || r === 'sing' || r === 'acctest') && x.dataset.r === 'songs') x.classList.add('on'); if (r === 'me' && x.dataset.r === 'set') x.classList.add('on'); });
     ({ today: vToday, path: vPath, unit: vUnit, chords: vChords, songs: vSongs, song: vSong, edit: vEdit, quiz: vQuiz, arp: vArp, mem: vMem, me: vMe, acc: vAcc, sing: vSing, acctest: vAccTest, know: vKnow, score: vScore, scan: vScan, pk: vPk, browse: vBrowse, along: vAlong, cmp: vCmp, combo: vCombo, sym: vSym, inv: vInv, cards: vCards, logic: vLogic, sight: vSight, set: vSet }[r] || vToday)();
-    if (!['chords', 'combo'].includes(r)) document.body.classList.remove('cxdark'); else if (r === 'combo') cxTheme(null);
+    cxGlobalDark(); if (!['chords', 'combo'].includes(r)) document.body.classList.remove('cxdark'); else if (r === 'combo') cxTheme(null);
     try { linkChords(view); linkTerms(view); } catch (e) {} // 立即给文字加下划线，不等谱面画完
     document.body.classList.toggle('nolab', S.lab === false);
     pbarPaint();
@@ -699,10 +699,12 @@
   const hueVars = h => `--h:${h[0]};--hm:${h[1]};--hs0:${h[2]};--hs1:${h[3]};--hs2:${h[4]};--ha:${h[5]}`;
   const darkMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : { matches: false };
   // 和弦相关页面：深色跟着手机主题；整页的色彩跟着和弦走（body 上的变量会渐变）
+  function cxGlobalDark() { const d = isDarkTheme(); document.body.classList.toggle('dark', d); const m = document.querySelector('meta[name=theme-color]'); if (m) m.setAttribute('content', d ? '#141210' : '#ffffff'); }
   const isDarkTheme = () => S.theme === 'dark' || (S.theme !== 'light' && !!darkMQ.matches);
   function cxTheme(q) {
     const b = document.body, h = q == null ? ['#555555', '#cccccc', '#26231f', '#1c1a17', '#141210', '#e8e0d4'] : cxHue(q);
     b.classList.toggle('cxdark', isDarkTheme() && ['chords', 'combo'].includes(route[0]));
+    cxGlobalDark();
     ['--h', '--hm', '--hs0', '--hs1', '--hs2', '--ha'].forEach((k, n) => b.style.setProperty(k, h[n]));
   }
   const CX_PATS = () => [PATTERNS[4][0], PATTERNS[4][2], PATTERNS[4][3], PATTERNS[3][1], PATTERNS[4][1]];
@@ -1659,7 +1661,7 @@
     const th = S.theme || 'auto';
     view.innerHTML = `<header class="top"><div><small>外观和数据</small><h1>设置</h1></div></header>
       <h3 class="h3">外观</h3>
-      <p class="fine">深色模式。目前只用在「和弦」「组合和弦」页面，其他页面还是浅色。</p>
+      <p class="fine">深色模式。整个 App 都会变；谱子里的音符、彩条会跟着换成适合深色的颜色。</p>
       <div class="chips">${[['auto', '跟随手机'], ['light', '始终浅色'], ['dark', '始终深色']].map(([v, t]) => `<button class="chip${th === v ? ' on' : ''}" data-act="theme" data-v="${v}">${t}</button>`).join('')}</div>
       <h3 class="h3">记录和数据</h3>
       <a class="link" href="#me"><small>记录</small><b>练琴日历、进度、备份、云端同步</b><span>→</span></a>
@@ -3856,7 +3858,7 @@
       case 'info': { const sg = allSongs().find(x => x.id === route[1]); if (!sg) break; const [t, h] = songInfo(sg, el.dataset.k); infoPop(el, t, h); break; }
       case 'mytoggle': S.myOpen = !S.myOpen; save(); { const b = document.querySelector('.mybox'); if (b) b.hidden = !S.myOpen; } el.textContent = '我的原谱 ' + (S.myOpen ? '⌃' : '⌄'); break;
       case 'lvset': S.lv = S.lv || {}; S.lv[el.dataset.k] = el.dataset.v; save(); render(); break;
-      case 'theme': S.theme = el.dataset.v; save(); cxTheme(null); vSet(); break;
+      case 'theme': S.theme = el.dataset.v; save(); cxGlobalDark(); vSet(); break;
       case 'sfilter': S.songFilter = el.dataset.v; save(); render(); break;
       case 'afilter': S.accFilter = el.dataset.v; save(); render(); break;
       case 'tagedit': e.preventDefault(); e.stopPropagation(); tagPop(el, el.dataset.id); break;
@@ -4013,7 +4015,7 @@
   });
 
   window.addEventListener('hashchange', render);
-  if (darkMQ.addEventListener) darkMQ.addEventListener('change', () => { if (['chords', 'combo'].includes(route[0])) render(); });
+  if (darkMQ.addEventListener) darkMQ.addEventListener('change', () => { cxGlobalDark(); render(); });
   document.addEventListener('pointerdown', e => { window.__lastClick = [e.clientX, e.clientY]; }, true);
   document.addEventListener('staffplay', e => { A.init(); const ms = e.detail || []; if (ms.length === 1) A.note(ms[0], 0, 1.4, 0.7); else A.chord(ms, 0, 0.02, 1.4); });
   document.addEventListener('calpick', e => { calDetail(e.detail); });

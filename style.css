@@ -6,6 +6,10 @@
   --r: 10px;
   color-scheme: light;
 }
+
+/* ---- 全 App 深色：只换变量，页面自己的配色都走变量 ---- */
+body.dark { --bg: #141210; --ink: #f3ece4; --mute: #a99d94; --line: #352c2a; --soft: #221d1b; --card: #1d1816; --acc: #ff8a5c; --acc-soft: #3a2219; --good: #4ac08c; --bad: #ff6b5e; --T: #f3ece4; --S: #7cb8ff; --D: #ff9a62; --kw: #efe6dc; --kbk: #1a1315; --kline: #000000; --kon: #5a3a2a; --kontext: #ffb08a; --klh: #27406a; color-scheme: dark; background: var(--bg); }
+body.dark .staff svg, body.dark .score svg, body.dark svg.staffsvg { filter: invert(1) hue-rotate(180deg); }
 /* 只用浅色：素、白、线条 */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; background: var(--bg); color: var(--ink); }
@@ -1269,3 +1273,14 @@ body.land #phone #pbar { margin-left: calc(env(safe-area-inset-left) + 62px); }
 .seg2 a.on { background: var(--ink); color: var(--bg); font-weight: 600; }
 .cxview .kb .k.on.on-play, .cxmini .kb .k.on.on-play { fill: color-mix(in srgb, var(--h) 28%, #fff); stroke: var(--h); stroke-width: 2.4; filter: drop-shadow(0 0 7px var(--h)); transition: fill .04s, stroke .04s; }
 body.cxdark .cxview .kb .k.on.on-play, body.cxdark .cxmini .kb .k.on.on-play { fill: #fff; stroke: var(--ha); filter: drop-shadow(0 0 10px var(--ha)); }
+body.dark .score { background: var(--card); color: var(--ink); }
+body.dark .rprev { background: #231e1b; border-bottom-color: #8e8a80; }
+body.dark .rprev i.fT { background: #d8cfc6; }
+body.dark .pageend { color: var(--mute); }
+body.dark .cxhold.go small { color: inherit; opacity: .7; }
+
+body.dark #rotbtn { background: var(--card); border-color: var(--line); color: var(--ink); }
+body.dark .cxhold { background: transparent; }
+body.dark .holdmenu, body.dark .cxnb .nb { background: var(--card); }
+body.dark .thumbs img, body.dark .myscore img, body.dark .sharecard img { background: #fff; }
+body.dark .lk.w { background: #efe6dc; border-color: #2a2420; }

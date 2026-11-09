@@ -77,18 +77,19 @@ const Roll = (() => {
     if (cur.GW > cur.W) { const t = scrollTarget(); cur.sx += Math.abs(t - cur.sx) < 0.5 ? t - cur.sx : (t - cur.sx) * 0.12; }
     const { g, W, H, hitY, ppb, geo, beat, chords, opt } = cur;
     g.clearRect(0, 0, W, H);
-    g.fillStyle = '#fbfbfa'; g.fillRect(0, 0, W, hitY);
+    const DK = document.body.classList.contains('dark'), INK = DK ? '255,245,235' : '0,0,0';
+    g.fillStyle = DK ? '#181412' : '#fbfbfa'; g.fillRect(0, 0, W, hitY);
     // 竖直的键道（黑键位置浅灰）
     g.save(); g.translate(-cur.sx, 0);
-    for (const [m, p] of Object.entries(geo.pos)) if (p.black) { g.fillStyle = 'rgba(0,0,0,0.035)'; g.fillRect(p.x, 0, p.w, hitY); }
+    for (const [m, p] of Object.entries(geo.pos)) if (p.black) { g.fillStyle = 'rgba(' + INK + ',0.035)'; g.fillRect(p.x, 0, p.w, hitY); }
     g.restore();
     const yOf = t => hitY - (t - beat) * ppb;
     // 小节线 + 和弦标签
     const beats = opt.beats || 4;
     for (let b = Math.ceil(beat / beats) * beats; yOf(b) > -20; b += beats) {
       const y = yOf(b); if (y > hitY) continue;
-      g.strokeStyle = 'rgba(0,0,0,0.12)'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke();
-      if (opt.barNo) { g.fillStyle = 'rgba(0,0,0,0.35)'; g.font = '10px -apple-system, sans-serif'; g.fillText(String(opt.barNo(b)), 3, y - 3); }
+      g.strokeStyle = 'rgba(' + INK + ',0.12)'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke();
+      if (opt.barNo) { g.fillStyle = 'rgba(' + INK + ',0.45)'; g.font = '10px -apple-system, sans-serif'; g.fillText(String(opt.barNo(b)), 3, y - 3); }
     }
     chords.forEach(c => {
       const y0 = yOf(c.t), y1 = yOf(c.t + c.d); if (y1 > hitY || y0 < -40) return;
@@ -108,7 +109,7 @@ const Roll = (() => {
     });
     g.restore();
     // 判定线
-    g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, hitY - 1, W, 2);
+    g.fillStyle = 'rgba(' + INK + ',0.6)'; g.fillRect(0, hitY - 1, W, 2);
     // 键盘：正在响的键按颜色亮
     const on = {};
     opt.events.forEach(e => { if (beat >= e.t - 1e-3 && beat < e.t + e.d) on[e.midi] = { col: COL[funcAt(chords, e.t)] || COL.N, hand: e.hand }; });
@@ -117,17 +118,17 @@ const Roll = (() => {
     g.save(); g.translate(-cur.sx, 0);
     for (const [m, p] of Object.entries(geo.pos)) if (!p.black) {
       const o = on[m], t = cur.tapped.has(+m);
-      g.fillStyle = o ? rgba(o.col, o.wait ? 0.45 : 0.85) : t ? '#e9e9e9' : '#fff'; g.fillRect(p.x, hitY + 1, p.w - 1, kh - 1);
-      g.strokeStyle = '#cfcfcf'; g.strokeRect(p.x + 0.5, hitY + 1.5, p.w - 1, kh - 2);
+      g.fillStyle = o ? rgba(o.col, o.wait ? 0.45 : 0.85) : t ? (DK ? '#b9b0a6' : '#e9e9e9') : (DK ? '#efe6dc' : '#fff'); g.fillRect(p.x, hitY + 1, p.w - 1, kh - 1);
+      g.strokeStyle = DK ? '#2a2420' : '#cfcfcf'; g.strokeRect(p.x + 0.5, hitY + 1.5, p.w - 1, kh - 2);
       if (opt.real) { const nm = ['C', '', 'D', '', 'E', 'F', '', 'G', '', 'A', '', 'B'][+m % 12] + (+m % 12 === 0 ? Math.floor(+m / 12) - 1 : ''); g.fillStyle = 'rgba(0,0,0,0.38)'; g.font = '12px -apple-system, sans-serif'; g.fillText(nm, p.x + p.w / 2 - g.measureText(nm).width / 2, hitY + kh - 8); }
-      else if (+m % 12 === 0) { g.fillStyle = 'rgba(0,0,0,0.4)'; g.font = '9px -apple-system, sans-serif'; g.fillText('C' + (Math.floor(+m / 12) - 1), p.x + 2, hitY + kh - 4); }
+      else if (+m % 12 === 0) { g.fillStyle = DK ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.4)'; g.font = '9px -apple-system, sans-serif'; g.fillText('C' + (Math.floor(+m / 12) - 1), p.x + 2, hitY + kh - 4); }
     }
     for (const [m, p] of Object.entries(geo.pos)) if (p.black) {
       const o = on[m], t = cur.tapped.has(+m);
       g.fillStyle = o ? rgba(o.col, 1) : t ? '#555' : '#1b1b1b'; roundRect(g, p.x, hitY + 1, p.w, kh * (opt.real ? 0.63 : 0.62), 2); g.fill();
     }
     g.restore();
-    if (cur.waiting) { g.fillStyle = 'rgba(0,0,0,0.55)'; g.font = '600 13px -apple-system, sans-serif'; const t = '等你弹：' + (cur.waitLabel || ''); g.fillText(t, 8, hitY - 10); }
+    if (cur.waiting) { g.fillStyle = 'rgba(' + INK + ',0.7)'; g.font = '600 13px -apple-system, sans-serif'; const t = '等你弹：' + (cur.waitLabel || ''); g.fillText(t, 8, hitY - 10); }
   }
   function roundRect(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
   // mode: 'play'（跟着声音落下）| 'wait'（每个和弦等你弹对）
