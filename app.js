@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 87; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 88; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -714,7 +714,9 @@
     const c = T.build(CX.root, CX.q, Math.min(CX.inv, T.Q[CX.q].ints.length - 1));
     const pat = CX_PATS().find(p => p.id === CX.pat) || PATTERNS[4][0], beats = pat.id === 'waltz' ? 3 : 4, spb = 60 / 84;
     stopAll(); A.init();
-    const evs = patEvents(c.sym, pat);
+    // 按当前转位弹：最低的音就是这个转位的低音，其余的音按显示的排法
+    const m = T.voicing(c, 48).map(n => n.midi), pick = { R: [m[0]], 3: [m[1]], 5: [m[2]], 8: [m[0] + 12], 10: [m[1] + 12], C: m, RC: [m[0] - 12].concat(m) };
+    const evs = pat.ev.map(([t, code, d]) => ({ t, d, keys: (pick[code] || [m[0]]).map(x => ({ midi: x })) }));
     for (let bar = 0; bar < 2; bar++) evs.forEach(e => {
       const t = (bar * beats + e.t) * spb + 0.03;
       A.chord(e.keys.map(k => k.midi), t, pat.id === 'block' ? 0.012 : 0.005, e.d * spb * 1.05);
