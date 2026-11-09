@@ -1305,3 +1305,11 @@ body.cxdark .cxdock { background: var(--hs2); }
 .cxdock .cxroot .rtrack { top: 21px; } .cxdock .cxroot .rt { top: 42px; }
 .cxdocksp { height: 78px; }
 body.land .cxdock { bottom: 0; left: calc(env(safe-area-inset-left) + 62px); }
+
+/* 和弦页整页的底色铺满左右（竖屏、横屏、预览框都一样）：渐变放在最外层，各块自己不再带底 */
+body.cxpage, body.cxpage #phone { background: linear-gradient(180deg, color-mix(in srgb, var(--hm) 32%, var(--bg)) 0, var(--bg) 640px) no-repeat, var(--bg); }
+body.cxpage.cxdark, body.cxpage.cxdark #phone { background: radial-gradient(130% 70% at 50% 0%, var(--hs0) 0%, var(--hs1) 55%, var(--hs2) 100%) no-repeat, var(--hs2); }
+body.cxpage .cxtop { background: none; }
+.cxsticky { background: color-mix(in srgb, var(--hm) 32%, var(--bg)); }
+body.cxdark .cxsticky { background: var(--hs0); }
+body.land .cxsticky { margin-right: calc(-1 * max(16px, env(safe-area-inset-right))); padding-right: max(16px, env(safe-area-inset-right)); }
