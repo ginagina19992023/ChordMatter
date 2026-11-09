@@ -1335,3 +1335,15 @@ body.dark .hbar i.q { background: var(--ha); color: #1a0f0a; }
 body.dark .klhead b { color: var(--ha); }
 body.dark .lk .dot.mv { background: var(--ha); color: #1a0f0a; }
 body.dark .lk .dot.st { background: color-mix(in srgb, var(--ha) 50%, var(--hs1, #2a2420)); color: #fff; }
+
+/* 和弦格子：折行（一行两小节，竖着往下排）或横滑（一排，左右滑）；永远不撑破整页 */
+.gmode { display: inline-flex; margin: 4px 0 8px; border: 1px solid var(--line); border-radius: 999px; padding: 2px; }
+.gmode button { padding: 3px 14px; border-radius: 999px; font-size: 13px; color: var(--mute); }
+.gmode button.on { background: var(--ink); color: var(--bg); font-weight: 600; }
+#grid { max-width: 100%; }
+.cell svg.cshape { max-width: 100%; height: auto; }
+#grid[data-mode=wrap] .bars { grid-template-columns: repeat(2, 1fr); }
+body.land #grid[data-mode=wrap] .bars { grid-template-columns: repeat(4, 1fr); }
+#grid[data-mode=scroll] .bars { display: flex; overflow-x: auto; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+#grid[data-mode=scroll] .bars::-webkit-scrollbar { display: none; }
+#grid[data-mode=scroll] .bar { flex: 0 0 172px; scroll-snap-align: start; }

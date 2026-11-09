@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 108; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 109; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -1582,7 +1582,7 @@
       <div class="chips scroll"><button class="chip${v === 'sheet' ? ' on' : ''}" data-act="songview" data-v="sheet">谱 + 和弦</button><button class="chip${v === 'roll' ? ' on' : ''}" data-act="songview" data-v="roll">瀑布流</button><button class="chip${v === 'grid' ? ' on' : ''}" data-act="songview" data-v="grid">和弦格子</button>${hasFull(s.id) ? `<a class="chip linkchip" href="#cmp-${s.id}">原曲↔和弦 →</a>` : ''}<button class="pill info" data-act="info" data-k="how">ⓘ</button></div>
       ${secChips}
       ${route[2] ? `<p class="hitnote">从 <b>${D(route[3] || '')}</b> 和弦页过来：要找的是第 ${route[2].split('.').join('、')} 小节。</p>` : ''}
-      ${v === 'grid' ? `<div class="grid" id="grid">${songGrid(s, si)}</div>${(() => { const first = view && si >= 0 ? songFlat({ sections: s.sections.slice(0, si) }).length : 0; if (KL.song !== s.id || KL.sec !== si) { KL.song = s.id; KL.sec = si; KL.i = first; } return klPanel(s); })()}<p class="explain" id="explain">点任意和弦：听声音，并看它是什么意思。</p>` : v === 'roll' ? rollEntry('song', hasFull(s.id) ? '整首按原谱落下：简单只弹和弦，中等加左手低音，困难是原曲两只手' : '整首落下：简单只弹和弦，中等加左手低音') : songSheet(s, si)}`;
+      ${v === 'grid' ? `<div class="seg gmode" role="group" aria-label="格子排法">${[['wrap', '折行'], ['scroll', '横滑']].map(([k, t]) => `<button class="${(S.gridMode || 'wrap') === k ? 'on' : ''}" data-act="gridmode" data-v="${k}">${t}</button>`).join('')}</div><div class="grid" id="grid" data-mode="${S.gridMode || 'wrap'}">${songGrid(s, si)}</div>${(() => { const first = view && si >= 0 ? songFlat({ sections: s.sections.slice(0, si) }).length : 0; if (KL.song !== s.id || KL.sec !== si) { KL.song = s.id; KL.sec = si; KL.i = first; } return klPanel(s); })()}<p class="explain" id="explain">点任意和弦：听声音，并看它是什么意思。</p>` : v === 'roll' ? rollEntry('song', hasFull(s.id) ? '整首按原谱落下：简单只弹和弦，中等加左手低音，困难是原曲两只手' : '整首落下：简单只弹和弦，中等加左手低音') : songSheet(s, si)}`;
     if (tab === 'shape') body = `
       ${harmonyStrip(s)}
       <section class="logic"><h3>谱面逻辑 <small>· 点下划线的词看解释</small></h3>${songLogic(s).map(l => `<p>${l}</p>`).join('')}</section>
@@ -3896,6 +3896,7 @@
       case 'mytoggle': S.myOpen = !S.myOpen; save(); { const b = document.querySelector('.mybox'); if (b) b.hidden = !S.myOpen; } el.textContent = '我的原谱 ' + (S.myOpen ? '⌃' : '⌄'); break;
       case 'lvset': S.lv = S.lv || {}; S.lv[el.dataset.k] = el.dataset.v; save(); render(); break;
       case 'theme': S.theme = el.dataset.v; save(); cxGlobalDark(); vSet(); break;
+      case 'gridmode': { S.gridMode = el.dataset.v; save(); const g = document.getElementById('grid'); if (g) g.dataset.mode = S.gridMode; document.querySelectorAll('.gmode button').forEach(x => x.classList.toggle('on', x.dataset.v === S.gridMode)); break; }
       case 'sfilter': S.songFilter = el.dataset.v; save(); render(); break;
       case 'afilter': S.accFilter = el.dataset.v; save(); render(); break;
       case 'tagedit': e.preventDefault(); e.stopPropagation(); tagPop(el, el.dataset.id); break;
