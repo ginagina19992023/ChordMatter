@@ -1230,3 +1230,29 @@ body.land #phone #pbar { margin-left: calc(env(safe-area-inset-left) + 62px); }
 .refsong .rs:first-of-type { border-top: 0; }
 .refsong .rs b { font-size: 15px; margin: 0; }
 .refsong .rs span { display: block; font-size: 12px; color: var(--mute); }
+
+/* ---- 和弦页整合：右边竖滑条（性质）+ 下面横滑条（根音），一屏里选、一屏里看 ---- */
+.cxtop { position: relative; }
+.cxdeg { margin-right: 54px; position: relative; }
+.cxdeg .dr .dmove { left: 82px; }
+.cxrail { position: absolute; right: -56px; top: 0; width: 56px; height: 200px; touch-action: none; -webkit-user-select: none; user-select: none; z-index: 2; }
+.cxrail::before { content: ''; position: absolute; left: 27px; top: 10px; bottom: 10px; border-left: 2px solid var(--line); }
+.cxrail .qt { position: absolute; left: 23px; width: 9px; height: 9px; margin-top: -4px; border-radius: 50%; opacity: .85; }
+.cxrail .qt.on { opacity: 0; }
+.cxrail .qthumb { position: absolute; left: 1px; width: 54px; height: 28px; line-height: 28px; text-align: center; border-radius: 14px; background: var(--h); color: #fff; font-size: 12px; font-weight: 700; box-shadow: 0 2px 10px rgba(0,0,0,.22); transition: top .18s ease, background .5s; }
+.cxnbs { display: flex; align-items: center; gap: 6px; margin: 8px 0 2px; }
+.cxnbs > span { font-size: 11px; color: var(--mute); width: 58px; flex: none; line-height: 1.2; }
+.cxnbs .nb { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 12px; padding: 5px 6px; background: var(--card, #fff); text-align: left; }
+.cxnbs .nb b { display: block; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cxnbs .nb small { font-size: 10.5px; color: var(--mute); }
+.cxnbs .qd { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 4px; }
+.cxroot { position: relative; height: 62px; margin: 6px 0 0; touch-action: none; -webkit-user-select: none; user-select: none; }
+.cxroot .rhint { position: absolute; left: 0; top: 0; font-size: 11px; color: var(--mute); }
+.cxroot .rtrack { position: absolute; left: 19px; right: 19px; top: 30px; border-top: 2px solid var(--line); }
+.cxroot .rt, .cxroot .rthumb { position: absolute; font-style: normal; }
+.cxroot .rt { top: 46px; width: 28px; margin-left: -14px; text-align: center; font-size: 10.5px; color: var(--mute); line-height: 1; }
+.cxroot .rthumb { top: 12px; width: 38px; height: 38px; margin-left: -19px; line-height: 38px; text-align: center; border-radius: 19px; background: var(--h); color: #fff; font-size: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.22); transition: left .18s ease, background .5s; }
+@media (prefers-color-scheme: dark) { body.cxdark .cxrail .qthumb, body.cxdark .cxroot .rthumb { background: var(--ha); color: #1a0f0a; } }
+.cxtop { top: auto; }
+.cxnbs .nb { height: 54px; align-self: stretch; }
+.cxnbs .nb small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

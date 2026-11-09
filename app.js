@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 93; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 94; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -769,17 +769,13 @@
           const alt = c.quality.ints[i][1] - [0, 4, 7, 11][i], role = cxRole(c, i), dy = -alt * CX_DU;
           const sub = i === 0 ? '根音' : i === 3 ? '新加的音' + (alt ? ' · 比 7 低 ' + (-alt === 1 ? '半音' : -alt + ' 个半音') : '') : role === 'st' ? '不动' : (alt < 0 ? '往下挪 ' : '往上挪 ') + (Math.abs(alt) === 1 ? '半音' : Math.abs(alt) + ' 个半音');
           return `<div class="dr ${role}" data-i="${i}" data-dy="${dy}"><span class="dn">${sl}</span><span class="dstart"></span><svg class="dline" width="64" height="50" viewBox="0 0 64 50"><path d="${cxPath(dy)}"/></svg><span class="dmove" style="transform:translateY(${dy}px)"><span class="dc ${role}">${CX_LAB[CX.q][i]}</span><span class="dt"><b>${D(n.name)}</b><small>${sub}</small></span></span></div>`;
-        }).join('')}</div>
+        }).join('')}<div class="cxrail" id="cxrail" aria-label="性质滑条：上下拖动换和弦性质">${CX_Q.map((q, i) => `<i class="qt${q === CX.q ? ' on' : ''}" style="top:${(10 + i * 18).toFixed(0)}px;background:${QHUE[q][0]}"></i>`).join('')}<b class="qthumb" style="top:${(10 + CX_Q.indexOf(CX.q) * 18 - 14).toFixed(0)}px">${CX_ZH[CX.q]}</b></div></div>
         <div class="cxview">${kb(bigN, { lo: CX.hand === 'R' ? 60 : 48, hi: CX.hand === 'R' ? 83 : CX.hand === 'L' ? 71 : 83 })}</div>
+        <div class="cxnbs"><span>只动一点，就变成</span>${nbrs.map(x => `<button class="nb" data-act="cx" data-k="q" data-v="${x.q}"><i class="qd" style="background:${QHUE[x.q][0]}"></i><b>${D(CX.root + x.q)}</b><small>${x.note}</small></button>`).join('')}</div>
+        <div class="cxroot" id="cxroot" aria-label="根音滑条：左右拖动换根音"><span class="rhint">左右拖动，换根音</span><div class="rtrack"></div>${ROOT_MAJ.map((r, i) => `<i class="rt" style="left:calc(19px + (100% - 38px) * ${(i / 11).toFixed(4)})">${D(r)}</i>`).join('')}<b class="rthumb" style="left:calc(19px + (100% - 38px) * ${(ROOT_MAJ.indexOf(CX.root) / 11).toFixed(4)})">${D(CX.root)}</b></div>
         <p class="cxline">${CX.hand !== 'R' ? '<span class="lhc">左手 ' + fgL.join('-') + '</span> ' : ''}${CX.hand !== 'L' ? '右手 ' + fgR.join('-') : ''} · ${c.quality.f}</p>
         <details class="cxstaff"><summary>看谱</summary>${Staff.html({ bars: [[c.sym]], numerals: false, perRow: 1, minBar: 60, exact: true, notes: showN.map(n => ({ name: n.name, midi: n.midi, lh: n.lh ? 1 : 0 })) })}</details>
       </section>
-      <div class="cxrow"><p><b>① 根音</b> 和弦从哪个音开始叠</p>
-      <div class="chips grid6">${ROOT_MAJ.map(r => `<button class="chip${r === CX.root ? ' on' : ''}" data-act="cx" data-k="root" data-v="${r}">${D(r)}</button>`).join('')}</div></div>
-      <div class="cxrow"><p><b>② 性质</b> 听起来是什么颜色 · 小字是和弦名里的写法</p>
-      <div class="chips grid5">${qlist.map(q => `<button class="chip q${q === CX.q ? ' on' : ''}" data-act="cx" data-k="q" data-v="${q}"><i class="qd" style="background:${QHUE[q][0]}"></i><b>${QINFO[q][0]}</b><small>${q === '' ? '不写' : D(q)}</small></button>`).join('')}</div></div>
-      <div class="cxrow"><p><b>只动一点，就变成</b> 离 ${D(c.sym)} 最近的三个</p>
-      <div class="cxnb">${nbrs.map(x => `<button class="nb" data-act="cx" data-k="q" data-v="${x.q}"><i class="qd" style="background:${QHUE[x.q][0]}"></i><b>${D(CX.root + x.q)}</b><small>${x.note}</small></button>`).join('')}</div></div>
       <div class="cxrow"><p><b>③ 手</b> 看哪只手的指法 · 转位在右上角「↻」</p>
       <div class="chips"><button class="chip${CX.hand === 'R' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="R">右手</button><button class="chip${CX.hand === 'L' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="L">左手</button><button class="chip${CX.hand === 'B' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="B">双手</button></div></div>
       <p class="explain"><b>${D(c.sym)}</b>：以 ${D(c.root.name)} 为根音的${c.quality.zh}，${qi[2]}，听起来${qi[1]}。${invi ? `${INV[invi][0]}：最下面弹 ${D(bottom.name)}（${INV[invi][1]}），所以写成 ${D(c.sym)}，斜线后面就是最低音。` : '原位：根音 ' + D(c.root.name) + ' 在最下面。'}键盘上的数字是手指（1 = 拇指，5 = 小指）${CX.hand === 'B' ? '，蓝色是左手（低八度），橙色是右手' : CX.hand === 'L' ? '，左手在低八度' : ''}。<a href="#know-k0">看不懂？</a></p>
@@ -839,6 +835,30 @@
       return `<div class="cbt cxcard" style="${hueVars(h)}"><b>${D(x)}</b><small>${a ? degLabel(x, key) : ''}</small>${kb(notes, { lo: 60, hi: 71 })}<em>${prev ? '留 ' + shared + ' · 动 ' + (p.notes.length - shared) : '起点'}</em></div>`;
     }).join('')}</div><p class="fine cblegend"><i class="lg rt"></i>没动 <i class="lg mv"></i>新按（和弦的色彩）</p>`;
   }
+  // 两条滑条：右边竖的换性质，下面横的换根音；拖到哪一格就换到哪，页面立刻跟着变
+  (function () {
+    let D2 = null;
+    const idx = (e, el, vertical) => {
+      const r = el.getBoundingClientRect();
+      if (vertical) return Math.max(0, Math.min(CX_Q.length - 1, Math.round((e.clientY - r.top - 10) / 18)));
+      const tr = el.querySelector('.rtrack').getBoundingClientRect();
+      return Math.max(0, Math.min(11, Math.round((e.clientX - tr.left) / tr.width * 11)));
+    };
+    const apply = (e) => {
+      const el = document.getElementById(D2.vertical ? 'cxrail' : 'cxroot'); if (!el) return;
+      const i = idx(e, el, D2.vertical);
+      if (D2.vertical) { const q = CX_Q[i]; if (q !== CX.q) { CX.q = q; CX.inv = Math.min(CX.inv, T.Q[q].ints.length - 1); vChords(); if (navigator.vibrate) navigator.vibrate(4); } }
+      else { const r = ROOT_MAJ[i]; if (r !== CX.root) { CX.root = r; vChords(); if (navigator.vibrate) navigator.vibrate(4); } }
+    };
+    document.addEventListener('pointerdown', e => {
+      const el = e.target.closest && e.target.closest('#cxrail, #cxroot'); if (!el || route[0] !== 'chords') return;
+      e.preventDefault(); try { document.documentElement.setPointerCapture(e.pointerId); } catch (err) {}
+      D2 = { vertical: el.id === 'cxrail' }; apply(e);
+    }, true);
+    document.addEventListener('pointermove', e => { if (D2) apply(e); }, true);
+    const end = () => { if (!D2) return; D2 = null; try { playChord(T.build(CX.root, CX.q, Math.min(CX.inv, T.Q[CX.q].ints.length - 1)).sym); } catch (err) {} };
+    document.addEventListener('pointerup', end, true); document.addEventListener('pointercancel', () => { D2 = null; }, true);
+  })();
   // 按住往下拖选：转位 / 弹法（点一下 = 直接执行）
   (function () {
     let H = null;
