@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 116; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 117; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -791,7 +791,7 @@
         ['曲子里', `${refSongHtml(c)}<h3>在曲子里找到它</h3>${chordFinds(c)}<a class="link" href="#browse-${encodeURIComponent(c.root.name + c.q)}"><small>浏览</small><b>曲库里所有和弦 · 有的和没有的</b><span>→</span></a><a class="link" href="#combo"><small>连起来记</small><b>组合和弦：一串一串记</b><span>→</span></a>`],
         ['练', `${arp.white && T.Q[CX.q].ints.length === 3 && !CX.q.startsWith('sus') ? `<a class="link" href="#arp-${CX.root + CX.q}"><small>练这个和弦</small><b>${D(CX.root + CX.q)} 琶音 · 带指法和收音</b><span>→</span></a>` : ''}<a class="link" href="#combo"><small>连起来记</small><b>组合和弦：一串一串记</b><span>→</span></a>`],
       ])}
-      <div class="cxdock" id="cxdock"><div class="cxroot" id="cxroot" aria-label="根音滑条：左右拖动换根音"><div class="rtrack"></div>${ROOT_MAJ.map((r, i) => `<i class="rt" style="left:calc(19px + (100% - 38px) * ${(i / 11).toFixed(4)})">${D(r)}</i>`).join('')}<b class="rthumb" style="left:calc(19px + (100% - 38px) * ${(ROOT_MAJ.indexOf(CX.root) / 11).toFixed(4)})">${D(CX.root)}</b></div></div><div class="cxdocksp"></div>`;
+      <div class="cxdock" id="cxdock"><div class="cxroot" id="cxroot" aria-label="根音滑条：左右拖动换根音"><div class="rtrack"></div>${ROOT_MAJ.map((r, i) => `<i class="rt${r === CX.root ? ' cur' : ''}" style="left:calc(19px + (100% - 38px) * ${(i / 11).toFixed(4)})">${D(r)}</i>`).join('')}<b class="rthumb" style="left:calc(19px + (100% - 38px) * ${(ROOT_MAJ.indexOf(CX.root) / 11).toFixed(4)})">${D(CX.root)}</b></div></div><div class="cxdocksp"></div>`;
     { const nv = document.querySelector('nav'); document.documentElement.style.setProperty('--navh', (nv ? nv.offsetHeight : 64) + 'px'); }
     pagerInit();
     // 度数线：从原来的位置，慢慢滑到升/降之后的位置（线是一条弧，圆圈跟着走）
@@ -848,6 +848,7 @@
       const rad = a * Math.PI / 180;
       th.style.transition = 'none'; th.style.left = (140 + DIAL_R * Math.sin(rad) - 20).toFixed(1) + 'px'; th.style.top = (140 - DIAL_R * Math.cos(rad) - 20).toFixed(1) + 'px';
       const r = FIFTHS[idx];
+      el.querySelectorAll('.cr-b').forEach((x, k) => x.classList.toggle('near', k === idx));
       if (r !== CX.root) {
         CX.root = r; th.textContent = D(r);
         const nm = document.getElementById('dialname'); if (nm) nm.innerHTML = D(r);
@@ -858,11 +859,11 @@
     document.addEventListener('pointerdown', e => {
       const el = e.target.closest && e.target.closest('#dial'); if (!el || route[0] !== 'chords' || route[1]) return;
       e.preventDefault(); try { document.documentElement.setPointerCapture(e.pointerId); } catch (err) {}
-      D3 = { raf: 0 }; apply(e);
+      D3 = { raf: 0 }; document.body.classList.add('drag-dial'); apply(e);
     }, true);
     document.addEventListener('pointermove', e => { if (D3) apply(e); }, true);
     const end = () => {
-      if (!D3) return; D3 = null;
+      if (!D3) return; D3 = null; document.body.classList.remove('drag-dial'); document.querySelectorAll('#dial .cr-b.near').forEach(x => x.classList.remove('near'));
       const th = document.getElementById('dthumb'); if (th) { const [x, y] = dialPos(Math.max(0, FIFTHS.indexOf(CX.root))); th.style.transition = 'left .2s ease, top .2s ease'; th.style.left = x.toFixed(1) + 'px'; th.style.top = y.toFixed(1) + 'px'; }
       const g = document.getElementById('libgrid'); if (g) g.innerHTML = libCardsHtml();
       try { playChord(CX.root); } catch (err) {}
@@ -898,11 +899,11 @@
     document.addEventListener('pointerdown', e => {
       const el = e.target.closest && e.target.closest('#cxrail, #cxroot'); if (!el || route[0] !== 'chords') return;
       e.preventDefault(); try { document.documentElement.setPointerCapture(e.pointerId); } catch (err) {}
-      D2 = { vertical: el.id === 'cxrail' }; apply(e);
+      D2 = { vertical: el.id === 'cxrail' }; document.body.classList.add(D2.vertical ? 'drag-rail' : 'drag-root'); apply(e);
     }, true);
     document.addEventListener('pointermove', e => { if (D2) apply(e); }, true);
-    const end = () => { if (!D2) return; D2 = null; try { playChord(T.build(CX.root, CX.q, Math.min(CX.inv, T.Q[CX.q].ints.length - 1)).sym); } catch (err) {} };
-    document.addEventListener('pointerup', end, true); document.addEventListener('pointercancel', () => { D2 = null; }, true);
+    const end = () => { if (!D2) return; D2 = null; document.body.classList.remove('drag-rail', 'drag-root'); try { playChord(T.build(CX.root, CX.q, Math.min(CX.inv, T.Q[CX.q].ints.length - 1)).sym); } catch (err) {} };
+    document.addEventListener('pointerup', end, true); document.addEventListener('pointercancel', () => { D2 = null; document.body.classList.remove('drag-rail', 'drag-root'); }, true);
   })();
   // ---- 底部每个标签都记住「上次停在哪一页、滚到哪里」：切到别的标签再点回来，回到原处；已在这个标签里再点一下，回到这个标签的首页 ----
   const TAB_OF = { today: 'today', pk: 'today', path: 'path', unit: 'path', sym: 'path', inv: 'path', logic: 'path', know: 'path', sight: 'path', chords: 'chords', combo: 'chords', browse: 'chords', songs: 'songs', song: 'songs', acc: 'songs', sing: 'songs', score: 'songs', scan: 'songs', cmp: 'songs', edit: 'songs', set: 'set', me: 'set', cards: 'set' };

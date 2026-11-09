@@ -1386,3 +1386,20 @@ body.dark .fifths .dthumb { box-shadow: 0 3px 14px rgba(0,0,0,.6); }
 /* 名字栏高度固定：字大字小（长和弦名会自动缩小）都不改变这一条的高度 */
 .cxname b { display: flex; align-items: center; height: 64px; line-height: 1; white-space: nowrap; }
 .cxsticky.stuck .cxname b, .cxsticky.stuck .cxname b.long { height: 34px; }
+
+/* 手按在滑条 / 圆盘上：整条放大一点，按到的那一格更大、带光晕 */
+.cxrail, .cxroot, .cxrail .qthumb, .cxroot .rthumb, .fifths .dthumb, .fifths .cr-b { transition: transform .12s ease, box-shadow .12s ease; }
+.cxrail .qthumb { transform-origin: 50% 50%; } .cxroot .rthumb { transform-origin: 50% 50%; }
+body.drag-rail .cxrail .qthumb { transform: scale(1.14); box-shadow: 0 0 30px 8px color-mix(in srgb, var(--h) 42%, transparent), 0 0 12px 2px color-mix(in srgb, var(--h) 70%, transparent); }
+body.drag-rail .cxrail::before { border-left-width: 5px; border-left-color: color-mix(in srgb, var(--h) 45%, var(--line)); }
+body.drag-rail .cxrail .qt { transform: scale(1.35); }
+body.drag-root .cxroot .rthumb { transform: scale(1.3); box-shadow: 0 0 30px 8px color-mix(in srgb, var(--h) 42%, transparent), 0 0 12px 2px color-mix(in srgb, var(--h) 70%, transparent); }
+body.drag-root .cxroot .rtrack { border-top-width: 5px; border-top-color: color-mix(in srgb, var(--h) 45%, var(--line)); }
+body.drag-root .cxroot .rt.cur { transform: scale(1.5); color: var(--ink); font-weight: 700; }
+body.drag-root .cxroot { transform: scaleY(1.04); }
+body.drag-dial .fifths .dthumb { transform: scale(1.3); box-shadow: 0 0 30px 8px color-mix(in srgb, var(--ink) 30%, transparent), 0 0 12px 2px color-mix(in srgb, var(--ink) 45%, transparent); }
+body.drag-dial .fifths .cr-b.near { transform: scale(1.35); border-color: var(--ink); box-shadow: 0 0 30px 8px color-mix(in srgb, var(--ink) 30%, transparent), 0 0 12px 2px color-mix(in srgb, var(--ink) 45%, transparent); }
+body.drag-dial .fifths::before { border-color: color-mix(in srgb, var(--ink) 40%, var(--line)); border-style: solid; }
+body.dark.drag-rail .cxrail .qthumb, body.dark.drag-root .cxroot .rthumb { box-shadow: 0 0 30px 8px color-mix(in srgb, var(--ha) 50%, transparent), 0 0 12px 2px color-mix(in srgb, var(--ha) 75%, transparent); }
+body.dark.drag-rail .cxrail::before { border-left-color: color-mix(in srgb, var(--ha) 50%, var(--line)); }
+body.dark.drag-root .cxroot .rtrack { border-top-color: color-mix(in srgb, var(--ha) 50%, var(--line)); }
