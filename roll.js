@@ -55,7 +55,7 @@ const Roll = (() => {
     cv.onpointerdown = e => {
       const m = keyAt(e); if (m == null) return;
       e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (er) {}
-      down.set(e.pointerId, m); cur.tapped.add(m); draw();
+      down.set(e.pointerId, m); cur.tapped.add(m); (cur.flashT = cur.flashT || {})[m] = performance.now(); draw();
       if (opt.onKey) opt.onKey(m);
     };
     const up = e => { const m = down.get(e.pointerId); if (m == null) return; down.delete(e.pointerId); if (![...down.values()].includes(m)) cur.tapped.delete(m); draw(); };
@@ -108,6 +108,8 @@ const Roll = (() => {
       g.fillStyle = rgba(col, a); roundRect(g, x, top, w, Math.max(3, bot - top), Math.min(5, w / 2)); g.fill();
     });
     g.restore();
+    // 手指按过的键：整条键道亮一下（告诉你「按这条道上任何位置都算」）
+    if (opt.real) { g.save(); g.translate(-cur.sx, 0); const nowT = performance.now(), hot = new Set(cur.tapped); Object.keys(cur.flashT || {}).forEach(k => { if (nowT - cur.flashT[k] < 450) hot.add(+k); }); hot.forEach(m => { const p = geo.pos[m]; if (!p) return; const gr = g.createLinearGradient(0, 0, 0, hitY); gr.addColorStop(0, 'rgba(' + (DK ? '255,200,140' : '232,84,30') + ',0)'); gr.addColorStop(1, 'rgba(' + (DK ? '255,200,140' : '232,84,30') + ',0.28)'); g.fillStyle = gr; g.fillRect(p.x, 0, p.w, hitY); }); g.restore(); }
     // 判定线
     g.fillStyle = 'rgba(' + INK + ',0.6)'; g.fillRect(0, hitY - 1, W, 2);
     // 键盘：正在响的键按颜色亮

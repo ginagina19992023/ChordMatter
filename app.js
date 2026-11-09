@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 122; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 123; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -2238,13 +2238,22 @@
     const t = DR.targets[DR.i]; if (!t) return;
     const pc = midi % 12;
     if (t.kind === 'note') return drillJudge(pc === t.pcs[0], PCN[pc]);
-    DR.tap.has(pc) ? DR.tap.delete(pc) : DR.tap.add(pc);
-    document.querySelectorAll('#tapkb .k').forEach(k => k.classList.toggle('sel', DR.tap.has(+k.dataset.m % 12)));
-    if (DR.tap.size >= t.pcs.length) {
-      const ok = t.pcs.every(p => DR.tap.has(p)) && DR.tap.size === t.pcs.length;
-      DR.tap.clear();
-      setTimeout(() => document.querySelectorAll('#tapkb .k').forEach(k => k.classList.remove('sel')), ok ? 200 : 400);
-      drillJudge(ok);
+    // 和弦：不再「按两次就取消」，也不要求同时按。4 秒内按过的音都算，目标和弦的音凑齐就通过；
+    // 多按了不相干的音只记一次失误，不清零、不让你重来（手指蹭到邻键不算错得离谱）
+    const now = Date.now(); DR.tapT = DR.tapT || new Map(); if (DR.tapFor !== DR.i) { DR.tapT.clear(); DR.tapFor = DR.i; DR.wrong = false; }
+    DR.tapT.set(pc, now);
+    for (const [p, tm] of DR.tapT) if (now - tm > 4000) DR.tapT.delete(p);
+    const got = t.pcs.filter(p => DR.tapT.has(p)).length;
+    document.querySelectorAll('#tapkb .k').forEach(k => k.classList.toggle('sel', DR.tapT.has(+k.dataset.m % 12)));
+    if (!t.pcs.includes(pc) && !DR.wrong) { DR.wrong = true; DR.miss++; DR.missAt[DR.i] = (DR.missAt[DR.i] || 0) + 1; DR.hooks.onMiss && DR.hooks.onMiss(DR.i, PCN[pc], DR.missAt[DR.i]); }
+    if (got >= t.pcs.length) {
+      DR.tapT.clear(); DR.wrong = false;
+      setTimeout(() => document.querySelectorAll('#tapkb .k').forEach(k => k.classList.remove('sel')), 200);
+      // 通过：已经算过一次失误就不再重复记；直接前进
+      const i = DR.i; DR.i++; DR.tapFor = null;
+      DR.hooks.onHit && DR.hooks.onHit(i);
+      if (DR.i >= DR.targets.length) { const r = { miss: DR.miss, total: DR.targets.length }; drillStop(); DR.hooks.onDone(r); return; }
+      DR.hooks.onAdvance && DR.hooks.onAdvance(DR.i);
     }
   }
   const placeChips = () => ''; // 改到页眉右上角统一切换
@@ -2451,7 +2460,7 @@
     let evs = data.events;
     if (kb) { const seen = new Set(); evs = data.events.map(e => { let m = e.midi; while (m < KB_LO) m += 12; while (m > KB_HI) m -= 12; return Object.assign({}, e, { midi: m }); }).filter(e => { const k = e.t.toFixed(3) + ':' + e.midi; if (seen.has(k)) return false; seen.add(k); return true; }); }
     Roll.mount(el, { events: evs, real: kb, rot, lo: kb ? KB_LO : undefined, hi: kb ? KB_HI : undefined, keyFrac: kb ? 0.55 : 0, keyW: kb && RL.kbReal ? KEY_REAL : 0, chords: data.chords, beats: data.beats, bpm, barNo: data.barNo, lead: 2, height: id === 'fsroll' && RL.fsH ? RL.fsH : isLand() ? Math.max(220, (document.getElementById('phone') && getComputedStyle(document.getElementById('phone')).overflowY === 'auto' ? document.getElementById('phone').clientHeight : innerHeight) - 80) : Math.min(420, Math.round(innerHeight * 0.5)), onKey: m => { A.init(); if (RL.mode === 'wait' && DR) drillTapKey(m); else A.note(m, 0, 0.8, 0.6); } });
-    $('#rlctl').innerHTML = kb ? `<p class="fine">${RL.mode === 'wait' ? '彩条停住时，在下面的键盘上把这个和弦按出来（几根手指一起按，或一个一个点都行）。' : '跟着彩条在下面的键盘上按。'}</p>` : RL.mode === 'wait' ? (place() === 'away' ? '<p class="fine">没钢琴模式：点画面里的键盘。</p>' : '<div class="row"><button class="ghost sm" data-act="dlisten">开始收音 · 弹给它听</button></div>') : '';
+    $('#rlctl').innerHTML = kb ? `<p class="fine">${RL.mode === 'wait' ? '彩条停住时，按出这个和弦的音。<b>整条彩条道都能按</b>（不用非得按在键盘那一小块上），按到的道会亮起来；几根手指一起按，或一个一个按都行，4 秒内凑齐就算对。' : '跟着彩条在下面的键盘上按。'}</p>` : RL.mode === 'wait' ? (place() === 'away' ? '<p class="fine">没钢琴模式：点画面里的键盘。</p>' : '<div class="row"><button class="ghost sm" data-act="dlisten">开始收音 · 弹给它听</button></div>') : '';
   }
   function rollGo() {
     const d = RL.data; if (!d) return;
@@ -4152,5 +4161,5 @@
   document.addEventListener('calpick', e => { calDetail(e.detail); });
   render();
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
-  window.__hexian = { T, GEN, S: () => S, A, SY: () => SY };
+  window.__hexian = { T, GEN, S: () => S, A, SY: () => SY, drill: { start: drillStart, tap: drillTapKey, state: () => DR } };
 })();
