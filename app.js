@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 83; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 84; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -492,6 +492,7 @@
     document.body.classList.toggle('focus', ['quiz', 'arp', 'mem', 'sing', 'acctest'].includes(r) || (['sym', 'inv', 'logic', 'sight'].includes(r) && route[1]));
     document.querySelectorAll('nav a').forEach(x => { if ((r === 'sing' || r === 'acctest') && x.dataset.r === 'acc') x.classList.add('on'); if (['know', 'sym', 'inv', 'logic', 'sight'].includes(r) && x.dataset.r === 'path') x.classList.add('on'); if ((r === 'score' || r === 'scan') && x.dataset.r === 'songs') x.classList.add('on'); });
     ({ today: vToday, path: vPath, unit: vUnit, chords: vChords, songs: vSongs, song: vSong, edit: vEdit, quiz: vQuiz, arp: vArp, mem: vMem, me: vMe, acc: vAcc, sing: vSing, acctest: vAccTest, know: vKnow, score: vScore, scan: vScan, pk: vPk, browse: vBrowse, along: vAlong, cmp: vCmp, combo: vCombo, sym: vSym, inv: vInv, cards: vCards, logic: vLogic, sight: vSight }[r] || vToday)();
+    if (!['chords', 'combo'].includes(r)) document.body.classList.remove('cxdark'); else if (r === 'combo') cxTheme(null);
     try { linkChords(view); linkTerms(view); } catch (e) {} // 立即给文字加下划线，不等谱面画完
     document.body.classList.toggle('nolab', S.lab === false);
     pbarPaint();
@@ -690,7 +691,18 @@
   // ---- 和弦库 ----
   const CX = { root: 'C', q: '', inv: 0, hand: 'R', pat: 'block', lastH: null };
   // 每种和弦一个固定的色彩：[深色, 浅色]（深色 = 挪了/新加的音，浅色 = 没动的音）
-  const QHUE = { '': ['#a35f00', '#f2c45c'], m: ['#2f6fdb', '#a9c6f3'], dim: ['#7a4fd0', '#cdb9f1'], aug: ['#0b7a72', '#9ad9d3'], '7': ['#d9480f', '#f5b08a'], maj7: ['#c2417a', '#f0b0cd'], m7: ['#4a5bd6', '#b0b8f3'], m7b5: ['#3f7a60', '#b0d2c0'], dim7: ['#c0283a', '#efaab2'], sus4: ['#5c7a00', '#d3e38f'] };
+  const QHUE = { '': ['#a35f00', '#f2c45c', '#5a3d0b', '#2e2008', '#17110a', '#ffc857'], m: ['#2f6fdb', '#a9c6f3', '#1c3560', '#141f38', '#0c1220', '#7cb8ff'], dim: ['#7a4fd0', '#cdb9f1', '#3d2466', '#22163d', '#130d22', '#c9a6ff'], aug: ['#0b7a72', '#9ad9d3', '#0f4a47', '#0e2a29', '#0a1717', '#5ee0d4'], '7': ['#d9480f', '#f5b08a', '#5c2410', '#2e170e', '#170d09', '#ff9a62'], maj7: ['#c2417a', '#f0b0cd', '#5a2140', '#2e1424', '#170b12', '#ff9cc8'], m7: ['#4a5bd6', '#b0b8f3', '#26306a', '#171c3d', '#0d1022', '#9aa8ff'], m7b5: ['#3f7a60', '#b0d2c0', '#1f4034', '#13261f', '#0b1511', '#8fd0aa'], dim7: ['#c0283a', '#efaab2', '#5a1f24', '#2a1215', '#170a0c', '#ff6b7c'], sus4: ['#5c7a00', '#d3e38f', '#3d4a0e', '#212809', '#121505', '#c6e45c'] };
+  const CX_ZH = { '': '大三', m: '小三', dim: '减三', aug: '增三', '7': '属七', maj7: '大七', m7: '小七', m7b5: '半减七', dim7: '减七', sus4: '挂四' };
+  const CX_Q = ['', 'm', 'dim', 'aug', '7', 'maj7', 'm7', 'm7b5', 'dim7', 'sus4'];
+  const cxHue = q => QHUE[q] || QHUE[''];
+  const hueVars = h => `--h:${h[0]};--hm:${h[1]};--hs0:${h[2]};--hs1:${h[3]};--hs2:${h[4]};--ha:${h[5]}`;
+  const darkMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : { matches: false };
+  // 和弦相关页面：深色跟着手机主题；整页的色彩跟着和弦走（body 上的变量会渐变）
+  function cxTheme(q) {
+    const b = document.body, h = q == null ? ['#555555', '#cccccc', '#26231f', '#1c1a17', '#141210', '#e8e0d4'] : cxHue(q);
+    b.classList.toggle('cxdark', !!darkMQ.matches && ['chords', 'combo'].includes(route[0]));
+    ['--h', '--hm', '--hs0', '--hs1', '--hs2', '--ha'].forEach((k, n) => b.style.setProperty(k, h[n]));
+  }
   const CX_PATS = () => [PATTERNS[4][0], PATTERNS[4][2], PATTERNS[4][3], PATTERNS[3][1], PATTERNS[4][1]];
   const CX_PAT_NAME = { block: '柱式', broken: '逐键', alberti: '阿尔贝蒂', waltz: '华尔兹', oom: '低音+和弦' };
   const CX_LAB = { '': ['1', '3', '5'], m: ['1', '♭3', '5'], dim: ['1', '♭3', '♭5'], aug: ['1', '3', '♯5'], '7': ['1', '3', '5', '♭7'], maj7: ['1', '3', '5', '7'], m7: ['1', '♭3', '5', '♭7'], m7b5: ['1', '♭3', '♭5', '♭7'], dim7: ['1', '♭3', '♭5', '♭♭7'], sus4: ['1', '4', '5'] };
@@ -712,6 +724,8 @@
     if (el) { el.classList.add('flash'); later(() => el.classList.remove('flash'), 300); }
   }
   function vChords() {
+    if (!route[1]) return vLib();
+    const oldK = {}; document.querySelectorAll('.cxview .kb .k').forEach(k => { oldK[k.dataset.m] = k.getAttribute('class'); });
     if (route[1]) { const r = decodeURIComponent(route[1]); if (ROOT_MAJ.includes(r)) CX.root = r; if (route[2] != null) CX.q = route[2] === '_' ? '' : route[2]; if (!T.Q[CX.q]) CX.q = ''; }
     const c = T.build(CX.root, CX.q, Math.min(CX.inv, T.Q[CX.q].ints.length - 1));
     const v = T.voicing(c), fg = T.blockFingers(c, CX.hand === 'L' ? 'L' : 'R');
@@ -729,12 +743,13 @@
       m7b5: ['半减七', '忧郁、悬着', '减三 + 小七度'], dim7: ['减七', '悬疑、戏剧化', '每两个音都隔小三度'], sus4: ['挂四', '悬而未决', '三音换成四音，等着落回大三'],
     };
     const INV = [['原位', '根音在最下面'], ['一转', '三音在最下面'], ['二转', '五音在最下面'], ['三转', '七音在最下面']];
+    cxTheme(CX.q);
     const qi = QINFO[CX.q], invi = Math.max(0, c.inv);
     const bigN = showN.map(n => Object.assign({}, n, { f: D(n.name) }));
     const curL = CX_LAB[CX.q];
     const nbrs = qlist.filter(q => q !== CX.q).map((q, k) => { const L = CX_LAB[q], add = L.filter(x => !curL.includes(x)), rem = curL.filter(x => !L.includes(x)); return { q, k, d: Math.max(add.length, rem.length) * 10 + add.length + rem.length, note: (rem.length ? rem.join(' ') + ' → ' : '') + (add.length ? (rem.length ? '' : '加 ') + add.join(' ') : '去掉 ' + rem.join(' ')) }; }).sort((x, y) => x.d - y.d || x.k - y.k).slice(0, 3);
     const bottom = v[0];
-    view.innerHTML = `<section class="cxtop" id="cxtop" style="--h:${(CX.lastH || QHUE[CX.q])[0]};--hm:${(CX.lastH || QHUE[CX.q])[1]}">
+    view.innerHTML = `<section class="cxtop" id="cxtop"><a class="cxback" href="#chords">← 和弦</a>
         <div class="cxhead"><div class="cxname"><b>${D(c.sym)}</b><span>${qi[0]}和弦${invi ? ' · ' + INV[invi][0] : ''} · ${qi[1]}</span></div>
           <button class="cxhold" data-hold="inv" aria-label="转位：按住往下拖可以选">↻ ${CX_INV[invi]}</button><button class="cxhold go" data-hold="pat" aria-label="弹奏：点一下弹，按住往下拖选弹法">弹 <small>${CX_PAT_NAME[CX.pat]}</small></button></div>
         <p class="cxhint">按住「↻」或「弹」往下拖，可以选转位 / 弹法</p>
@@ -765,12 +780,40 @@
         ['练', `${arp.white && T.Q[CX.q].ints.length === 3 && !CX.q.startsWith('sus') ? `<a class="link" href="#arp-${CX.root + CX.q}"><small>练这个和弦</small><b>${D(CX.root + CX.q)} 琶音 · 带指法和收音</b><span>→</span></a>` : ''}<a class="link" href="#combo"><small>连起来记</small><b>组合和弦：一串一串记</b><span>→</span></a>`],
       ])}`;
     pagerInit();
-    const nh = QHUE[CX.q], top = document.getElementById('cxtop');
-    if (top && CX.lastH && CX.lastH !== nh) requestAnimationFrame(() => requestAnimationFrame(() => { top.style.setProperty('--h', nh[0]); top.style.setProperty('--hm', nh[1]); }));
-    CX.lastH = nh;
+    const ks = [...document.querySelectorAll('.cxview .kb .k')];
+    if (Object.keys(oldK).length) {
+      ks.forEach(k => { const t = k.getAttribute('class'); k.dataset.t = t; k.setAttribute('class', oldK[k.dataset.m] || t.replace(/ (on|rt|st|mv)\b/g, '')); });
+      requestAnimationFrame(() => requestAnimationFrame(() => ks.forEach(k => k.setAttribute('class', k.dataset.t))));
+    }
   }
 
   document.addEventListener('toggle', e => { const d = e.target; if (d.matches && d.matches('details.cxstaff') && d.open) d.querySelectorAll('.staff').forEach(x => { try { Staff.draw(x); } catch (err) {} }); }, true);
+  // ---- 和弦库首页：五度圈选根音 + 这个根音的 10 种和弦 ----
+  const FIFTHS = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'Db', 'Ab', 'Eb', 'Bb', 'F'];
+  function vLib() {
+    cxTheme(null);
+    const R = 112, ring = FIFTHS.map((r, i) => { const a = i * 30 * Math.PI / 180, on = r === CX.root; return `<button class="cr-b${on ? ' on' : ''}" data-act="libroot" data-v="${r}" aria-label="根音 ${D(r)}" style="left:${(140 + R * Math.sin(a) - 20).toFixed(1)}px;top:${(140 - R * Math.cos(a) - 20).toFixed(1)}px">${D(r)}</button>`; }).join('');
+    const cards = CX_Q.map(q => {
+      const c = T.build(CX.root, q, 0), v = T.voicing(c), h = cxHue(q);
+      const notes = v.map(n => ({ midi: n.midi, name: n.name, cls: cxRole(c, n.deg) }));
+      return `<a class="libcard cxcard" href="#chords-${encodeURIComponent(CX.root)}-${q || '_'}" style="${hueVars(h)}"><div class="lh"><b>${D(CX.root + q)}</b><span>${CX_ZH[q]}</span></div><p>${CX_STORY[q]}</p>${kb(notes, { lo: 60, hi: 83 })}</a>`;
+    }).join('');
+    view.innerHTML = `<header class="top"><div><small>选一个根音，看它的 10 种颜色</small><h1>和弦</h1></div></header>
+      <div class="fifths"><div class="crc"><b>${D(CX.root)}</b><small>五度圈 · 顺时针每格升一个五度</small></div>${ring}</div>
+      <div class="libhd"><b>${D(CX.root)} 的 10 种和弦</b><small>点进去看怎么搭 →</small></div>
+      <div class="libgrid">${cards}</div>`;
+  }
+
+  // 组合和弦：每个和弦的小键盘，没动的音灰，新按的音用这个和弦的色彩
+  function cbTiles(ch, key) {
+    return `<div class="cbtiles">${ch.map((x, i) => {
+      const p = T.parseChord(x), v = T.voicing(p), prev = i ? T.parseChord(ch[i - 1]).notes.map(n => n.pc) : null, h = cxHue(p.q);
+      const shared = prev ? p.notes.filter(n => prev.includes(n.pc)).length : 0;
+      const notes = v.map(n => ({ midi: n.midi, name: n.name, cls: !prev || prev.includes(n.midi % 12) ? 'rt' : 'mv' }));
+      const a = T.analyze(x, key);
+      return `<div class="cbt cxcard" style="${hueVars(h)}"><b>${D(x)}</b><small>${a ? degLabel(x, key) : ''}</small>${kb(notes, { lo: 60, hi: 71 })}<em>${prev ? '留 ' + shared + ' · 动 ' + (p.notes.length - shared) : '起点'}</em></div>`;
+    }).join('')}</div><p class="fine cblegend"><i class="lg rt"></i>没动 <i class="lg mv"></i>新按（和弦的色彩）</p>`;
+  }
   // 按住往下拖选：转位 / 弹法（点一下 = 直接执行）
   (function () {
     let H = null;
@@ -785,18 +828,18 @@
     function mark() { H.m.querySelectorAll('.hmi').forEach((e, i) => e.classList.toggle('on', i === H.idx)); }
     document.addEventListener('pointerdown', e => {
       const b = e.target.closest && e.target.closest('[data-hold]'); if (!b || route[0] !== 'chords') return;
-      e.preventDefault(); H = { b, kind: b.dataset.hold, open: false, idx: 0 }; H.t = setTimeout(open, 260);
+      e.preventDefault(); try { document.documentElement.setPointerCapture(e.pointerId); } catch (err) {} H = { b, kind: b.dataset.hold, open: false, idx: 0 }; H.t = setTimeout(open, 260);
     }, true);
     document.addEventListener('pointermove', e => {
       if (!H || !H.open) return; const i = Math.max(0, Math.min(H.n - 1, Math.round((e.clientY - H.y0) / 38)));
-      if (i !== H.idx) { H.idx = i; mark(); if (navigator.vibrate) navigator.vibrate(5); }
+      if (i !== H.idx) { H.idx = i; mark(); if (navigator.vibrate) navigator.vibrate(5); if (H.kind === 'inv') { CX.inv = i; vChords(); H.b = document.querySelector('[data-hold=inv]') || H.b; } }
     }, true);
     const end = (e, cancel) => {
       if (!H) return; clearTimeout(H.t); const h = H; H = null;
       if (h.m) h.m.remove();
       if (cancel) return;
       if (h.open) {
-        if (h.kind === 'inv') { CX.inv = h.idx; vChords(); playChord(T.build(CX.root, CX.q, CX.inv).sym); }
+        if (h.kind === 'inv') { CX.inv = h.idx; playChord(T.build(CX.root, CX.q, CX.inv).sym); }
         else { CX.pat = CX_PATS()[h.idx].id; vChords(); cxPlay(document.querySelector('.cxhold.go')); }
       } else if (h.kind === 'inv') { CX.inv = (cur('inv') + 1) % T.Q[CX.q].ints.length; vChords(); playChord(T.build(CX.root, CX.q, CX.inv).sym); }
       else cxPlay(h.b);
@@ -984,7 +1027,7 @@
       ${keyChips(cb.minor)}
       <section class="cbtop"><div class="viewsw">${S.cbView === 'staff' ? perRowChips() : ''}<span class="seg"><button class="${S.cbView !== 'staff' ? 'on' : ''}" data-act="cbview" data-v="grid">格子</button><button class="${S.cbView === 'staff' ? 'on' : ''}" data-act="cbview" data-v="staff">谱</button></span></div>
         ${S.cbView === 'staff' ? `<div class="cbstaff">${Staff.html({ key, bars: ch.map(x => [x]), end: true, time: true, start: 1, perRow: S.perRow || 4 })}</div>` : `${progRow(key, ch)}
-        <div class="shaperow">${ch.map(x => `<span>${chordShape(x, key, 56, 60)}</span>`).join('')}</div>`}
+        ${cbTiles(ch, key)}`}
         <p class="fine">${cb.say}${cb.where ? ' · 你在 ' + cb.where + ' 里见过它。' : ''}</p></section>
       ${pager('combo', [
         ['变体', `<h3>抠掉一个，换成它的「字」</h3>        <p class="fine">选一个位置抠掉。它变成一个字（稳 / 走 / 紧）：<b>同一个字的和弦都能填进去</b>，每填一个就是一个新变体。点每一行听。</p>
@@ -3862,6 +3905,7 @@
       case 'qplay': qplay(Z.list[Z.i]); break;
       case 'ans': answer(el.dataset.v); break;
       case 'next': Z.i++; quizStep(); break;
+      case 'libroot': CX.root = el.dataset.v; vLib(); playChord(CX.root); break;
       case 'cx': CX[el.dataset.k] = el.dataset.k === 'inv' ? +el.dataset.v : el.dataset.v; if (el.dataset.k === 'q') CX.inv = 0; vChords(); if (el.dataset.k !== 'hand') playChord(T.build(CX.root, CX.q, CX.inv).sym); break;
       case 'ahand': ARP.hand = el.dataset.v; vArp(); break;
       case 'bpm': { const sym = route[1]; const st = S.arp[sym]; st.bpm = Math.max(40, Math.min(160, st.bpm + +el.dataset.v)); save(); $('#bpm').textContent = st.bpm; if (metro) startMetro(st.bpm); break; }
@@ -3910,6 +3954,7 @@
   });
 
   window.addEventListener('hashchange', render);
+  if (darkMQ.addEventListener) darkMQ.addEventListener('change', () => { if (['chords', 'combo'].includes(route[0])) render(); });
   document.addEventListener('pointerdown', e => { window.__lastClick = [e.clientX, e.clientY]; }, true);
   document.addEventListener('staffplay', e => { A.init(); const ms = e.detail || []; if (ms.length === 1) A.note(ms[0], 0, 1.4, 0.7); else A.chord(ms, 0, 0.02, 1.4); });
   document.addEventListener('calpick', e => { calDetail(e.detail); });

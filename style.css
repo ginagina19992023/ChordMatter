@@ -47,7 +47,7 @@ nav svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-wi
 
 /* ring + steps */
 .ring-wrap { position: relative; width: 148px; height: 148px; margin: 4px auto 26px; }
-.ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+.cring { width: 100%; height: 100%; transform: rotate(-90deg); }
 .ring circle { fill: none; stroke: var(--line); stroke-width: 1.2; }
 .ring circle.p { stroke: var(--acc); stroke-width: 2.4; stroke-linecap: round; transition: stroke-dashoffset .6s ease; }
 .ring-t { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -1133,3 +1133,57 @@ body.immersive #pbar { display: none; }
 .cxnb .nb { border: 1px solid var(--line); border-radius: 12px; padding: 8px 6px; text-align: center; background: #fff; }
 .cxnb .nb b { display: block; font-size: 18px; font-weight: 600; } .cxnb .nb small { font-size: 12px; color: var(--mute); }
 .cxnb .qd { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; }
+
+/* ---- 和弦页：整页色彩渐变 / 深色跟随手机主题 / 库首页 / 组合页 ---- */
+@property --hs0 { syntax: '<color>'; inherits: true; initial-value: #26231f; }
+@property --hs1 { syntax: '<color>'; inherits: true; initial-value: #1c1a17; }
+@property --hs2 { syntax: '<color>'; inherits: true; initial-value: #141210; }
+@property --ha { syntax: '<color>'; inherits: true; initial-value: #e8e0d4; }
+body { transition: --h .5s ease, --hm .5s ease, --hs0 .5s ease, --hs1 .5s ease, --hs2 .5s ease, --ha .5s ease; }
+.cxtop { transition: none; }
+.cxview .kb .k { transition: fill .45s ease, stroke .45s ease; }
+.cxcard .kb .k.on.rt { fill: #8e8a80; stroke: #8e8a80; }
+.cxcard .kb .k.on.st { fill: var(--hm); stroke: var(--hm); }
+.cxcard .kb .k.on.mv { fill: var(--h); stroke: var(--h); }
+.cxcard .kb .fn { display: none; }
+.cxback { display: inline-block; font-size: 13px; color: var(--mute); margin-bottom: 2px; }
+.fifths { position: relative; width: 280px; height: 280px; margin: 6px auto 0; }
+.fifths::before { content: ''; position: absolute; left: 34px; top: 34px; width: 212px; height: 212px; border: 1px dashed var(--line); border-radius: 50%; }
+.fifths .crc { position: absolute; left: 0; right: 0; top: 96px; text-align: center; }
+.fifths .crc b { display: block; font-size: 60px; line-height: 60px; font-weight: 700; letter-spacing: -0.03em; }
+.fifths .crc small { display: block; margin-top: 6px; font-size: 11px; color: var(--mute); }
+.fifths .cr-b { position: absolute; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--card, #fff); font-size: 14px; font-weight: 600; }
+.fifths .cr-b.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.libhd { display: flex; align-items: baseline; justify-content: space-between; margin: 10px 0 8px; }
+.libhd b { font-size: 15px; font-weight: 600; } .libhd small { font-size: 12px; color: var(--mute); }
+.libgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.libcard { display: block; border: 1px solid var(--line); border-top: 0; border-radius: 14px; padding: 10px 12px; background: var(--card, #fff); }
+.libcard .lh { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.libcard .lh b { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; }
+.libcard .lh span { font-size: 12px; font-weight: 600; border: 1px solid var(--line); border-radius: 10px; padding: 1px 8px; white-space: nowrap; }
+.libcard p { margin: 4px 0 8px; font-size: 12px; color: var(--mute); line-height: 1.4; }
+.cbtiles { display: flex; gap: 8px; margin-top: 10px; }
+.cbt { flex: 1; min-width: 0; }
+.cbt b { display: block; font-size: 20px; font-weight: 700; color: var(--h); letter-spacing: -0.01em; }
+.cbt small { display: block; font-size: 12px; color: var(--mute); margin-bottom: 4px; }
+.cbt em { display: block; margin-top: 4px; font-size: 11px; font-style: normal; color: var(--mute); }
+.cblegend .lg { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin: 0 4px 0 10px; vertical-align: -1px; }
+.cblegend .lg.rt { background: #8e8a80; } .cblegend .lg.mv { background: var(--h); }
+@media (prefers-color-scheme: dark) {
+  body.cxdark { --bg: var(--hs2); --ink: #f7efe8; --mute: #c7b2a9; --line: #3a2a2c; --soft: rgba(255,255,255,.06); --card: rgba(255,255,255,.06); --kw: #efe6dc; --kbk: #1a1315; --kline: #00000055; color-scheme: dark; }
+  body.cxdark .cxtop { background: radial-gradient(130% 70% at 50% 0%, var(--hs0) 0%, var(--hs1) 55%, var(--hs2) 100%); border-bottom-color: transparent; }
+  body.cxdark .chip { background: var(--card); }
+  body.cxdark .chip.on, body.cxdark .fifths .cr-b.on { background: var(--ha); color: #1a0f0a; border-color: var(--ha); }
+  body.cxdark .cxhold { background: transparent; border-color: var(--ha); color: var(--ha); }
+  body.cxdark .cxhold.go { background: var(--ha); color: #1a0f0a; }
+  body.cxdark .cxview .kb .k.on.mv, body.cxdark .cxcard .kb .k.on.mv { fill: var(--ha); stroke: var(--ha); filter: drop-shadow(0 0 5px var(--ha)); }
+  body.cxdark .cxview .kb .k.on.st, body.cxdark .cxcard .kb .k.on.st { fill: color-mix(in srgb, var(--ha) 50%, var(--hs1)); stroke: color-mix(in srgb, var(--ha) 50%, var(--hs1)); }
+  body.cxdark .dr .dc.mv { background: var(--ha); color: #1a0f0a; } body.cxdark .dr .dc.st { background: color-mix(in srgb, var(--ha) 50%, var(--hs1)); color: #fff; }
+  body.cxdark .cbt b { color: var(--ha); } body.cxdark .cblegend .lg.mv { background: var(--ha); }
+  body.cxdark .explain, body.cxdark .cxnb .nb, body.cxdark .holdmenu { background: var(--card); color: var(--ink); }
+  body.cxdark .holdmenu { background: #2a1a1d; } body.cxdark .holdmenu .hmi.on { background: var(--ha); color: #1a0f0a; }
+  body.cxdark .cxrow .chip.q.on { border-color: var(--ha); }
+  body.cxdark .dr.st .dc, body.cxdark .staff { filter: none; }
+}
+/* 横屏：顶栏浮在上面，和弦页的头不能被它遮住 */
+body.land .cxtop, #phone .cxtop { margin-top: 0; padding-top: calc(var(--pbar, 36px) + 6px); }
