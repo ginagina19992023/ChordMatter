@@ -1383,3 +1383,6 @@ body.cxpage .cxsticky { z-index: 7; }
 .fifths .cr-b { pointer-events: none; }
 .fifths .dthumb { position: absolute; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--ink); color: var(--bg); font-size: 14px; font-weight: 700; box-shadow: 0 3px 14px rgba(0,0,0,.28); z-index: 3; pointer-events: none; }
 body.dark .fifths .dthumb { box-shadow: 0 3px 14px rgba(0,0,0,.6); }
+/* 名字栏高度固定：字大字小（长和弦名会自动缩小）都不改变这一条的高度 */
+.cxname b { display: flex; align-items: center; height: 64px; line-height: 1; white-space: nowrap; }
+.cxsticky.stuck .cxname b, .cxsticky.stuck .cxname b.long { height: 34px; }
