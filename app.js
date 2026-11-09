@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 88; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 89; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -692,6 +692,7 @@
   const CX = { root: 'C', q: '', inv: 0, hand: 'R', pat: 'block', lastH: null };
   // 每种和弦一个固定的色彩：[深色, 浅色]（深色 = 挪了/新加的音，浅色 = 没动的音）
   const QHUE = { '': ['#a35f00', '#f2c45c', '#5a3d0b', '#2e2008', '#17110a', '#ffc857'], m: ['#2f6fdb', '#a9c6f3', '#1c3560', '#141f38', '#0c1220', '#7cb8ff'], dim: ['#7a4fd0', '#cdb9f1', '#3d2466', '#22163d', '#130d22', '#c9a6ff'], aug: ['#0b7a72', '#9ad9d3', '#0f4a47', '#0e2a29', '#0a1717', '#5ee0d4'], '7': ['#d9480f', '#f5b08a', '#5c2410', '#2e170e', '#170d09', '#ff9a62'], maj7: ['#c2417a', '#f0b0cd', '#5a2140', '#2e1424', '#170b12', '#ff9cc8'], m7: ['#4a5bd6', '#b0b8f3', '#26306a', '#171c3d', '#0d1022', '#9aa8ff'], m7b5: ['#3f7a60', '#b0d2c0', '#1f4034', '#13261f', '#0b1511', '#8fd0aa'], dim7: ['#c0283a', '#efaab2', '#5a1f24', '#2a1215', '#170a0c', '#ff6b7c'], sus4: ['#5c7a00', '#d3e38f', '#3d4a0e', '#212809', '#121505', '#c6e45c'] };
+  const REF_SONGS = {"C": "月亮代表我的心", "Cm": "爱情转移（陈奕迅）", "Caug": "Yesterday Once More（卡朋特）", "Cdim": "梦中的婚礼（克莱德曼）", "C7": "蒲公英的约定（周杰伦）", "Cm7": "红豆（王菲）", "Cmaj7": "Imagine（约翰·列侬）", "Cdim7": "青花瓷·间奏（周杰伦）", "Csus4": "春天里（汪峰）", "D": "卡农（帕赫贝尔）", "Dm": "南方姑娘（赵雷）", "Daug": "经典进行 D–Daug–G", "Ddim": "梁祝·化蝶段", "D7": "Hotel California（Eagles）", "Dm7": "突然好想你（五月天）", "Dmaj7": "曾经的你（许巍）", "Ddim7": "梁祝（何占豪/陈钢）", "Dsus4": "爱情诺曼底（黄征）", "E": "同桌的你（老狼）", "Em": "小调歌曲常用色彩", "Eaug": "经典进行 E–Eaug–A", "Edim": "天鹅（圣桑）", "E7": "花海（周杰伦）", "Em7": "小情歌（苏打绿）", "Emaj7": "知足（五月天）", "Edim7": "Memory（音乐剧《猫》）", "Esus4": "安静（周杰伦）", "F": "童话（光良）", "Fm": "轨迹（周杰伦）", "Faug": "经典进行 F–Faug–B♭", "Fdim": "月光（德彪西）", "F7": "遥远的她（张学友）", "Fm7": "雨下一整晚（周杰伦）", "Fmaj7": "成都（赵雷）", "Fdim7": "月光·第一乐章（贝多芬）", "Fsus4": "喜欢你（Beyond）", "G": "平凡之路（朴树）", "Gm": "白桦林（朴树）", "Gaug": "是否（苏芮）", "Gdim": "天空之城（久石让）", "G7": "月亮代表我的心", "Gm7": "最长的电影（周杰伦）", "Gmaj7": "贝加尔湖畔（李健）", "Gdim7": "千与千寻·那个夏天（久石让）", "Gsus4": "蓝莲花（许巍）", "A": "真心英雄（张雨生等）", "Am": "白桦林（朴树）", "Aaug": "经典进行 A–Aaug–D", "Adim": "辛德勒的名单（威廉姆斯）", "A7": "Yesterday（The Beatles）", "Am7": "告白气球（周杰伦）", "Amaj7": "城里的月光（许美静）", "Adim7": "青花瓷（周杰伦）", "Asus4": "爱情诺曼底（黄征）", "B": "卡农（帕赫贝尔）", "Bm": "安和桥（宋冬野）", "Baug": "经典进行 B–Baug–E", "Bdim": "致爱丽丝（贝多芬）", "B7": "Autumn Leaves（秋叶）", "Bm7": "青花瓷（周杰伦）", "Bmaj7": "说好的幸福呢（周杰伦）", "Bdim7": "梁祝·化蝶段", "Bsus4": "灰色轨迹（Beyond）"};
   const CX_ZH = { '': '大三', m: '小三', dim: '减三', aug: '增三', '7': '属七', maj7: '大七', m7: '小七', m7b5: '半减七', dim7: '减七', sus4: '挂四' };
   const CX_Q = ['', 'm', 'dim', 'aug', '7', 'maj7', 'm7', 'm7b5', 'dim7', 'sus4'];
   const cxHue = q => QHUE[q] || QHUE[''];
@@ -778,7 +779,7 @@
       <p class="explain"><b>${D(c.sym)}</b>：以 ${D(c.root.name)} 为根音的${c.quality.zh}，${qi[2]}，听起来${qi[1]}。${invi ? `${INV[invi][0]}：最下面弹 ${D(bottom.name)}（${INV[invi][1]}），所以写成 ${D(c.sym)}，斜线后面就是最低音。` : '原位：根音 ' + D(c.root.name) + ' 在最下面。'}键盘上的数字是手指（1 = 拇指，5 = 小指）${CX.hand === 'B' ? '，蓝色是左手（低八度），橙色是右手' : CX.hand === 'L' ? '，左手在低八度' : ''}。<a href="#know-k0">看不懂？</a></p>
       ${pager('chord', [
         ['小进行', `${(() => { const ctx = chordContext(c); return ctx ? `<h3>先在小进行里听它</h3><p class="fine">${ctx[1]} · 点一下听，跟着弹</p>${progRow(c.root.name, ctx[0])}<div class="pills"><button class="pill rlprog" data-act="rollprog" data-k="${esc(c.root.name)}" data-c="${esc(ctx[0].join(','))}" data-t="${esc(ctx[0].map(D).join(' → '))}">▶ 跟练这个小进行 · 全屏</button></div>` : '<p class="fine">这个和弦没有常用的小进行。</p>'; })()}`],
-        ['曲子里', `<h3>在曲子里找到它</h3>${chordFinds(c)}<a class="link" href="#browse-${encodeURIComponent(c.root.name + c.q)}"><small>浏览</small><b>曲库里所有和弦 · 有的和没有的</b><span>→</span></a><a class="link" href="#combo"><small>连起来记</small><b>组合和弦：一串一串记</b><span>→</span></a>`],
+        ['曲子里', `${refSongHtml(c)}<h3>在曲子里找到它</h3>${chordFinds(c)}<a class="link" href="#browse-${encodeURIComponent(c.root.name + c.q)}"><small>浏览</small><b>曲库里所有和弦 · 有的和没有的</b><span>→</span></a><a class="link" href="#combo"><small>连起来记</small><b>组合和弦：一串一串记</b><span>→</span></a>`],
         ['练', `${arp.white && T.Q[CX.q].ints.length === 3 && !CX.q.startsWith('sus') ? `<a class="link" href="#arp-${CX.root + CX.q}"><small>练这个和弦</small><b>${D(CX.root + CX.q)} 琶音 · 带指法和收音</b><span>→</span></a>` : ''}<a class="link" href="#combo"><small>连起来记</small><b>组合和弦：一串一串记</b><span>→</span></a>`],
       ])}`;
     pagerInit();
@@ -790,6 +791,10 @@
   }
 
   document.addEventListener('toggle', e => { const d = e.target; if (d.matches && d.matches('details.cxstaff') && d.open) d.querySelectorAll('.staff').forEach(x => { try { Staff.draw(x); } catch (err) {} }); }, true);
+  function refSongHtml(c) {
+    const t = REF_SONGS[c.root.name + c.q];
+    return t ? `<div class="refsong"><small>参考曲目</small><b>${esc(t)}</b><span>来自你给的和弦表。表里的歌我没有逐首核对过和弦，听感和弦以原曲为准。</span></div>` : '';
+  }
   // ---- 和弦库首页：五度圈选根音 + 这个根音的 10 种和弦 ----
   const FIFTHS = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'Db', 'Ab', 'Eb', 'Bb', 'F'];
   function vLib() {
