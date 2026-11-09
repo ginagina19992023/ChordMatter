@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 118; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 119; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -1238,6 +1238,7 @@
     const txt = {
       printed: '和弦记号是<b>印在谱上的</b>（编曲者写的），我只是照抄并标出级数。',
       analyzed: `谱上<b>没有印和弦记号</b>。和弦是我<b>按谱上的音分析出来的</b>：每小节看左手低音 + 右手和声音，再判断是哪个和弦。${ev.length ? `一共 ${ev.length} 小节都有依据，点下面任意一格就能看到那一小节左手、右手各是什么音${low ? `；其中 ${low} 小节把握不大，格子带斜纹` : ''}。` : s.orig && s.orig.score ? '这首是公有领域的曲子：打开上面的「完整原谱」，每小节上方都标了和弦，可以对着谱上的音核对。' : '这首的和弦是常见分析，没有逐小节依据。'}`,
+      web: `和弦来自<b>公开的和弦谱网页</b>，我把网页上的和弦按段落整理成一小节一小节的格子，没核对到的段落没有收。${(s.srcurls || []).length ? '<br>来源：' + s.srcurls.map(u => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\/(www\.)?/, '').slice(0, 46))}</a>`).join('　') : ''}${s.conf === 'mid' ? '<br>这一首只核对了一个来源，和别的版本可能有出入。' : ''}`,
       simplified: '这是<b>学习用的简化和声</b>（常见的配法），<b>没有逐小节对过原谱</b>。和你的谱不一样时，以你的谱为准，可以在「编辑」里改。',
     }[src];
     return `<section class="srcbox"><h3>这些和弦从哪来</h3><p>${txt}</p><p class="fine">「▶ 播放进行」是用合成钢琴把这些和弦弹给你听，<b>不是原曲录音</b>；原曲请点 Apple Music。${s.orig && s.orig.score && s.orig.score.made ? '新造谱里左手是原谱的左手，右手是按和弦配的柱式和弦，没有旋律：旋律请看你自己的谱。' : ''}</p></section>`;
@@ -1301,7 +1302,7 @@
     // 三种「找到」，每种都写清楚是什么关系
     const LV = { 3: ['原样', `就是 ${D(c.sym)}，一模一样`], 2: ['转位', `还是 ${D(c.root.name)}${c.q ? D(c.q) : ''} 这几个音，只是最低音换了（斜线后面是最低音）`], 1: ['同类型', `也是${(T.Q[c.q] || {}).zh || '这类和弦'}，只是换了根音：形状一样，整体平移`] };
     // 每首曲子的和弦是从哪来的
-    const SRC = s => s.src === 'printed' ? ['谱上印的', '和弦名就印在原谱上，照抄的'] : s.src === 'analyzed' ? ['我读原谱判断的', s.ev ? '原谱上没印和弦名：我逐小节看左手低音和右手的音判断出来的，点小节号能看每小节的依据' : '原谱上没印和弦名：我按谱上的音判断出来的'] : ['学习用简化', '不是原谱上的和弦：为了好学，简化成了常用和弦，和原曲听起来会不一样'];
+    const SRC = s => s.src === 'web' ? ['网页和弦谱核对', '和弦来自公开的和弦谱网页（来源在曲子页「来源」里）；没核对到的段落没有收。有版权，只放在私人预览里。'] : s.src === 'printed' ? ['谱上印的', '和弦名就印在原谱上，照抄的'] : s.src === 'analyzed' ? ['我读原谱判断的', s.ev ? '原谱上没印和弦名：我逐小节看左手低音和右手的音判断出来的，点小节号能看每小节的依据' : '原谱上没印和弦名：我按谱上的音判断出来的'] : ['学习用简化', '不是原谱上的和弦：为了好学，简化成了常用和弦，和原曲听起来会不一样'];
     const rows = allSongs().map(s => { const h = chordHits(s, c); return h.length ? { s, h, best: Math.max(...h.map(x => x.lv)) } : null; }).filter(Boolean)
       .sort((x, y) => y.best - x.best || y.h.filter(z => z.lv === y.best).length - x.h.filter(z => z.lv === x.best).length);
     if (!rows.length) return '<p class="fine">曲库里还没有用到这种和弦的曲子，先用上面的小进行练。</p>';
@@ -1398,7 +1399,7 @@
 
   // ---- 曲库 ----
   function parseBars(str) { return String(str || '').split('|').map(b => b.trim().split(/\s+/).filter(Boolean)).filter(b => b.length); }
-  function allSongs() { return SONGS.concat(GIFT_SONGS.filter(g => S.cards && S.cards[g.id])).map(s => Object.assign({}, s, S.custom.find(c => c.id === s.id) || {})).concat(S.custom.filter(c => !SONGS.some(s => s.id === c.id))); }
+  function allSongs() { return SONGS.concat(window.PRIVATE_SONGS || []).concat(GIFT_SONGS.filter(g => S.cards && S.cards[g.id])).map(s => Object.assign({}, s, S.custom.find(c => c.id === s.id) || {})).concat(S.custom.filter(c => !SONGS.some(s => s.id === c.id))); }
   // ---------------- 曲目：弹一首曲子（看谱 → 认和弦 → 弹下来）----------------
   // 类型自动识别；用户可以自己改标签（S.tags[id] 覆盖自动结果）
   const TYPES = ['古典', '影视', '流行', '儿歌民谣', '我的谱'];
