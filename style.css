@@ -1187,3 +1187,4 @@ body { transition: --h .5s ease, --hm .5s ease, --hs0 .5s ease, --hs1 .5s ease, 
 }
 /* 横屏：顶栏浮在上面，和弦页的头不能被它遮住 */
 body.land .cxtop, #phone .cxtop { margin-top: 0; padding-top: calc(var(--pbar, 36px) + 6px); }
+@media (prefers-color-scheme: dark) { body.cxdark { --T: #f7efe8; --S: #7cb8ff; --D: #ff9a62; --acc: #ff9a62; } }

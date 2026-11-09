@@ -16,7 +16,7 @@ server.listen(8781, async () => {
     ['#combo', '.combos li', 8, '组合和弦列表'],
     ['#combo-c4536', '.rollentry', 1, '瀑布流入口'],
     ['#combo-c4536', '.variant', 0, '（抠掉前没有变体）'],
-    ['#chords', '.chip', 10, '和弦页选项'],
+    ['#chords-C-_', '.chip', 10, '和弦页选项'], ['#chords', '.libcard', 10, '和弦库首页'],
     ['#browse', '.brchips .chip', 10, '和弦浏览'],
     ['#today', '.steps li', 4, '今天的 4 步'],
     ['#sight', '.sightpath li', 14, '视奏关卡'],
