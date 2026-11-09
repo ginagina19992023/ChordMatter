@@ -1377,3 +1377,9 @@ body.cxpage:not(.cxdark) .cxsticky, body.cxpage:not(.cxdark) .cxsticky.stuck { b
 body.cxpage.cxdark .cxsticky.stuck { background: color-mix(in srgb, var(--hs0) 86%, transparent); }
 body.cxpage nav { border-top: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); }
 body.cxpage .cxsticky { z-index: 7; }
+
+/* 五度圈圆盘：手指转着拖，圆点跟着走 */
+.fifths { touch-action: none; -webkit-user-select: none; user-select: none; cursor: grab; }
+.fifths .cr-b { pointer-events: none; }
+.fifths .dthumb { position: absolute; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--ink); color: var(--bg); font-size: 14px; font-weight: 700; box-shadow: 0 3px 14px rgba(0,0,0,.28); z-index: 3; pointer-events: none; }
+body.dark .fifths .dthumb { box-shadow: 0 3px 14px rgba(0,0,0,.6); }

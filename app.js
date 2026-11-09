@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 113; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 114; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -818,19 +818,55 @@
   }
   // ---- 和弦库首页：五度圈选根音 + 这个根音的 10 种和弦 ----
   const FIFTHS = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'Db', 'Ab', 'Eb', 'Bb', 'F'];
-  function vLib() {
-    CX.sig = null; cxTheme(null);
-    const R = 112, ring = FIFTHS.map((r, i) => { const a = i * 30 * Math.PI / 180, on = r === CX.root; return `<button class="cr-b${on ? ' on' : ''}" data-act="libroot" data-v="${r}" aria-label="根音 ${D(r)}" style="left:${(140 + R * Math.sin(a) - 20).toFixed(1)}px;top:${(140 - R * Math.cos(a) - 20).toFixed(1)}px">${D(r)}</button>`; }).join('');
-    const cards = CX_Q.map(q => {
+  // 每个根音的 10 种和弦卡片（拖动圆盘时只刷新这一块）
+  function libCardsHtml() {
+    return CX_Q.map(q => {
       const c = T.build(CX.root, q, 0), v = T.voicing(c), h = cxHue(q);
       const notes = v.map(n => ({ midi: n.midi, name: n.name, cls: cxRole(c, n.deg) }));
       return `<a class="libcard cxcard" href="#chords-${encodeURIComponent(CX.root)}-${q || '_'}" style="${hueVars(h)}"><div class="lh"><b>${D(CX.root + q)}</b><span>${CX_ZH[q]}</span></div><p>${CX_STORY[q]}</p>${kb(notes, { lo: 60, hi: 83 })}</a>`;
     }).join('');
-    view.innerHTML = `<header class="top"><div><small>选一个根音，看它的 10 种颜色</small><h1>和弦</h1></div></header>
-      <div class="fifths"><div class="crc"><b>${D(CX.root)}</b><small>五度圈 · 顺时针每格升一个五度</small></div>${ring}</div>
-      <div class="libhd"><b>${D(CX.root)} 的 10 种和弦</b><small>点进去看怎么搭 →</small></div>
-      <div class="libgrid">${cards}</div>`;
   }
+  const DIAL_R = 112, dialPos = i => { const a = i * 30 * Math.PI / 180; return [140 + DIAL_R * Math.sin(a) - 20, 140 - DIAL_R * Math.cos(a) - 20]; };
+  function vLib() {
+    CX.sig = null; cxTheme(null);
+    const ring = FIFTHS.map((r, i) => { const [x, y] = dialPos(i); return `<button class="cr-b" data-act="libroot" data-v="${r}" aria-label="根音 ${D(r)}" style="left:${x.toFixed(1)}px;top:${y.toFixed(1)}px">${D(r)}</button>`; }).join('');
+    const [tx, ty] = dialPos(Math.max(0, FIFTHS.indexOf(CX.root)));
+    view.innerHTML = `<header class="top"><div><small>选一个根音，看它的 10 种颜色</small><h1>和弦</h1></div></header>
+      <div class="fifths" id="dial" aria-label="五度圈：手指在圆盘上转着拖，可以一格一格换根音"><div class="crc"><b id="dialname">${D(CX.root)}</b><small>五度圈 · 转动圆盘</small></div>${ring}<div class="dthumb" id="dthumb" style="left:${tx.toFixed(1)}px;top:${ty.toFixed(1)}px">${D(CX.root)}</div></div>
+      <div class="libhd"><b id="libtitle">${D(CX.root)} 的 10 种和弦</b><small>点进去看怎么搭 →</small></div>
+      <div class="libgrid" id="libgrid">${libCardsHtml()}</div>`;
+  }
+  // 圆盘：像拨号盘一样，手指在圆上转，圆点跟着手指走，经过哪个根音就换成哪个；松手吸附并弹一下
+  (function () {
+    let D3 = null;
+    const ang = (e, el) => { const r = el.getBoundingClientRect(), dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2); return (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360; };
+    function apply(e) {
+      const el = document.getElementById('dial'); if (!el) return;
+      const a = ang(e, el), idx = Math.round(a / 30) % 12, th = document.getElementById('dthumb'), sc = el.getBoundingClientRect().width / 280;
+      const rad = a * Math.PI / 180;
+      th.style.transition = 'none'; th.style.left = (140 + DIAL_R * Math.sin(rad) - 20).toFixed(1) + 'px'; th.style.top = (140 - DIAL_R * Math.cos(rad) - 20).toFixed(1) + 'px';
+      const r = FIFTHS[idx];
+      if (r !== CX.root) {
+        CX.root = r; th.textContent = D(r);
+        const nm = document.getElementById('dialname'); if (nm) nm.innerHTML = D(r);
+        if (navigator.vibrate) navigator.vibrate(4);
+        const st = D3; if (!st.raf) st.raf = requestAnimationFrame(() => { st.raf = 0; const g = document.getElementById('libgrid'), t = document.getElementById('libtitle'); if (g) g.innerHTML = libCardsHtml(); if (t) t.innerHTML = D(CX.root) + ' 的 10 种和弦'; });
+      }
+    }
+    document.addEventListener('pointerdown', e => {
+      const el = e.target.closest && e.target.closest('#dial'); if (!el || route[0] !== 'chords' || route[1]) return;
+      e.preventDefault(); try { document.documentElement.setPointerCapture(e.pointerId); } catch (err) {}
+      D3 = { raf: 0 }; apply(e);
+    }, true);
+    document.addEventListener('pointermove', e => { if (D3) apply(e); }, true);
+    const end = () => {
+      if (!D3) return; D3 = null;
+      const th = document.getElementById('dthumb'); if (th) { const [x, y] = dialPos(Math.max(0, FIFTHS.indexOf(CX.root))); th.style.transition = 'left .2s ease, top .2s ease'; th.style.left = x.toFixed(1) + 'px'; th.style.top = y.toFixed(1) + 'px'; }
+      const g = document.getElementById('libgrid'); if (g) g.innerHTML = libCardsHtml();
+      try { playChord(CX.root); } catch (err) {}
+    };
+    document.addEventListener('pointerup', end, true); document.addEventListener('pointercancel', end, true);
+  })();
 
   // 组合和弦：每个和弦的小键盘，没动的音灰，新按的音用这个和弦的色彩
   function cbTiles(ch, key) {
