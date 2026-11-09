@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 89; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 90; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -708,6 +708,7 @@
   const CX_PAT_NAME = { block: '柱式', broken: '逐键', alberti: '阿尔贝蒂', waltz: '华尔兹', oom: '低音+和弦' };
   const CX_LAB = { '': ['1', '3', '5'], m: ['1', '♭3', '5'], dim: ['1', '♭3', '♭5'], aug: ['1', '3', '♯5'], '7': ['1', '3', '5', '♭7'], maj7: ['1', '3', '5', '7'], m7: ['1', '♭3', '5', '♭7'], m7b5: ['1', '♭3', '♭5', '♭7'], dim7: ['1', '♭3', '♭5', '♭♭7'], sus4: ['1', '4', '5'] };
   const CX_STORY = { '': '1 · 3 · 5，最基本的三个音', m: '3 往下挪半音', dim: '3 和 5 都往下挪', aug: '5 往上挪半音', '7': '大三和弦，再加 ♭7', maj7: '大三和弦，再加 7', m7: '小三和弦，再加 ♭7', m7b5: '减三和弦，再加 ♭7', dim7: '3 和 5 都往下挪，再加 ♭♭7', sus4: '3 往上挪成 4' };
+  const CX_DL = 64, CX_DU = 7; // 度数线：水平长度 / 每个半音升降的像素
   const CX_INV = ['原位', '一转', '二转', '三转'];
   // 一个音是「根音 / 没动 / 挪了」：和大三和弦（1-3-5）比，七音一律算新加的
   function cxRole(c, i) { if (i === 0) return 'rt'; const se = c.quality.ints[i][1]; return (i >= 3 || se !== [0, 4, 7][i]) ? 'mv' : 'st'; }
@@ -729,6 +730,7 @@
   function vChords() {
     if (!route[1]) return vLib();
     const oldK = {}; document.querySelectorAll('.cxview .kb .k').forEach(k => { oldK[k.dataset.m] = k.getAttribute('class'); });
+    const oldDy = {}; document.querySelectorAll('.cxdeg .dr[data-dy]').forEach(r => { oldDy[r.dataset.i] = +r.dataset.dy; });
     { const sig = route.join('-'); if (CX.sig !== sig) { CX.sig = sig; const r = decodeURIComponent(route[1]); if (ROOT_MAJ.includes(r)) CX.root = r; if (route[2] != null) CX.q = route[2] === '_' ? '' : route[2]; if (!T.Q[CX.q]) CX.q = ''; CX.inv = 0; } }
     const c = T.build(CX.root, CX.q, Math.min(CX.inv, T.Q[CX.q].ints.length - 1));
     const v = T.voicing(c), fg = T.blockFingers(c, CX.hand === 'L' ? 'L' : 'R');
@@ -759,10 +761,10 @@
         <p class="cxstory">${CX_STORY[CX.q]}</p>
         <div class="cxdeg">${[3, 2, 1, 0].map(k => {
           const i = k, sl = ['1', '3', '5', '7'][i], n = c.notes[i];
-          if (!n) return `<div class="dr none"><span class="dn">${sl}</span><span class="dl"></span></div>`;
-          const alt = c.quality.ints[i][1] - [0, 4, 7, 11][i], role = cxRole(c, i);
+          if (!n) return `<div class="dr none" data-i="${i}"><span class="dn">${sl}</span><span class="dstart"></span><span class="dline" style="width:${CX_DL}px"></span></div>`;
+          const alt = c.quality.ints[i][1] - [0, 4, 7, 11][i], role = cxRole(c, i), dy = -alt * CX_DU, len = Math.hypot(CX_DL, dy), ang = Math.atan2(dy, CX_DL);
           const sub = i === 0 ? '根音' : i === 3 ? '新加的音' + (alt ? ' · 比 7 低 ' + (-alt === 1 ? '半音' : -alt + ' 个半音') : '') : role === 'st' ? '不动' : (alt < 0 ? '往下挪 ' : '往上挪 ') + (Math.abs(alt) === 1 ? '半音' : Math.abs(alt) + ' 个半音');
-          return `<div class="dr ${role}"><span class="dn">${sl}</span><span class="dl"></span><span class="dc ${role}">${CX_LAB[CX.q][i]}</span><span class="dt"><b>${D(n.name)}</b><small>${sub}</small></span></div>`;
+          return `<div class="dr ${role}" data-i="${i}" data-dy="${dy}"><span class="dn">${sl}</span><span class="dstart"></span><span class="dline" style="width:${len.toFixed(1)}px;transform:rotate(${ang.toFixed(4)}rad)"></span><span class="dmove" style="transform:translateY(${dy}px)"><span class="dc ${role}">${CX_LAB[CX.q][i]}</span><span class="dt"><b>${D(n.name)}</b><small>${sub}</small></span></span></div>`;
         }).join('')}</div>
         <div class="cxview">${kb(bigN, { lo: CX.hand === 'R' ? 60 : 48, hi: CX.hand === 'R' ? 83 : CX.hand === 'L' ? 71 : 83 })}</div>
         <p class="cxline">${CX.hand !== 'R' ? '<span class="lhc">左手 ' + fgL.join('-') + '</span> ' : ''}${CX.hand !== 'L' ? '右手 ' + fgR.join('-') : ''} · ${c.quality.f}</p>
@@ -783,6 +785,11 @@
         ['练', `${arp.white && T.Q[CX.q].ints.length === 3 && !CX.q.startsWith('sus') ? `<a class="link" href="#arp-${CX.root + CX.q}"><small>练这个和弦</small><b>${D(CX.root + CX.q)} 琶音 · 带指法和收音</b><span>→</span></a>` : ''}<a class="link" href="#combo"><small>连起来记</small><b>组合和弦：一串一串记</b><span>→</span></a>`],
       ])}`;
     pagerInit();
+    // 度数线：从没升降的位置，慢慢滑到升/降之后的位置
+    const rows = [...document.querySelectorAll('.cxdeg .dr[data-dy]')].filter(r => oldDy[r.dataset.i] != null && oldDy[r.dataset.i] !== +r.dataset.dy);
+    rows.forEach(r => { const dy = +r.dataset.dy, o = oldDy[r.dataset.i], ln = r.querySelector('.dline'), mv = r.querySelector('.dmove'), tl = ln.style.cssText, tm = mv.style.cssText;
+      r._t = [tl, tm]; ln.style.transition = mv.style.transition = 'none'; ln.style.width = Math.hypot(CX_DL, o * 1).toFixed(1) + 'px'; ln.style.transform = `rotate(${Math.atan2(o, CX_DL).toFixed(4)}rad)`; mv.style.transform = `translateY(${o}px)`; });
+    if (rows.length) { void document.body.offsetHeight; requestAnimationFrame(() => rows.forEach(r => { const ln = r.querySelector('.dline'), mv = r.querySelector('.dmove'); ln.style.cssText = r._t[0]; mv.style.cssText = r._t[1]; })); }
     const ks = [...document.querySelectorAll('.cxview .kb .k')];
     if (Object.keys(oldK).length) {
       ks.forEach(k => { const t = k.getAttribute('class'); k.dataset.t = t; k.setAttribute('class', oldK[k.dataset.m] || t.replace(/ (on|rt|st|mv)\b/g, '')); });
