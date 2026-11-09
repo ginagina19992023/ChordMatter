@@ -1256,3 +1256,10 @@ body.land #phone #pbar { margin-left: calc(env(safe-area-inset-left) + 62px); }
 .cxtop { top: auto; }
 .cxnbs .nb { height: 54px; align-self: stretch; }
 .cxnbs .nb small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cxsticky { z-index: 6; } .cxtop { z-index: 1; }
+
+.cxmini { display: none; margin-top: 4px; }
+.cxsticky.stuck .cxmini { display: block; }
+.cxmini .kb { width: 100%; height: 34px; }
+.cxmini .kb .k.on.rt { fill: #8e8a80; stroke: #8e8a80; } .cxmini .kb .k.on.st { fill: var(--hm); stroke: var(--hm); } .cxmini .kb .k.on.mv { fill: var(--h); stroke: var(--h); }
+@media (prefers-color-scheme: dark) { body.cxdark .cxmini .kb .k.on.mv { fill: var(--ha); stroke: var(--ha); } body.cxdark .cxmini .kb .k.on.st { fill: color-mix(in srgb, var(--ha) 50%, var(--hs1)); stroke: color-mix(in srgb, var(--ha) 50%, var(--hs1)); } }
