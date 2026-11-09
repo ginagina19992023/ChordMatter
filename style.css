@@ -9,7 +9,7 @@
 
 /* ---- 全 App 深色：只换变量，页面自己的配色都走变量 ---- */
 body.dark { --bg: #141210; --ink: #f3ece4; --mute: #a99d94; --line: #352c2a; --soft: #221d1b; --card: #1d1816; --acc: #ff8a5c; --acc-soft: #3a2219; --good: #4ac08c; --bad: #ff6b5e; --T: #f3ece4; --S: #7cb8ff; --D: #ff9a62; --kw: #efe6dc; --kbk: #1a1315; --kline: #000000; --kon: #5a3a2a; --kontext: #ffb08a; --klh: #27406a; color-scheme: dark; background: var(--bg); }
-body.dark .staff svg, body.dark .score svg, body.dark svg.staffsvg { filter: invert(1) hue-rotate(180deg); }
+body.dark .staff svg:not(svg svg), body.dark .score svg:not(svg svg), body.dark svg.staffsvg:not(svg svg) { filter: invert(1) hue-rotate(180deg); }
 /* 只用浅色：素、白、线条 */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; background: var(--bg); color: var(--ink); }
