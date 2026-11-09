@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 105; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 106; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -762,7 +762,7 @@
     const bottom = v[0];
     view.innerHTML = `<a class="cxback" href="#chords">← 和弦</a><div class="cxsent" id="cxsent"></div>
       <div class="cxsticky" id="cxst">
-        <div class="cxhead"><div class="cxname"><b>${D(c.sym)}</b><span>${qi[0]}和弦${invi ? ' · ' + INV[invi][0] : ''} · ${qi[1]}</span></div>
+        <div class="cxhead"><div class="cxname"><b class="${D(c.sym).replace(/<[^>]*>/g, '').length >= 5 ? 'long' : ''}">${D(c.sym)}</b><span>${qi[0]}和弦${invi ? ' · ' + INV[invi][0] : ''} · ${qi[1]}</span></div>
           <button class="cxhold" data-hold="inv" aria-label="转位：按住往下拖可以选">↻ ${CX_INV[invi]}</button><button class="cxhold go" data-hold="pat" aria-label="弹奏：点一下弹，按住往下拖选弹法">弹 <small>${CX_PAT_NAME[CX.pat]}</small></button></div>
         <div class="cxmini">${kb(showN.map(n => ({ midi: n.midi, cls: n.cls })), { lo: CX.hand === 'R' ? 60 : 48, hi: CX.hand === 'R' ? 83 : CX.hand === 'L' ? 71 : 83 }).replace('<svg class="kb"', '<svg class="kb" preserveAspectRatio="none"')}</div>
       </div>

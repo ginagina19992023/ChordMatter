@@ -1313,3 +1313,14 @@ body.cxpage .cxtop { background: none; }
 .cxsticky { background: color-mix(in srgb, var(--hm) 32%, var(--bg)); }
 body.cxdark .cxsticky { background: var(--hs0); }
 body.land .cxsticky { margin-right: calc(-1 * max(16px, env(safe-area-inset-right))); padding-right: max(16px, env(safe-area-inset-right)); }
+
+/* 排得松一点：长和弦名缩小，不撞按钮；各块之间留一点空 */
+.cxname b.long { font-size: 42px; }
+.cxsticky.stuck .cxname b.long { font-size: 28px; }
+.cxhint { margin-top: 6px; }
+.cxdeg { margin: 8px 54px 8px 0; }
+.cxview { margin-top: 12px; }
+.cxnbs { margin-top: 12px; gap: 8px; }
+.cxline { margin-top: 14px; }
+.cxdock { padding: 8px 16px 4px; }
+.cxdocksp { height: 88px; }
