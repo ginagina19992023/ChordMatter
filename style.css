@@ -1324,3 +1324,14 @@ body.land .cxsticky { margin-right: calc(-1 * max(16px, env(safe-area-inset-righ
 .cxline { margin-top: 14px; }
 .cxdock { padding: 8px 16px 4px; }
 .cxdocksp { height: 88px; }
+
+/* 和弦的颜色：所有地方一套——根音灰、没动的音浅色、挪了或新加的音用这个和弦的颜色 */
+.cshape.fQ rect.rh { fill: var(--h); } .cshape.fQ rect.lh { fill: #8e8a80; opacity: 1; }
+.hbar i.q { background: var(--h); }
+.klhead b { color: var(--h); }
+.lk .dot.rt { background: #8e8a80; color: #fff; } .lk .dot.st { background: var(--hm); color: #111; } .lk .dot.mv { background: var(--h); color: #fff; }
+body.dark .cshape.fQ rect.rh { fill: var(--ha); }
+body.dark .hbar i.q { background: var(--ha); color: #1a0f0a; }
+body.dark .klhead b { color: var(--ha); }
+body.dark .lk .dot.mv { background: var(--ha); color: #1a0f0a; }
+body.dark .lk .dot.st { background: color-mix(in srgb, var(--ha) 50%, var(--hs1, #2a2420)); color: #fff; }

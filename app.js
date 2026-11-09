@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 106; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 107; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -1451,12 +1451,12 @@
     const top = 41, bot = 15, k = h / (top - bot), y = st => (top - st) * k;
     const lines = [30, 32, 34, 36, 38, 18, 20, 22, 24, 26].map(st => `<line x1="0" x2="${w}" y1="${y(st).toFixed(1)}" y2="${y(st).toFixed(1)}"/>`).join('');
     const ledger = notes.some(n => n.st === 28) ? `<line class="ldg" x1="${w * 0.3}" x2="${w * 0.7}" y1="${y(28).toFixed(1)}" y2="${y(28).toFixed(1)}"/>` : '';
-    const f = klCfg().feel ? chordFunc(sym, key) : 'N';
+    const f = klCfg().feel ? 'Q' : 'N';
     // 横条和音符头一样宽（约 1.4 个谱线间距），居中；相邻二度像五线谱一样错开半个身位
     const nw = k * 2.8, cx = w / 2 - nw / 2, sorted = notes.slice().sort((p, q) => p.st - q.st);
     sorted.forEach((n, i) => { n.dx = i && sorted[i - 1].st === n.st - 1 && !sorted[i - 1].dx ? nw * 0.95 : 0; });
     const bars = notes.map(n => `<rect class="${n.L ? 'lh' : 'rh'}" x="${(cx + n.dx).toFixed(1)}" y="${(y(n.st) - k * 0.6).toFixed(1)}" width="${nw.toFixed(1)}" height="${(k * 1.2).toFixed(1)}" rx="${(k * 0.6).toFixed(1)}"/>`).join('');
-    return `<svg class="cshape f${f}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><g class="sl">${lines}${ledger}</g>${bars}</svg>`;
+    return `<svg class="cshape f${f}" style="${hueVars(cxHue(c.q))}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><g class="sl">${lines}${ledger}</g>${bars}</svg>`;
   }
   // ---------------- 键盘图层：用键盘上的高低看和弦（和弦格子下面）----------------
   // 三层可以分别开关：调内音（铺底）· 感觉色（稳走紧）· 和弦音（圆点 + 字：级数 / R 3 5 7 / 音名）；「只看」R 3 5 7 9
@@ -1470,6 +1470,8 @@
     const lo = sc.indexOf((pc + 11) % 12); if (lo >= 0) return '♯' + (lo + 1);
     const hi = sc.indexOf((pc + 1) % 12); return hi >= 0 ? '♭' + (hi + 1) : '?';
   }
+  // 和弦里每个音：根音 rt / 没动 st / 挪了或新加 mv（和「和弦」页同一套）
+  function toneRole(c, m) { const i = c.notes.findIndex(n => n.pc === m % 12); return i < 0 ? 'st' : cxRole(c, i); }
   function klHtml(s, sym) {
     const cfg = klCfg(), c = T.parseChord(sym); if (!c) return '';
     const K = T.parseKey(s.key), scale = T.scale(K, true).map(n => T.parseNote(n.name).pc), func = chordFunc(sym, s.key);
@@ -1482,19 +1484,19 @@
     let html = '';
     const key = (m, x, w, black) => {
       const inSc = scale.includes(m % 12), isT = tones.includes(m), grp = INT_GROUP[((m - root) % 12 + 12) % 12], vis = isT && cfg.tones && cfg.show[grp];
-      return `<div class="lk ${black ? 'b' : 'w'}${cfg.scale && inSc ? ' sc' : ''}" style="left:${x}%;width:${w}%" data-m="${m}">${m % 12 === 0 && !black ? `<small>C${m / 12 - 1}</small>` : ''}${vis ? `<i class="dot${cfg.feel ? ' f' + func : ''}${m === bass ? ' bass' : ''}">${lab(m)}</i>` : isT && cfg.tones ? '<i class="dot ghostdot"></i>' : ''}</div>`;
+      return `<div class="lk ${black ? 'b' : 'w'}${cfg.scale && inSc ? ' sc' : ''}" style="left:${x}%;width:${w}%" data-m="${m}">${m % 12 === 0 && !black ? `<small>C${m / 12 - 1}</small>` : ''}${vis ? `<i class="dot${cfg.feel ? ' ' + toneRole(c, m) : ''}${m === bass ? ' bass' : ''}">${lab(m)}</i>` : isT && cfg.tones ? '<i class="dot ghostdot"></i>' : ''}</div>`;
     };
     whites.forEach((m, i) => (html += key(m, i * ww, ww, false)));
     whites.forEach((m, i) => { if (m + 1 <= hi && [1, 3, 6, 8, 10].includes((m + 1) % 12)) html += key(m + 1, i * ww + ww * 0.66, ww * 0.62, true); });
-    return `<div class="lkb">${html}</div>`;
+    return `<div class="lkb" style="${hueVars(cxHue(c.q))}">${html}</div>`;
   }
   function klPanel(s) {
     const cfg = klCfg(), flat = songFlat(s), i = Math.min(KL.i, flat.length - 1), sym = flat[i], a = T.analyze(sym, s.key);
     const chip = (k, v, n, on) => `<button class="chip sm${on ? ' on' : ''}" data-act="klset" data-k="${k}" data-v="${v}">${n}</button>`;
     return `<section class="klpanel" id="klpanel">
-      <div class="klhead"><button class="ghost sm" data-act="klstep" data-v="-1">‹</button><div><b>${D(sym)}</b><small>${a ? degLabel(sym, s.key) + ' · ' + (FUNC_ZH[a.func] || '') : ''} · 第 ${i + 1}/${flat.length} 个和弦</small></div><button class="ghost sm" data-act="klstep" data-v="1">›</button></div>
+      <div class="klhead"><button class="ghost sm" data-act="klstep" data-v="-1">‹</button><div><b style="${hueVars(cxHue((T.parseChord(sym) || {}).q))}">${D(sym)}</b><small>${a ? degLabel(sym, s.key) + ' · ' + (FUNC_ZH[a.func] || '') : ''} · 第 ${i + 1}/${flat.length} 个和弦</small></div><button class="ghost sm" data-act="klstep" data-v="1">›</button></div>
       ${klHtml(s, sym)}
-      <div class="klrow"><small>图层</small>${chip('scale', 1, '调内音', cfg.scale)}${chip('feel', 1, '感觉色', cfg.feel)}${chip('tones', 1, '和弦音', cfg.tones)}</div>
+      <div class="klrow"><small>图层</small>${chip('scale', 1, '调内音', cfg.scale)}${chip('feel', 1, '和弦色', cfg.feel)}${chip('tones', 1, '和弦音', cfg.tones)}</div>
       <div class="klrow"><small>圆点里写</small>${chip('label', 'int', 'R 3 5 7', cfg.label === 'int')}${chip('label', 'deg', '级数 1–7', cfg.label === 'deg')}${chip('label', 'name', '音名', cfg.label === 'name')}</div>
       <div class="klrow"><small>只看</small>${['R', '3', '5', '7', '9'].map(g => chip('show', g, g, cfg.show[g])).join('')}</div>
       <p class="fine">左边单独那个圆点（粗边）是左手低音，右边一组是右手和弦。只看 3 和 7：换和弦时这两个音通常只挪一点点，手跟着它们走就顺了。</p>
@@ -2317,7 +2319,7 @@
   }
   function harmonyStrip(s) {
     const st = sectionStarts(s);
-    return `<div class="hstrip">${s.sections.map((sec, i) => `<div class="hsec"><small>${esc(sec.name)}</small><div class="hrow">${parseBars(sec.bars).map((bar, k) => `<div class="hbar" data-act="hstrip" data-n="${st[i] + k}">${bar.map(x => `<i class="f${chordFunc(x, s.key)}" title="${esc(D(x))}">${D(x)}</i>`).join('')}</div>`).join('')}</div></div>`).join('')}<p class="fine">和声色带：<span class="fT">■ 稳</span> <span class="fS">■ 走</span> <span class="fD">■ 紧</span> · 一格一小节，点一格看那一小节</p></div>`;
+    return `<div class="hstrip">${s.sections.map((sec, i) => `<div class="hsec"><small>${esc(sec.name)}</small><div class="hrow">${parseBars(sec.bars).map((bar, k) => `<div class="hbar" data-act="hstrip" data-n="${st[i] + k}">${bar.map(x => `<i class="q" style="${hueVars(cxHue((T.parseChord(x) || {}).q))}" title="${esc(D(x))}">${D(x)}</i>`).join('')}</div>`).join('')}</div></div>`).join('')}<p class="fine">和声色带：颜色 = 和弦的性质（和「和弦」页一样：大三金黄、小三蓝、属七橙……） · 一格一小节，点一格看那一小节</p></div>`;
   }
   function rollPanel(id) {
     const maxLv = RL.maxLv || 2, passed = rollPassed();
