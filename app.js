@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 82; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 83; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -693,6 +693,8 @@
   const QHUE = { '': ['#a35f00', '#f2c45c'], m: ['#2f6fdb', '#a9c6f3'], dim: ['#7a4fd0', '#cdb9f1'], aug: ['#0b7a72', '#9ad9d3'], '7': ['#d9480f', '#f5b08a'], maj7: ['#c2417a', '#f0b0cd'], m7: ['#4a5bd6', '#b0b8f3'], m7b5: ['#3f7a60', '#b0d2c0'], dim7: ['#c0283a', '#efaab2'], sus4: ['#5c7a00', '#d3e38f'] };
   const CX_PATS = () => [PATTERNS[4][0], PATTERNS[4][2], PATTERNS[4][3], PATTERNS[3][1], PATTERNS[4][1]];
   const CX_PAT_NAME = { block: '柱式', broken: '逐键', alberti: '阿尔贝蒂', waltz: '华尔兹', oom: '低音+和弦' };
+  const CX_LAB = { '': ['1', '3', '5'], m: ['1', '♭3', '5'], dim: ['1', '♭3', '♭5'], aug: ['1', '3', '♯5'], '7': ['1', '3', '5', '♭7'], maj7: ['1', '3', '5', '7'], m7: ['1', '♭3', '5', '♭7'], m7b5: ['1', '♭3', '♭5', '♭7'], dim7: ['1', '♭3', '♭5', '♭♭7'], sus4: ['1', '4', '5'] };
+  const CX_STORY = { '': '1 · 3 · 5，最基本的三个音', m: '3 往下挪半音', dim: '3 和 5 都往下挪', aug: '5 往上挪半音', '7': '大三和弦，再加 ♭7', maj7: '大三和弦，再加 7', m7: '小三和弦，再加 ♭7', m7b5: '减三和弦，再加 ♭7', dim7: '3 和 5 都往下挪，再加 ♭♭7', sus4: '3 往上挪成 4' };
   const CX_INV = ['原位', '一转', '二转', '三转'];
   // 一个音是「根音 / 没动 / 挪了」：和大三和弦（1-3-5）比，七音一律算新加的
   function cxRole(c, i) { if (i === 0) return 'rt'; const se = c.quality.ints[i][1]; return (i >= 3 || se !== [0, 4, 7][i]) ? 'mv' : 'st'; }
@@ -728,18 +730,32 @@
     };
     const INV = [['原位', '根音在最下面'], ['一转', '三音在最下面'], ['二转', '五音在最下面'], ['三转', '七音在最下面']];
     const qi = QINFO[CX.q], invi = Math.max(0, c.inv);
+    const bigN = showN.map(n => Object.assign({}, n, { f: D(n.name) }));
+    const curL = CX_LAB[CX.q];
+    const nbrs = qlist.filter(q => q !== CX.q).map((q, k) => { const L = CX_LAB[q], add = L.filter(x => !curL.includes(x)), rem = curL.filter(x => !L.includes(x)); return { q, k, d: Math.max(add.length, rem.length) * 10 + add.length + rem.length, note: (rem.length ? rem.join(' ') + ' → ' : '') + (add.length ? (rem.length ? '' : '加 ') + add.join(' ') : '去掉 ' + rem.join(' ')) }; }).sort((x, y) => x.d - y.d || x.k - y.k).slice(0, 3);
     const bottom = v[0];
     view.innerHTML = `<section class="cxtop" id="cxtop" style="--h:${(CX.lastH || QHUE[CX.q])[0]};--hm:${(CX.lastH || QHUE[CX.q])[1]}">
         <div class="cxhead"><div class="cxname"><b>${D(c.sym)}</b><span>${qi[0]}和弦${invi ? ' · ' + INV[invi][0] : ''} · ${qi[1]}</span></div>
           <button class="cxhold" data-hold="inv" aria-label="转位：按住往下拖可以选">↻ ${CX_INV[invi]}</button><button class="cxhold go" data-hold="pat" aria-label="弹奏：点一下弹，按住往下拖选弹法">弹 <small>${CX_PAT_NAME[CX.pat]}</small></button></div>
         <p class="cxhint">按住「↻」或「弹」往下拖，可以选转位 / 弹法</p>
-        <div class="cxview">${Staff.html({ bars: [[c.sym]], numerals: false, perRow: 1, minBar: 60, exact: true, notes: showN.map(n => ({ name: n.name, midi: n.midi, lh: n.lh ? 1 : 0 })) })}${kb(showN, CX.hand === 'R' ? { lo: 60, hi: 88 } : CX.hand === 'L' ? { lo: 48, hi: 76 } : { lo: 48, hi: 88 })}</div>
-        <p class="cxline">${c.notes.map(n => D(n.name)).join(' – ')} · ${c.quality.f} · ${CX.hand !== 'R' ? '<span class="lhc">左手 ' + fgL.join('-') + '</span> ' : ''}${CX.hand !== 'L' ? '右手 ' + fgR.join('-') : ''}</p>
+        <p class="cxstory">${CX_STORY[CX.q]}</p>
+        <div class="cxdeg">${[3, 2, 1, 0].map(k => {
+          const i = k, sl = ['1', '3', '5', '7'][i], n = c.notes[i];
+          if (!n) return `<div class="dr none"><span class="dn">${sl}</span><span class="dl"></span></div>`;
+          const alt = c.quality.ints[i][1] - [0, 4, 7, 11][i], role = cxRole(c, i);
+          const sub = i === 0 ? '根音' : i === 3 ? '新加的音' + (alt ? ' · 比 7 低 ' + (-alt === 1 ? '半音' : -alt + ' 个半音') : '') : role === 'st' ? '不动' : (alt < 0 ? '往下挪 ' : '往上挪 ') + (Math.abs(alt) === 1 ? '半音' : Math.abs(alt) + ' 个半音');
+          return `<div class="dr ${role}"><span class="dn">${sl}</span><span class="dl"></span><span class="dc ${role}">${CX_LAB[CX.q][i]}</span><span class="dt"><b>${D(n.name)}</b><small>${sub}</small></span></div>`;
+        }).join('')}</div>
+        <div class="cxview">${kb(bigN, { lo: CX.hand === 'R' ? 60 : 48, hi: CX.hand === 'R' ? 83 : CX.hand === 'L' ? 71 : 83 })}</div>
+        <p class="cxline">${CX.hand !== 'R' ? '<span class="lhc">左手 ' + fgL.join('-') + '</span> ' : ''}${CX.hand !== 'L' ? '右手 ' + fgR.join('-') : ''} · ${c.quality.f}</p>
+        <details class="cxstaff"><summary>看谱</summary>${Staff.html({ bars: [[c.sym]], numerals: false, perRow: 1, minBar: 60, exact: true, notes: showN.map(n => ({ name: n.name, midi: n.midi, lh: n.lh ? 1 : 0 })) })}</details>
       </section>
       <div class="cxrow"><p><b>① 根音</b> 和弦从哪个音开始叠</p>
       <div class="chips grid6">${ROOT_MAJ.map(r => `<button class="chip${r === CX.root ? ' on' : ''}" data-act="cx" data-k="root" data-v="${r}">${D(r)}</button>`).join('')}</div></div>
       <div class="cxrow"><p><b>② 性质</b> 听起来是什么颜色 · 小字是和弦名里的写法</p>
       <div class="chips grid5">${qlist.map(q => `<button class="chip q${q === CX.q ? ' on' : ''}" data-act="cx" data-k="q" data-v="${q}"><i class="qd" style="background:${QHUE[q][0]}"></i><b>${QINFO[q][0]}</b><small>${q === '' ? '不写' : D(q)}</small></button>`).join('')}</div></div>
+      <div class="cxrow"><p><b>只动一点，就变成</b> 离 ${D(c.sym)} 最近的三个</p>
+      <div class="cxnb">${nbrs.map(x => `<button class="nb" data-act="cx" data-k="q" data-v="${x.q}"><i class="qd" style="background:${QHUE[x.q][0]}"></i><b>${D(CX.root + x.q)}</b><small>${x.note}</small></button>`).join('')}</div></div>
       <div class="cxrow"><p><b>③ 手</b> 看哪只手的指法 · 转位在右上角「↻」</p>
       <div class="chips"><button class="chip${CX.hand === 'R' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="R">右手</button><button class="chip${CX.hand === 'L' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="L">左手</button><button class="chip${CX.hand === 'B' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="B">双手</button></div></div>
       <p class="explain"><b>${D(c.sym)}</b>：以 ${D(c.root.name)} 为根音的${c.quality.zh}，${qi[2]}，听起来${qi[1]}。${invi ? `${INV[invi][0]}：最下面弹 ${D(bottom.name)}（${INV[invi][1]}），所以写成 ${D(c.sym)}，斜线后面就是最低音。` : '原位：根音 ' + D(c.root.name) + ' 在最下面。'}键盘上的数字是手指（1 = 拇指，5 = 小指）${CX.hand === 'B' ? '，蓝色是左手（低八度），橙色是右手' : CX.hand === 'L' ? '，左手在低八度' : ''}。<a href="#know-k0">看不懂？</a></p>
@@ -754,6 +770,7 @@
     CX.lastH = nh;
   }
 
+  document.addEventListener('toggle', e => { const d = e.target; if (d.matches && d.matches('details.cxstaff') && d.open) d.querySelectorAll('.staff').forEach(x => { try { Staff.draw(x); } catch (err) {} }); }, true);
   // 按住往下拖选：转位 / 弹法（点一下 = 直接执行）
   (function () {
     let H = null;

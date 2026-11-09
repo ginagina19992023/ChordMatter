@@ -1111,3 +1111,25 @@ body.immersive #pbar { display: none; }
 .holdmenu { position: fixed; z-index: 60; width: 132px; background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 8px 28px rgba(0,0,0,.14); padding: 3px; touch-action: none; }
 .holdmenu .hmi { height: 38px; line-height: 38px; padding: 0 12px; border-radius: 11px; font-size: 14px; color: var(--ink); }
 .holdmenu .hmi.on { background: #111; color: #fff; font-weight: 600; }
+
+.cxtop { position: static; padding-bottom: 12px; }
+.cxname b { font-size: 56px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.02; }
+.cxname span { margin-top: 2px; }
+.cxhead { align-items: flex-start; }
+.cxstory { margin: 6px 0 2px; font-size: 15px; font-weight: 600; color: var(--ink); }
+.cxdeg { margin: 10px 0 8px; display: flex; flex-direction: column; gap: 4px; }
+.dr { display: flex; align-items: center; gap: 8px; min-height: 36px; }
+.dr .dn { width: 14px; font-size: 12px; color: var(--mute); text-align: right; }
+.dr .dl { flex: 1; max-width: 70px; border-top: 1px solid var(--line); }
+.dr.none .dl { border-top-style: dashed; }
+.dr .dc { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; }
+.dr .dc.rt { background: #8e8a80; } .dr .dc.st { background: var(--hm); color: #111; } .dr .dc.mv { background: var(--h); }
+.dr .dt b { font-size: 17px; font-weight: 600; margin-right: 8px; }
+.dr .dt small { font-size: 12px; color: var(--mute); }
+.cxview { display: block; margin-top: 6px; }
+.cxview .kb { width: 100%; }
+.cxstaff { margin-top: 6px; } .cxstaff summary { font-size: 13px; color: var(--mute); cursor: pointer; padding: 4px 0; }
+.cxnb { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.cxnb .nb { border: 1px solid var(--line); border-radius: 12px; padding: 8px 6px; text-align: center; background: #fff; }
+.cxnb .nb b { display: block; font-size: 18px; font-weight: 600; } .cxnb .nb small { font-size: 12px; color: var(--mute); }
+.cxnb .qd { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; }
