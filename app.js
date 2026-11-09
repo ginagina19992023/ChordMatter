@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 110; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 111; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -4053,6 +4053,25 @@
     }
   });
 
+  // iPhone 要在手指抬起 / 点击这类动作里才允许出声：每次触摸都顺手把声音通道叫醒（并放一个无声小片段），按住拖选这类自定义手势也不会没声音
+  ['touchstart', 'touchend', 'pointerup', 'click'].forEach(t => document.addEventListener(t, () => {
+    try { A.init(); const c = A.ctx; if (c) { const b = c.createBuffer(1, 1, 22050), n = c.createBufferSource(); n.buffer = b; n.connect(c.destination); n.start(0); } } catch (e) {}
+  }, { capture: true, passive: true }));
+  // 自动换新版：每次回到 App（或打开后几秒），去看服务器上的版本号；比手机上的新，就自动刷新一次，不用再手动关掉 App
+  (function () {
+    if ('HX_PRESEED' in window || !/^https?:/.test(location.protocol)) return;
+    let busy = false;
+    async function check() {
+      if (busy) return; busy = true;
+      try {
+        const r = await fetch('app.js?v=' + Date.now(), { cache: 'no-store' }); const t = await r.text(), m = /APPV = (\d+)/.exec(t);
+        if (m && +m[1] > APPV) { if (document.body.classList.contains('focus')) { toast('有新版本，做完这一轮会自动更新'); busy = false; return; } sessionStorage.setItem('hx.upd', String(m[1])); location.reload(); return; }
+      } catch (e) {}
+      busy = false;
+    }
+    setTimeout(check, 4000);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+  })();
   window.addEventListener('hashchange', render);
   if (darkMQ.addEventListener) darkMQ.addEventListener('change', () => { cxGlobalDark(); render(); });
   document.addEventListener('pointerdown', e => { window.__lastClick = [e.clientX, e.clientY]; }, true);

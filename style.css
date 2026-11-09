@@ -1353,3 +1353,11 @@ body.cxpage #pbar { background: transparent; -webkit-backdrop-filter: none; back
 body.cxpage .cxsticky, body.cxpage.cxdark .cxsticky { background: transparent; }
 body.cxpage .cxsticky.stuck { background: color-mix(in srgb, var(--hm) 32%, var(--bg)); }
 body.cxpage.cxdark .cxsticky.stuck { background: var(--hs0); }
+
+/* 和弦页沉浸（含横屏）：整个屏幕（连同左侧菜单、右边安全区、底部）都是同一片色彩，菜单和底部条不再各带一块深色底 */
+html:has(body.cxpage) { background: var(--bg); }
+html:has(body.cxpage.cxdark) { background: var(--hs2); }
+body.cxpage nav { background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; border-color: transparent; }
+body.cxpage .cxdock { background: transparent; border-top-color: color-mix(in srgb, var(--ink) 12%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+body.cxpage.cxdark .cxdock { background: color-mix(in srgb, var(--hs2) 55%, transparent); }
+body.cxpage:not(.cxdark) .cxdock { background: color-mix(in srgb, var(--bg) 55%, transparent); }
