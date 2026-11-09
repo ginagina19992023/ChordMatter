@@ -1284,4 +1284,3 @@ body.dark .cxhold { background: transparent; }
 body.dark .holdmenu, body.dark .cxnb .nb { background: var(--card); }
 body.dark .thumbs img, body.dark .myscore img, body.dark .sharecard img { background: #fff; }
 body.dark .lk.w { background: #efe6dc; border-color: #2a2420; }
-body.dark video, body.dark .vclip img { filter: brightness(.62) contrast(1.05); }

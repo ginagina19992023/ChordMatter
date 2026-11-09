@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 98; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 99; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -588,7 +588,7 @@
       if (b.t === 'tip') return `<p class="tip">${b.x}</p>`;
       if (b.t === 'chord') return chordCard(b.s);
       if (b.t === 'prog') return progRow(b.k, b.c);
-      if (b.t === 'video') return `<figure class="vclip${b.tall ? ' tall' : ''}"><video controls playsinline preload="metadata" poster="${b.poster}" src="${b.src}">${b.vtt ? `<track kind="subtitles" srclang="zh" label="中文" src="${b.vtt}" default>` : ''}</video><figcaption><b>${b.title}</b><small>${b.credit}${b.url ? ` · <a href="${b.url}" target="_blank" rel="noopener">原视频 ↗</a>` : ''}</small></figcaption></figure>`;
+      if (b.t === 'video') return `<figure class="vclip${b.tall ? ' tall' : ''}"><video controls playsinline preload="metadata" poster="${b.poster}" src="${b.src}"${/media\/demo-[a-z]+\.mp4$/.test(b.src) ? ` data-light="${b.src}" data-lightp="${b.poster}" data-dark="${b.src.replace('.mp4', '-dark.mp4')}" data-darkp="${b.poster.replace('.jpg', '-dark.jpg')}"` : ''}>${b.vtt ? `<track kind="subtitles" srclang="zh" label="中文" src="${b.vtt}" default>` : ''}</video><figcaption><b>${b.title}</b><small>${b.credit}${b.url ? ` · <a href="${b.url}" target="_blank" rel="noopener">原视频 ↗</a>` : ''}</small></figcaption></figure>`;
       if (b.t === 'table') return `<table>${b.rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</table>`;
       return '';
     }).join('');
@@ -699,7 +699,7 @@
   const hueVars = h => `--h:${h[0]};--hm:${h[1]};--hs0:${h[2]};--hs1:${h[3]};--hs2:${h[4]};--ha:${h[5]}`;
   const darkMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : { matches: false };
   // 和弦相关页面：深色跟着手机主题；整页的色彩跟着和弦走（body 上的变量会渐变）
-  function cxGlobalDark() { const d = isDarkTheme(); document.body.classList.toggle('dark', d); const m = document.querySelector('meta[name=theme-color]'); if (m) m.setAttribute('content', d ? '#141210' : '#ffffff'); }
+  function cxGlobalDark() { const d = isDarkTheme(); document.body.classList.toggle('dark', d); document.querySelectorAll('video[data-dark]').forEach(v => { const want = d ? v.dataset.dark : v.dataset.light; if (v.getAttribute('src') !== want) { v.setAttribute('src', want); v.setAttribute('poster', d ? v.dataset.darkp : v.dataset.lightp); } }); const m = document.querySelector('meta[name=theme-color]'); if (m) m.setAttribute('content', d ? '#141210' : '#ffffff'); }
   const isDarkTheme = () => S.theme === 'dark' || (S.theme !== 'light' && !!darkMQ.matches);
   function cxTheme(q) {
     const b = document.body, h = q == null ? ['#555555', '#cccccc', '#26231f', '#1c1a17', '#141210', '#e8e0d4'] : cxHue(q);
@@ -3616,7 +3616,21 @@
     return cv;
   }
   // 预览 + 分享（iPhone 分享面板）/ 保存图片；也可以长按预览图存到相册
+  // 深色模式下分享的图也是深色：整张图反色并保持色相（和页面里谱面的做法一样），再把黑白压进 #121212–#f7f7f7
+  function darkenCanvas(cv) {
+    try {
+      const g = cv.getContext('2d'), im = g.getImageData(0, 0, cv.width, cv.height), d = im.data, cl = v => (v < 0 ? 0 : v > 255 ? 255 : v);
+      for (let i = 0; i < d.length; i += 4) {
+        const r = 255 - d[i], gg = 255 - d[i + 1], b = 255 - d[i + 2];
+        const R = -0.574 * r + 1.43 * gg + 0.144 * b, G = 0.426 * r + 0.43 * gg + 0.144 * b, B = 0.426 * r + 1.43 * gg - 0.856 * b;
+        d[i] = 18 + cl(R) * 0.9; d[i + 1] = 18 + cl(G) * 0.9; d[i + 2] = 18 + cl(B) * 0.9;
+      }
+      g.putImageData(im, 0, 0);
+    } catch (e) {}
+    return cv;
+  }
   async function sharePreview(cv, name, title) {
+    if (isDarkTheme()) darkenCanvas(cv);
     document.querySelectorAll('.sharepop').forEach(x => x.remove());
     const host = document.getElementById('phone') || document.body, url = cv.toDataURL('image/png');
     const el = document.createElement('div'); el.className = 'sharepop';
