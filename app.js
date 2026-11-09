@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 107; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 108; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -496,6 +496,7 @@
     try { linkChords(view); linkTerms(view); } catch (e) {} // 立即给文字加下划线，不等谱面画完
     document.body.classList.toggle('nolab', S.lab === false);
     pbarPaint();
+    navRestoreScroll();
     if (['song', 'cmp', 'score'].includes(r) && !view.querySelector('.dock')) view.insertAdjacentHTML('beforeend', dockHtml());
     if (r === 'song') mountMyScore(route[1]);
     if (S.pendingGift && !document.body.classList.contains('focus')) setTimeout(flushGift, 400);
@@ -864,12 +865,24 @@
     const end = () => { if (!D2) return; D2 = null; try { playChord(T.build(CX.root, CX.q, Math.min(CX.inv, T.Q[CX.q].ints.length - 1)).sym); } catch (err) {} };
     document.addEventListener('pointerup', end, true); document.addEventListener('pointercancel', () => { D2 = null; }, true);
   })();
-  // 点底部「和弦」：从别的页回来，回到上次看的那个和弦；已经在和弦页里，再点就回和弦库首页
+  // ---- 底部每个标签都记住「上次停在哪一页、滚到哪里」：切到别的标签再点回来，回到原处；已在这个标签里再点一下，回到这个标签的首页 ----
+  const TAB_OF = { today: 'today', pk: 'today', path: 'path', unit: 'path', sym: 'path', inv: 'path', logic: 'path', know: 'path', sight: 'path', chords: 'chords', combo: 'chords', browse: 'chords', songs: 'songs', song: 'songs', acc: 'songs', sing: 'songs', score: 'songs', scan: 'songs', cmp: 'songs', edit: 'songs', set: 'set', me: 'set', cards: 'set' };
+  const navTabNow = () => ((route[0] === 'sight' && route[1]) ? null : TAB_OF[route[0]] || null);
+  const scrollerNow = () => { const box = document.getElementById('phone'); return box && getComputedStyle(box).overflowY === 'auto' ? box : document.scrollingElement; };
+  let NAV_RESTORE = null;
+  function navRestoreScroll() {
+    if (NAV_RESTORE == null) return; const y = NAV_RESTORE; NAV_RESTORE = null;
+    const go2 = () => { const sc = scrollerNow(); if (sc) sc.scrollTop = y; };
+    go2(); setTimeout(go2, 80); setTimeout(go2, 600); setTimeout(go2, 1600);
+  }
   document.addEventListener('click', e => {
-    const a = e.target.closest && e.target.closest('nav a[data-r="chords"]'); if (!a) return;
+    const a = e.target.closest && e.target.closest('nav a[data-r]'); if (!a) return;
     e.preventDefault();
-    if (route[0] === 'chords' && route[1]) { go('#chords'); return; }
-    const L = S.cxLast; go(L && ROOT_MAJ.includes(L.r) && T.Q[L.q] ? `#chords-${encodeURIComponent(L.r)}-${L.q || '_'}` : '#chords');
+    const tab = a.dataset.r, cur = navTabNow();
+    if (cur) { const sc = scrollerNow(); S.navLast = S.navLast || {}; S.navLast[cur] = { h: location.hash || '#' + cur, y: sc ? Math.round(sc.scrollTop) : 0 }; save(); }
+    if (cur === tab) { go('#' + tab); return; }
+    const L = (S.navLast || {})[tab];
+    if (L && L.h) { NAV_RESTORE = L.y || 0; go(L.h); } else go('#' + tab);
   }, true);
   // 按住往下拖选：转位 / 弹法（点一下 = 直接执行）
   (function () {
