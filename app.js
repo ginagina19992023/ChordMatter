@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 104; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 105; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -754,6 +754,7 @@
     };
     const INV = [['原位', '根音在最下面'], ['一转', '三音在最下面'], ['二转', '五音在最下面'], ['三转', '七音在最下面']];
     cxTheme(CX.q);
+    S.cxLast = { r: CX.root, q: CX.q }; clearTimeout(CX.st); CX.st = setTimeout(save, 600); // 记住停在哪个和弦
     const qi = QINFO[CX.q], invi = Math.max(0, c.inv);
     const bigN = showN.map(n => Object.assign({}, n, { f: D(n.name) }));
     const curL = CX_LAB[CX.q];
@@ -863,6 +864,13 @@
     const end = () => { if (!D2) return; D2 = null; try { playChord(T.build(CX.root, CX.q, Math.min(CX.inv, T.Q[CX.q].ints.length - 1)).sym); } catch (err) {} };
     document.addEventListener('pointerup', end, true); document.addEventListener('pointercancel', () => { D2 = null; }, true);
   })();
+  // 点底部「和弦」：从别的页回来，回到上次看的那个和弦；已经在和弦页里，再点就回和弦库首页
+  document.addEventListener('click', e => {
+    const a = e.target.closest && e.target.closest('nav a[data-r="chords"]'); if (!a) return;
+    e.preventDefault();
+    if (route[0] === 'chords' && route[1]) { go('#chords'); return; }
+    const L = S.cxLast; go(L && ROOT_MAJ.includes(L.r) && T.Q[L.q] ? `#chords-${encodeURIComponent(L.r)}-${L.q || '_'}` : '#chords');
+  }, true);
   // 按住往下拖选：转位 / 弹法（点一下 = 直接执行）
   (function () {
     let H = null;
