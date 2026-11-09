@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 100; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 101; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -776,7 +776,6 @@
         }).join('')}<div class="cxrail" id="cxrail" aria-label="性质滑条：上下拖动换和弦性质">${CX_Q.map((q, i) => `<i class="qt${q === CX.q ? ' on' : ''}" style="top:${(10 + i * 18).toFixed(0)}px;background:${QHUE[q][0]}"></i>`).join('')}<b class="qthumb" style="top:${(10 + CX_Q.indexOf(CX.q) * 18 - 14).toFixed(0)}px">${CX_ZH[CX.q]}</b></div></div>
         <div class="cxview">${kb(bigN, { lo: CX.hand === 'R' ? 60 : 48, hi: CX.hand === 'R' ? 83 : CX.hand === 'L' ? 71 : 83 })}</div>
         <div class="cxnbs"><span>只动一点，就变成</span>${nbrs.map(x => `<button class="nb" data-act="cx" data-k="q" data-v="${x.q}"><i class="qd" style="background:${QHUE[x.q][0]}"></i><b>${D(CX.root + x.q)}</b><small>${x.note}</small></button>`).join('')}</div>
-        <div class="cxroot" id="cxroot" aria-label="根音滑条：左右拖动换根音"><span class="rhint">左右拖动，换根音</span><div class="rtrack"></div>${ROOT_MAJ.map((r, i) => `<i class="rt" style="left:calc(19px + (100% - 38px) * ${(i / 11).toFixed(4)})">${D(r)}</i>`).join('')}<b class="rthumb" style="left:calc(19px + (100% - 38px) * ${(ROOT_MAJ.indexOf(CX.root) / 11).toFixed(4)})">${D(CX.root)}</b></div>
         <p class="cxline"><span class="cxlt">${CX.hand !== 'R' ? '<span class="lhc">左手 ' + fgL.join('-') + '</span> ' : ''}${CX.hand !== 'L' ? '右手 ' + fgR.join('-') : ''} · ${c.quality.f}</span><span class="hseg" role="group" aria-label="左右手">${[['L', '左'], ['R', '右'], ['B', '双']].map(([v, t]) => `<button class="${CX.hand === v ? 'on' : ''}" data-act="cx" data-k="hand" data-v="${v}" aria-label="${t}手">${t}</button>`).join('')}</span></p>
         <details class="cxstaff"><summary>看谱</summary>${Staff.html({ bars: [[c.sym]], numerals: false, perRow: 1, minBar: 60, exact: true, notes: showN.map(n => ({ name: n.name, midi: n.midi, lh: n.lh ? 1 : 0 })) })}</details>
       </section>
@@ -785,7 +784,9 @@
         ['小进行', `${(() => { const ctx = chordContext(c); return ctx ? `<h3>先在小进行里听它</h3><p class="fine">${ctx[1]} · 点一下听，跟着弹</p>${progRow(c.root.name, ctx[0])}<div class="pills"><button class="pill rlprog" data-act="rollprog" data-k="${esc(c.root.name)}" data-c="${esc(ctx[0].join(','))}" data-t="${esc(ctx[0].map(D).join(' → '))}">▶ 跟练这个小进行 · 全屏</button></div>` : '<p class="fine">这个和弦没有常用的小进行。</p>'; })()}`],
         ['曲子里', `${refSongHtml(c)}<h3>在曲子里找到它</h3>${chordFinds(c)}<a class="link" href="#browse-${encodeURIComponent(c.root.name + c.q)}"><small>浏览</small><b>曲库里所有和弦 · 有的和没有的</b><span>→</span></a><a class="link" href="#combo"><small>连起来记</small><b>组合和弦：一串一串记</b><span>→</span></a>`],
         ['练', `${arp.white && T.Q[CX.q].ints.length === 3 && !CX.q.startsWith('sus') ? `<a class="link" href="#arp-${CX.root + CX.q}"><small>练这个和弦</small><b>${D(CX.root + CX.q)} 琶音 · 带指法和收音</b><span>→</span></a>` : ''}<a class="link" href="#combo"><small>连起来记</small><b>组合和弦：一串一串记</b><span>→</span></a>`],
-      ])}`;
+      ])}
+      <div class="cxdock" id="cxdock"><div class="cxroot" id="cxroot" aria-label="根音滑条：左右拖动换根音"><div class="rtrack"></div>${ROOT_MAJ.map((r, i) => `<i class="rt" style="left:calc(19px + (100% - 38px) * ${(i / 11).toFixed(4)})">${D(r)}</i>`).join('')}<b class="rthumb" style="left:calc(19px + (100% - 38px) * ${(ROOT_MAJ.indexOf(CX.root) / 11).toFixed(4)})">${D(CX.root)}</b></div></div><div class="cxdocksp"></div>`;
+    { const nv = document.querySelector('nav'); document.documentElement.style.setProperty('--navh', (nv ? nv.offsetHeight : 64) + 'px'); }
     pagerInit();
     // 度数线：从原来的位置，慢慢滑到升/降之后的位置（线是一条弧，圆圈跟着走）
     const rows = [...document.querySelectorAll('.cxdeg .dr[data-dy]')].filter(r => oldDy[r.dataset.i] != null && oldDy[r.dataset.i] !== +r.dataset.dy);
