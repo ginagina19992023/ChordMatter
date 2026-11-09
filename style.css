@@ -1089,3 +1089,25 @@ body.immersive #pbar { display: none; }
 .spwrap[data-ph="pre"] .spscore { order: 1; }
 .spprev .btn.sm { margin-left: auto; width: auto; padding: 8px 16px; }
 .sphint input[type=range] { flex: 1; max-width: 150px; min-width: 90px; accent-color: var(--acc); height: 28px; }
+
+/* ---- 和弦页：颜色跟着和弦走 ---- */
+@property --h { syntax: '<color>'; inherits: true; initial-value: #a35f00; }
+@property --hm { syntax: '<color>'; inherits: true; initial-value: #f2c45c; }
+.cxtop { transition: --h .5s ease, --hm .5s ease; background: linear-gradient(180deg, color-mix(in srgb, var(--hm) 32%, #fff) 0%, var(--bg) 100%); }
+.cxname b { color: var(--ink); }
+.cxview .kb .k.on.rt { fill: #8e8a80; stroke: #8e8a80; }
+.cxview .kb .k.on.st { fill: var(--hm); stroke: var(--hm); }
+.cxview .kb .k.on.mv { fill: var(--h); stroke: var(--h); }
+.cxview .kb .k.on-play { filter: brightness(1.18) saturate(1.25); }
+.cxview .kb .fn.rt, .cxview .kb .fn.mv { fill: #fff; }
+.cxview .kb .fn.st { fill: #111; }
+.cxhold { height: 34px; padding: 0 12px; border-radius: 17px; border: 1px solid var(--h); color: var(--h); background: #fff; font-size: 14px; font-weight: 600; touch-action: none; -webkit-touch-callout: none; white-space: nowrap; }
+.cxhold.go { background: var(--h); color: #fff; }
+.cxhold small { font-size: 11px; font-weight: 500; opacity: .85; margin-left: 2px; }
+.cxhold.flash { filter: brightness(1.2); }
+.cxhint { margin: 4px 0 0; font-size: 11px; color: var(--mute); }
+.cxrow .chip.q .qd { display: block; width: 7px; height: 7px; border-radius: 50%; margin-bottom: 2px; }
+.cxrow .chip.q.on { border-color: var(--h); }
+.holdmenu { position: fixed; z-index: 60; width: 132px; background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 8px 28px rgba(0,0,0,.14); padding: 3px; touch-action: none; }
+.holdmenu .hmi { height: 38px; line-height: 38px; padding: 0 12px; border-radius: 11px; font-size: 14px; color: var(--ink); }
+.holdmenu .hmi.on { background: #111; color: #fff; font-weight: 600; }

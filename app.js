@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 81; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 82; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -266,13 +266,13 @@
     for (let m = lo; m <= hi; m++) {
       const pc = m % 12, n = map[m];
       if (!BLACK.includes(pc)) {
-        whites.push(`<g><rect class="k w${n ? ' on' : ''}${n && n.dim ? ' dim' : ''}${n && n.lh ? ' lh' : ''}"${o.tap ? ' data-act="key"' : ''} data-m="${m}" x="${xs[m] + 0.5}" y="0.5" width="${W - 1}" height="${H}" rx="2"/>` +
-          (n && n.f ? `<text class="fn${n.lh ? ' fl' : ''}" x="${xs[m] + W / 2}" y="${H - 9}">${n.f}</text>` : '') +
+        whites.push(`<g><rect class="k w${n ? ' on' : ''}${n && n.dim ? ' dim' : ''}${n && n.lh ? ' lh' : ''}${n && n.cls ? ' ' + n.cls : ''}"${o.tap ? ' data-act="key"' : ''} data-m="${m}" x="${xs[m] + 0.5}" y="0.5" width="${W - 1}" height="${H}" rx="2"/>` +
+          (n && n.f ? `<text class="fn${n.lh ? ' fl' : ''}${n.cls ? ' ' + n.cls : ''}" x="${xs[m] + W / 2}" y="${H - 9}">${n.f}</text>` : '') +
           (pc === 0 && !n ? `<text class="cl" x="${xs[m] + W / 2}" y="${H - 8}">C${m / 12 - 1}</text>` : '') + '</g>');
       } else {
         const bx = xs[m - 1] + W - BW / 2;
-        blacks.push(`<g><rect class="k b${n ? ' on' : ''}${n && n.dim ? ' dim' : ''}${n && n.lh ? ' lh' : ''}"${o.tap ? ' data-act="key"' : ''} data-m="${m}" x="${bx}" y="0.5" width="${BW}" height="${BH}" rx="1.5"/>` +
-          (n && n.f ? `<text class="fn fb" x="${bx + BW / 2}" y="${BH - 8}">${n.f}</text>` : '') + '</g>');
+        blacks.push(`<g><rect class="k b${n ? ' on' : ''}${n && n.dim ? ' dim' : ''}${n && n.lh ? ' lh' : ''}${n && n.cls ? ' ' + n.cls : ''}"${o.tap ? ' data-act="key"' : ''} data-m="${m}" x="${bx}" y="0.5" width="${BW}" height="${BH}" rx="1.5"/>` +
+          (n && n.f ? `<text class="fn fb${n.cls ? ' ' + n.cls : ''}" x="${bx + BW / 2}" y="${BH - 8}">${n.f}</text>` : '') + '</g>');
       }
     }
     return `<svg class="kb" viewBox="0 0 ${x + 1} ${H + 2}" preserveAspectRatio="xMidYMid meet">${whites.join('')}${blacks.join('')}</svg>`;
@@ -688,15 +688,36 @@
   }
 
   // ---- 和弦库 ----
-  const CX = { root: 'C', q: '', inv: 0, hand: 'R' };
+  const CX = { root: 'C', q: '', inv: 0, hand: 'R', pat: 'block', lastH: null };
+  // 每种和弦一个固定的色彩：[深色, 浅色]（深色 = 挪了/新加的音，浅色 = 没动的音）
+  const QHUE = { '': ['#a35f00', '#f2c45c'], m: ['#2f6fdb', '#a9c6f3'], dim: ['#7a4fd0', '#cdb9f1'], aug: ['#0b7a72', '#9ad9d3'], '7': ['#d9480f', '#f5b08a'], maj7: ['#c2417a', '#f0b0cd'], m7: ['#4a5bd6', '#b0b8f3'], m7b5: ['#3f7a60', '#b0d2c0'], dim7: ['#c0283a', '#efaab2'], sus4: ['#5c7a00', '#d3e38f'] };
+  const CX_PATS = () => [PATTERNS[4][0], PATTERNS[4][2], PATTERNS[4][3], PATTERNS[3][1], PATTERNS[4][1]];
+  const CX_PAT_NAME = { block: '柱式', broken: '逐键', alberti: '阿尔贝蒂', waltz: '华尔兹', oom: '低音+和弦' };
+  const CX_INV = ['原位', '一转', '二转', '三转'];
+  // 一个音是「根音 / 没动 / 挪了」：和大三和弦（1-3-5）比，七音一律算新加的
+  function cxRole(c, i) { if (i === 0) return 'rt'; const se = c.quality.ints[i][1]; return (i >= 3 || se !== [0, 4, 7][i]) ? 'mv' : 'st'; }
+  function cxPlay(el) {
+    const c = T.build(CX.root, CX.q, Math.min(CX.inv, T.Q[CX.q].ints.length - 1));
+    const pat = CX_PATS().find(p => p.id === CX.pat) || PATTERNS[4][0], beats = pat.id === 'waltz' ? 3 : 4, spb = 60 / 84;
+    stopAll(); A.init();
+    const evs = patEvents(c.sym, pat);
+    for (let bar = 0; bar < 2; bar++) evs.forEach(e => {
+      const t = (bar * beats + e.t) * spb + 0.03;
+      A.chord(e.keys.map(k => k.midi), t, pat.id === 'block' ? 0.012 : 0.005, e.d * spb * 1.05);
+      later(() => document.querySelectorAll('.cxview .kb .k.on').forEach(k => k.classList.toggle('on-play', e.keys.some(x => x.midi % 12 === (+k.dataset.m) % 12))), t * 1000);
+    });
+    later(() => document.querySelectorAll('.cxview .kb .k.on-play').forEach(k => k.classList.remove('on-play')), (2 * beats * spb + 0.3) * 1000);
+    if (el) { el.classList.add('flash'); later(() => el.classList.remove('flash'), 300); }
+  }
   function vChords() {
     if (route[1]) { const r = decodeURIComponent(route[1]); if (ROOT_MAJ.includes(r)) CX.root = r; if (route[2] != null) CX.q = route[2] === '_' ? '' : route[2]; if (!T.Q[CX.q]) CX.q = ''; }
     const c = T.build(CX.root, CX.q, Math.min(CX.inv, T.Q[CX.q].ints.length - 1));
     const v = T.voicing(c), fg = T.blockFingers(c, CX.hand === 'L' ? 'L' : 'R');
     const fgR = T.blockFingers(c, 'R'), fgL = T.blockFingers(c, 'L');
     const lhV = v.map(n => Object.assign({}, n, { midi: n.midi - 12 }));
-    const showN = CX.hand === 'B' ? lhV.map((n, i) => ({ midi: n.midi, name: n.name, f: fgL[i], lh: 1 })).concat(v.map((n, i) => ({ midi: n.midi, name: n.name, f: fgR[i] })))
-      : CX.hand === 'L' ? lhV.map((n, i) => ({ midi: n.midi, name: n.name, f: fgL[i], lh: 1 })) : v.map((n, i) => ({ midi: n.midi, name: n.name, f: fgR[i] }));
+    const role = n => cxRole(c, n.deg);
+    const showN = CX.hand === 'B' ? lhV.map((n, i) => ({ midi: n.midi, name: n.name, f: fgL[i], lh: 1, cls: role(n) })).concat(v.map((n, i) => ({ midi: n.midi, name: n.name, f: fgR[i], cls: role(n) })))
+      : CX.hand === 'L' ? lhV.map((n, i) => ({ midi: n.midi, name: n.name, f: fgL[i], lh: 1, cls: role(n) })) : v.map((n, i) => ({ midi: n.midi, name: n.name, f: fgR[i], cls: role(n) }));
     const inSongs = allSongs().filter(s => s.sections.some(sec => parseBars(sec.bars).flat().some(x => { const p = T.parseChord(x); return p && p.root.pc === c.root.pc && p.q === c.q; })));
     const arp = T.arpeggio(T.parseChord(CX.root + CX.q), 'R');
     const qlist = ['', 'm', 'dim', 'aug', '7', 'maj7', 'm7', 'm7b5', 'dim7', 'sus4'];
@@ -708,19 +729,19 @@
     const INV = [['原位', '根音在最下面'], ['一转', '三音在最下面'], ['二转', '五音在最下面'], ['三转', '七音在最下面']];
     const qi = QINFO[CX.q], invi = Math.max(0, c.inv);
     const bottom = v[0];
-    view.innerHTML = `<section class="cxtop">
+    view.innerHTML = `<section class="cxtop" id="cxtop" style="--h:${(CX.lastH || QHUE[CX.q])[0]};--hm:${(CX.lastH || QHUE[CX.q])[1]}">
         <div class="cxhead"><div class="cxname"><b>${D(c.sym)}</b><span>${qi[0]}和弦${invi ? ' · ' + INV[invi][0] : ''} · ${qi[1]}</span></div>
-          <button class="ghost sm" data-act="play" data-s="${esc(c.sym)}">▶ 柱式</button><button class="ghost sm" data-act="play" data-s="${esc(c.sym)}" data-arp="1">▶ 分解</button></div>
+          <button class="cxhold" data-hold="inv" aria-label="转位：按住往下拖可以选">↻ ${CX_INV[invi]}</button><button class="cxhold go" data-hold="pat" aria-label="弹奏：点一下弹，按住往下拖选弹法">弹 <small>${CX_PAT_NAME[CX.pat]}</small></button></div>
+        <p class="cxhint">按住「↻」或「弹」往下拖，可以选转位 / 弹法</p>
         <div class="cxview">${Staff.html({ bars: [[c.sym]], numerals: false, perRow: 1, minBar: 60, exact: true, notes: showN.map(n => ({ name: n.name, midi: n.midi, lh: n.lh ? 1 : 0 })) })}${kb(showN, CX.hand === 'R' ? { lo: 60, hi: 88 } : CX.hand === 'L' ? { lo: 48, hi: 76 } : { lo: 48, hi: 88 })}</div>
         <p class="cxline">${c.notes.map(n => D(n.name)).join(' – ')} · ${c.quality.f} · ${CX.hand !== 'R' ? '<span class="lhc">左手 ' + fgL.join('-') + '</span> ' : ''}${CX.hand !== 'L' ? '右手 ' + fgR.join('-') : ''}</p>
       </section>
       <div class="cxrow"><p><b>① 根音</b> 和弦从哪个音开始叠</p>
       <div class="chips grid6">${ROOT_MAJ.map(r => `<button class="chip${r === CX.root ? ' on' : ''}" data-act="cx" data-k="root" data-v="${r}">${D(r)}</button>`).join('')}</div></div>
       <div class="cxrow"><p><b>② 性质</b> 听起来是什么颜色 · 小字是和弦名里的写法</p>
-      <div class="chips grid5">${qlist.map(q => `<button class="chip q${q === CX.q ? ' on' : ''}" data-act="cx" data-k="q" data-v="${q}"><b>${QINFO[q][0]}</b><small>${q === '' ? '不写' : D(q)}</small></button>`).join('')}</div></div>
-      <div class="cxrow"><p><b>③ 转位</b> 哪个音放最下面 · <b>手</b> 看哪只手的指法</p>
-      <div class="chips">${c.notes.map((_, i) => `<button class="chip${i === invi ? ' on' : ''}" data-act="cx" data-k="inv" data-v="${i}">${INV[i][0]}</button>`).join('')}
-        <span class="sp"></span><button class="chip${CX.hand === 'R' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="R">右手</button><button class="chip${CX.hand === 'L' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="L">左手</button><button class="chip${CX.hand === 'B' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="B">双手</button></div></div>
+      <div class="chips grid5">${qlist.map(q => `<button class="chip q${q === CX.q ? ' on' : ''}" data-act="cx" data-k="q" data-v="${q}"><i class="qd" style="background:${QHUE[q][0]}"></i><b>${QINFO[q][0]}</b><small>${q === '' ? '不写' : D(q)}</small></button>`).join('')}</div></div>
+      <div class="cxrow"><p><b>③ 手</b> 看哪只手的指法 · 转位在右上角「↻」</p>
+      <div class="chips"><button class="chip${CX.hand === 'R' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="R">右手</button><button class="chip${CX.hand === 'L' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="L">左手</button><button class="chip${CX.hand === 'B' ? ' on' : ''}" data-act="cx" data-k="hand" data-v="B">双手</button></div></div>
       <p class="explain"><b>${D(c.sym)}</b>：以 ${D(c.root.name)} 为根音的${c.quality.zh}，${qi[2]}，听起来${qi[1]}。${invi ? `${INV[invi][0]}：最下面弹 ${D(bottom.name)}（${INV[invi][1]}），所以写成 ${D(c.sym)}，斜线后面就是最低音。` : '原位：根音 ' + D(c.root.name) + ' 在最下面。'}键盘上的数字是手指（1 = 拇指，5 = 小指）${CX.hand === 'B' ? '，蓝色是左手（低八度），橙色是右手' : CX.hand === 'L' ? '，左手在低八度' : ''}。<a href="#know-k0">看不懂？</a></p>
       ${pager('chord', [
         ['小进行', `${(() => { const ctx = chordContext(c); return ctx ? `<h3>先在小进行里听它</h3><p class="fine">${ctx[1]} · 点一下听，跟着弹</p>${progRow(c.root.name, ctx[0])}<div class="pills"><button class="pill rlprog" data-act="rollprog" data-k="${esc(c.root.name)}" data-c="${esc(ctx[0].join(','))}" data-t="${esc(ctx[0].map(D).join(' → '))}">▶ 跟练这个小进行 · 全屏</button></div>` : '<p class="fine">这个和弦没有常用的小进行。</p>'; })()}`],
@@ -728,7 +749,45 @@
         ['练', `${arp.white && T.Q[CX.q].ints.length === 3 && !CX.q.startsWith('sus') ? `<a class="link" href="#arp-${CX.root + CX.q}"><small>练这个和弦</small><b>${D(CX.root + CX.q)} 琶音 · 带指法和收音</b><span>→</span></a>` : ''}<a class="link" href="#combo"><small>连起来记</small><b>组合和弦：一串一串记</b><span>→</span></a>`],
       ])}`;
     pagerInit();
+    const nh = QHUE[CX.q], top = document.getElementById('cxtop');
+    if (top && CX.lastH && CX.lastH !== nh) requestAnimationFrame(() => requestAnimationFrame(() => { top.style.setProperty('--h', nh[0]); top.style.setProperty('--hm', nh[1]); }));
+    CX.lastH = nh;
   }
+
+  // 按住往下拖选：转位 / 弹法（点一下 = 直接执行）
+  (function () {
+    let H = null;
+    const items = k => { if (k === 'inv') { const n = T.Q[CX.q].ints.length; return CX_INV.slice(0, n).map((t, i) => ({ t: (i ? i + ' · ' : '0 · ') + t })); } return CX_PATS().map(p => ({ t: CX_PAT_NAME[p.id] })); };
+    const cur = k => k === 'inv' ? Math.min(CX.inv, T.Q[CX.q].ints.length - 1) : Math.max(0, CX_PATS().findIndex(p => p.id === CX.pat));
+    function open() {
+      if (!H) return; H.open = true; const r = H.b.getBoundingClientRect(), its = items(H.kind);
+      const m = document.createElement('div'); m.className = 'holdmenu'; m.style.cssText = `right:${Math.max(8, innerWidth - r.right)}px;top:${r.bottom + 6}px`;
+      m.innerHTML = its.map((x, i) => `<div class="hmi" data-i="${i}">${x.t}</div>`).join(''); document.body.appendChild(m); H.m = m; H.n = its.length; H.y0 = r.bottom + 6 + 19;
+      H.idx = cur(H.kind); mark(); if (navigator.vibrate) navigator.vibrate(10);
+    }
+    function mark() { H.m.querySelectorAll('.hmi').forEach((e, i) => e.classList.toggle('on', i === H.idx)); }
+    document.addEventListener('pointerdown', e => {
+      const b = e.target.closest && e.target.closest('[data-hold]'); if (!b || route[0] !== 'chords') return;
+      e.preventDefault(); H = { b, kind: b.dataset.hold, open: false, idx: 0 }; H.t = setTimeout(open, 260);
+    }, true);
+    document.addEventListener('pointermove', e => {
+      if (!H || !H.open) return; const i = Math.max(0, Math.min(H.n - 1, Math.round((e.clientY - H.y0) / 38)));
+      if (i !== H.idx) { H.idx = i; mark(); if (navigator.vibrate) navigator.vibrate(5); }
+    }, true);
+    const end = (e, cancel) => {
+      if (!H) return; clearTimeout(H.t); const h = H; H = null;
+      if (h.m) h.m.remove();
+      if (cancel) return;
+      if (h.open) {
+        if (h.kind === 'inv') { CX.inv = h.idx; vChords(); playChord(T.build(CX.root, CX.q, CX.inv).sym); }
+        else { CX.pat = CX_PATS()[h.idx].id; vChords(); cxPlay(document.querySelector('.cxhold.go')); }
+      } else if (h.kind === 'inv') { CX.inv = (cur('inv') + 1) % T.Q[CX.q].ints.length; vChords(); playChord(T.build(CX.root, CX.q, CX.inv).sym); }
+      else cxPlay(h.b);
+    };
+    document.addEventListener('pointerup', e => end(e, false), true);
+    document.addEventListener('pointercancel', e => end(e, true), true);
+    document.addEventListener('contextmenu', e => { if (e.target.closest && e.target.closest('[data-hold]')) e.preventDefault(); });
+  })();
 
 
   // 每个和弦组合：找含有它的曲子；找不到就给一段「它通常怎么用」的小进行（按所选根音移调）
