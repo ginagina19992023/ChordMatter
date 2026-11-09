@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 121; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 122; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -1302,7 +1302,7 @@
     // 三种「找到」，每种都写清楚是什么关系
     const LV = { 3: ['原样', `就是 ${D(c.sym)}，一模一样`], 2: ['转位', `还是 ${D(c.root.name)}${c.q ? D(c.q) : ''} 这几个音，只是最低音换了（斜线后面是最低音）`], 1: ['同类型', `也是${(T.Q[c.q] || {}).zh || '这类和弦'}，只是换了根音：形状一样，整体平移`] };
     // 每首曲子的和弦是从哪来的
-    const SRC = s => s.src === 'web' ? ['网页和弦谱核对', '和弦来自公开的和弦谱网页（来源在曲子页「来源」里）；没核对到的段落没有收。有版权，只放在私人预览里。'] : s.src === 'printed' ? ['谱上印的', '和弦名就印在原谱上，照抄的'] : s.src === 'analyzed' ? ['我读原谱判断的', s.ev ? '原谱上没印和弦名：我逐小节看左手低音和右手的音判断出来的，点小节号能看每小节的依据' : '原谱上没印和弦名：我按谱上的音判断出来的'] : ['学习用简化', '不是原谱上的和弦：为了好学，简化成了常用和弦，和原曲听起来会不一样'];
+    const SRC = s => s.src === 'web' ? ['网页和弦谱核对', '和弦来自公开的和弦谱网页（来源在曲子页「来源」里）；没核对到的段落没有收。'] : s.src === 'printed' ? ['谱上印的', '和弦名就印在原谱上，照抄的'] : s.src === 'analyzed' ? ['我读原谱判断的', s.ev ? '原谱上没印和弦名：我逐小节看左手低音和右手的音判断出来的，点小节号能看每小节的依据' : '原谱上没印和弦名：我按谱上的音判断出来的'] : ['学习用简化', '不是原谱上的和弦：为了好学，简化成了常用和弦，和原曲听起来会不一样'];
     const rows = allSongs().map(s => { const h = chordHits(s, c); return h.length ? { s, h, best: Math.max(...h.map(x => x.lv)) } : null; }).filter(Boolean)
       .sort((x, y) => y.best - x.best || y.h.filter(z => z.lv === y.best).length - x.h.filter(z => z.lv === x.best).length);
     if (!rows.length) return '<p class="fine">曲库里还没有用到这种和弦的曲子，先用上面的小进行练。</p>';
