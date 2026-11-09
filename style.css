@@ -1347,3 +1347,9 @@ body.land #grid[data-mode=wrap] .bars { grid-template-columns: repeat(4, 1fr); }
 #grid[data-mode=scroll] .bars { display: flex; overflow-x: auto; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 #grid[data-mode=scroll] .bars::-webkit-scrollbar { display: none; }
 #grid[data-mode=scroll] .bar { flex: 0 0 172px; scroll-snap-align: start; }
+
+/* 和弦页沉浸：整页的色彩一直铺到最上面，顶上的小条和名字栏不再单独带一块底色 */
+body.cxpage #pbar { background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; border-bottom: 0; }
+body.cxpage .cxsticky, body.cxpage.cxdark .cxsticky { background: transparent; }
+body.cxpage .cxsticky.stuck { background: color-mix(in srgb, var(--hm) 32%, var(--bg)); }
+body.cxpage.cxdark .cxsticky.stuck { background: var(--hs0); }

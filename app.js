@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 109; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 110; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -707,6 +707,7 @@
     b.classList.toggle('cxdark', isDarkTheme() && ['chords', 'combo'].includes(route[0]));
     cxGlobalDark();
     b.classList.toggle('cxpage', q != null && route[0] === 'chords' && !!route[1]);
+    { const mt = document.querySelector('meta[name=theme-color]'); if (mt && b.classList.contains('cxpage')) mt.setAttribute('content', isDarkTheme() ? h[2] : h[1]); }
     ['--h', '--hm', '--hs0', '--hs1', '--hs2', '--ha'].forEach((k, n) => b.style.setProperty(k, h[n]));
   }
   const CX_PATS = () => [PATTERNS[4][0], PATTERNS[4][2], PATTERNS[4][3], PATTERNS[3][1], PATTERNS[4][1]];
