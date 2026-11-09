@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 111; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 112; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -1456,6 +1456,9 @@
   }
   // ---------------- 和弦的「体块」：一小块大谱表，每个音换成一根横条（位置 = 五线谱上的高低，颜色 = 感觉色）----------------
   const LETTER = { C: 0, D: 1, E: 2, F: 3, G: 4, A: 5, B: 6 };
+  // 配色方式：稳走紧（和弦在曲子里的作用）或 和弦色（和弦本身的性质，和「和弦」页一致）。默认稳走紧
+  const colorMode = () => (S.colorMode === 'chord' ? 'chord' : 'func');
+  const colorSeg = () => `<span class="seg2 cmode" role="group" aria-label="配色方式">${[['func', '稳 · 走 · 紧'], ['chord', '和弦色']].map(([k, t]) => `<a class="${colorMode() === k ? 'on' : ''}" data-act="colormode" data-v="${k}">${t}</a>`).join('')}</span>`;
   function chordShape(sym, key, w = 64, h = 68) {
     const c = T.parseChord(sym); if (!c) return '';
     const b = c.bass || c.root; let bm = 36 + b.pc; if (bm < 40) bm += 12;
@@ -1465,7 +1468,7 @@
     const top = 41, bot = 15, k = h / (top - bot), y = st => (top - st) * k;
     const lines = [30, 32, 34, 36, 38, 18, 20, 22, 24, 26].map(st => `<line x1="0" x2="${w}" y1="${y(st).toFixed(1)}" y2="${y(st).toFixed(1)}"/>`).join('');
     const ledger = notes.some(n => n.st === 28) ? `<line class="ldg" x1="${w * 0.3}" x2="${w * 0.7}" y1="${y(28).toFixed(1)}" y2="${y(28).toFixed(1)}"/>` : '';
-    const f = klCfg().feel ? 'Q' : 'N';
+    const f = klCfg().feel ? (colorMode() === 'chord' ? 'Q' : chordFunc(sym, key)) : 'N';
     // 横条和音符头一样宽（约 1.4 个谱线间距），居中；相邻二度像五线谱一样错开半个身位
     const nw = k * 2.8, cx = w / 2 - nw / 2, sorted = notes.slice().sort((p, q) => p.st - q.st);
     sorted.forEach((n, i) => { n.dx = i && sorted[i - 1].st === n.st - 1 && !sorted[i - 1].dx ? nw * 0.95 : 0; });
@@ -1498,19 +1501,19 @@
     let html = '';
     const key = (m, x, w, black) => {
       const inSc = scale.includes(m % 12), isT = tones.includes(m), grp = INT_GROUP[((m - root) % 12 + 12) % 12], vis = isT && cfg.tones && cfg.show[grp];
-      return `<div class="lk ${black ? 'b' : 'w'}${cfg.scale && inSc ? ' sc' : ''}" style="left:${x}%;width:${w}%" data-m="${m}">${m % 12 === 0 && !black ? `<small>C${m / 12 - 1}</small>` : ''}${vis ? `<i class="dot${cfg.feel ? ' ' + toneRole(c, m) : ''}${m === bass ? ' bass' : ''}">${lab(m)}</i>` : isT && cfg.tones ? '<i class="dot ghostdot"></i>' : ''}</div>`;
+      return `<div class="lk ${black ? 'b' : 'w'}${cfg.scale && inSc ? ' sc' : ''}" style="left:${x}%;width:${w}%" data-m="${m}">${m % 12 === 0 && !black ? `<small>C${m / 12 - 1}</small>` : ''}${vis ? `<i class="dot${cfg.feel ? (colorMode() === 'chord' ? ' ' + toneRole(c, m) : ' f' + func) : ''}${m === bass ? ' bass' : ''}">${lab(m)}</i>` : isT && cfg.tones ? '<i class="dot ghostdot"></i>' : ''}</div>`;
     };
     whites.forEach((m, i) => (html += key(m, i * ww, ww, false)));
     whites.forEach((m, i) => { if (m + 1 <= hi && [1, 3, 6, 8, 10].includes((m + 1) % 12)) html += key(m + 1, i * ww + ww * 0.66, ww * 0.62, true); });
-    return `<div class="lkb" style="${hueVars(cxHue(c.q))}">${html}</div>`;
+    return `<div class="lkb" style="${colorMode() === 'chord' ? hueVars(cxHue(c.q)) : ''}">${html}</div>`;
   }
   function klPanel(s) {
     const cfg = klCfg(), flat = songFlat(s), i = Math.min(KL.i, flat.length - 1), sym = flat[i], a = T.analyze(sym, s.key);
     const chip = (k, v, n, on) => `<button class="chip sm${on ? ' on' : ''}" data-act="klset" data-k="${k}" data-v="${v}">${n}</button>`;
     return `<section class="klpanel" id="klpanel">
-      <div class="klhead"><button class="ghost sm" data-act="klstep" data-v="-1">‹</button><div><b style="${hueVars(cxHue((T.parseChord(sym) || {}).q))}">${D(sym)}</b><small>${a ? degLabel(sym, s.key) + ' · ' + (FUNC_ZH[a.func] || '') : ''} · 第 ${i + 1}/${flat.length} 个和弦</small></div><button class="ghost sm" data-act="klstep" data-v="1">›</button></div>
+      <div class="klhead"><button class="ghost sm" data-act="klstep" data-v="-1">‹</button><div><b${colorMode() === 'chord' ? ` class="hq" style="${hueVars(cxHue((T.parseChord(sym) || {}).q))}"` : ''}>${D(sym)}</b><small>${a ? degLabel(sym, s.key) + ' · ' + (FUNC_ZH[a.func] || '') : ''} · 第 ${i + 1}/${flat.length} 个和弦</small></div><button class="ghost sm" data-act="klstep" data-v="1">›</button></div>
       ${klHtml(s, sym)}
-      <div class="klrow"><small>图层</small>${chip('scale', 1, '调内音', cfg.scale)}${chip('feel', 1, '和弦色', cfg.feel)}${chip('tones', 1, '和弦音', cfg.tones)}</div>
+      <div class="klrow"><small>图层</small>${chip('scale', 1, '调内音', cfg.scale)}${chip('feel', 1, '感觉色', cfg.feel)}${chip('tones', 1, '和弦音', cfg.tones)}</div>
       <div class="klrow"><small>圆点里写</small>${chip('label', 'int', 'R 3 5 7', cfg.label === 'int')}${chip('label', 'deg', '级数 1–7', cfg.label === 'deg')}${chip('label', 'name', '音名', cfg.label === 'name')}</div>
       <div class="klrow"><small>只看</small>${['R', '3', '5', '7', '9'].map(g => chip('show', g, g, cfg.show[g])).join('')}</div>
       <p class="fine">左边单独那个圆点（粗边）是左手低音，右边一组是右手和弦。只看 3 和 7：换和弦时这两个音通常只挪一点点，手跟着它们走就顺了。</p>
@@ -1583,7 +1586,7 @@
       <div class="chips scroll"><button class="chip${v === 'sheet' ? ' on' : ''}" data-act="songview" data-v="sheet">谱 + 和弦</button><button class="chip${v === 'roll' ? ' on' : ''}" data-act="songview" data-v="roll">瀑布流</button><button class="chip${v === 'grid' ? ' on' : ''}" data-act="songview" data-v="grid">和弦格子</button>${hasFull(s.id) ? `<a class="chip linkchip" href="#cmp-${s.id}">原曲↔和弦 →</a>` : ''}<button class="pill info" data-act="info" data-k="how">ⓘ</button></div>
       ${secChips}
       ${route[2] ? `<p class="hitnote">从 <b>${D(route[3] || '')}</b> 和弦页过来：要找的是第 ${route[2].split('.').join('、')} 小节。</p>` : ''}
-      ${v === 'grid' ? `<div class="seg gmode" role="group" aria-label="格子排法">${[['wrap', '折行'], ['scroll', '横滑']].map(([k, t]) => `<button class="${(S.gridMode || 'wrap') === k ? 'on' : ''}" data-act="gridmode" data-v="${k}">${t}</button>`).join('')}</div><div class="grid" id="grid" data-mode="${S.gridMode || 'wrap'}">${songGrid(s, si)}</div>${(() => { const first = view && si >= 0 ? songFlat({ sections: s.sections.slice(0, si) }).length : 0; if (KL.song !== s.id || KL.sec !== si) { KL.song = s.id; KL.sec = si; KL.i = first; } return klPanel(s); })()}<p class="explain" id="explain">点任意和弦：听声音，并看它是什么意思。</p>` : v === 'roll' ? rollEntry('song', hasFull(s.id) ? '整首按原谱落下：简单只弹和弦，中等加左手低音，困难是原曲两只手' : '整首落下：简单只弹和弦，中等加左手低音') : songSheet(s, si)}`;
+      ${v === 'grid' ? `${colorSeg()}<div class="seg gmode" role="group" aria-label="格子排法">${[['wrap', '折行'], ['scroll', '横滑']].map(([k, t]) => `<button class="${(S.gridMode || 'wrap') === k ? 'on' : ''}" data-act="gridmode" data-v="${k}">${t}</button>`).join('')}</div><div class="grid" id="grid" data-mode="${S.gridMode || 'wrap'}">${songGrid(s, si)}</div>${(() => { const first = view && si >= 0 ? songFlat({ sections: s.sections.slice(0, si) }).length : 0; if (KL.song !== s.id || KL.sec !== si) { KL.song = s.id; KL.sec = si; KL.i = first; } return klPanel(s); })()}<p class="explain" id="explain">点任意和弦：听声音，并看它是什么意思。</p>` : v === 'roll' ? rollEntry('song', hasFull(s.id) ? '整首按原谱落下：简单只弹和弦，中等加左手低音，困难是原曲两只手' : '整首落下：简单只弹和弦，中等加左手低音') : songSheet(s, si)}`;
     if (tab === 'shape') body = `
       ${harmonyStrip(s)}
       <section class="logic"><h3>谱面逻辑 <small>· 点下划线的词看解释</small></h3>${songLogic(s).map(l => `<p>${l}</p>`).join('')}</section>
@@ -2333,7 +2336,7 @@
   }
   function harmonyStrip(s) {
     const st = sectionStarts(s);
-    return `<div class="hstrip">${s.sections.map((sec, i) => `<div class="hsec"><small>${esc(sec.name)}</small><div class="hrow">${parseBars(sec.bars).map((bar, k) => `<div class="hbar" data-act="hstrip" data-n="${st[i] + k}">${bar.map(x => `<i class="q" style="${hueVars(cxHue((T.parseChord(x) || {}).q))}" title="${esc(D(x))}">${D(x)}</i>`).join('')}</div>`).join('')}</div></div>`).join('')}<p class="fine">和声色带：颜色 = 和弦的性质（和「和弦」页一样：大三金黄、小三蓝、属七橙……） · 一格一小节，点一格看那一小节</p></div>`;
+    return `<div class="hstrip">${colorSeg()}${s.sections.map((sec, i) => `<div class="hsec"><small>${esc(sec.name)}</small><div class="hrow">${parseBars(sec.bars).map((bar, k) => `<div class="hbar" data-act="hstrip" data-n="${st[i] + k}">${bar.map(x => (colorMode() === 'chord' ? `<i class="q" style="${hueVars(cxHue((T.parseChord(x) || {}).q))}" title="${esc(D(x))}">${D(x)}</i>` : `<i class="f${chordFunc(x, s.key)}" title="${esc(D(x))}">${D(x)}</i>`)).join('')}</div>`).join('')}</div></div>`).join('')}<p class="fine">和声色带：${colorMode() === 'chord' ? '颜色 = 和弦的性质（大三金黄、小三蓝、属七橙……，和「和弦」页一样）' : '<span class="fT">■ 稳</span> <span class="fS">■ 走</span> <span class="fD">■ 紧</span>'} · 一格一小节，点一格看那一小节</p></div>`;
   }
   function rollPanel(id) {
     const maxLv = RL.maxLv || 2, passed = rollPassed();
@@ -3897,6 +3900,7 @@
       case 'mytoggle': S.myOpen = !S.myOpen; save(); { const b = document.querySelector('.mybox'); if (b) b.hidden = !S.myOpen; } el.textContent = '我的原谱 ' + (S.myOpen ? '⌃' : '⌄'); break;
       case 'lvset': S.lv = S.lv || {}; S.lv[el.dataset.k] = el.dataset.v; save(); render(); break;
       case 'theme': S.theme = el.dataset.v; save(); cxGlobalDark(); vSet(); break;
+      case 'colormode': S.colorMode = el.dataset.v; save(); render(); break;
       case 'gridmode': { S.gridMode = el.dataset.v; save(); const g = document.getElementById('grid'); if (g) g.dataset.mode = S.gridMode; document.querySelectorAll('.gmode button').forEach(x => x.classList.toggle('on', x.dataset.v === S.gridMode)); break; }
       case 'sfilter': S.songFilter = el.dataset.v; save(); render(); break;
       case 'afilter': S.accFilter = el.dataset.v; save(); render(); break;

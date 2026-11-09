@@ -1328,11 +1328,11 @@ body.land .cxsticky { margin-right: calc(-1 * max(16px, env(safe-area-inset-righ
 /* 和弦的颜色：所有地方一套——根音灰、没动的音浅色、挪了或新加的音用这个和弦的颜色 */
 .cshape.fQ rect.rh { fill: var(--h); } .cshape.fQ rect.lh { fill: #8e8a80; opacity: 1; }
 .hbar i.q { background: var(--h); }
-.klhead b { color: var(--h); }
+.klhead b.hq { color: var(--h); }
 .lk .dot.rt { background: #8e8a80; color: #fff; } .lk .dot.st { background: var(--hm); color: #111; } .lk .dot.mv { background: var(--h); color: #fff; }
 body.dark .cshape.fQ rect.rh { fill: var(--ha); }
 body.dark .hbar i.q { background: var(--ha); color: #1a0f0a; }
-body.dark .klhead b { color: var(--ha); }
+body.dark .klhead b.hq { color: var(--ha); }
 body.dark .lk .dot.mv { background: var(--ha); color: #1a0f0a; }
 body.dark .lk .dot.st { background: color-mix(in srgb, var(--ha) 50%, var(--hs1, #2a2420)); color: #fff; }
 
@@ -1361,3 +1361,7 @@ body.cxpage nav { background: transparent; -webkit-backdrop-filter: none; backdr
 body.cxpage .cxdock { background: transparent; border-top-color: color-mix(in srgb, var(--ink) 12%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
 body.cxpage.cxdark .cxdock { background: color-mix(in srgb, var(--hs2) 55%, transparent); }
 body.cxpage:not(.cxdark) .cxdock { background: color-mix(in srgb, var(--bg) 55%, transparent); }
+
+.seg2.cmode { margin: 2px 8px 8px 0; }
+.seg2 a[data-act] { cursor: pointer; }
+.cmode a { padding: 4px 12px; font-size: 13px; }
