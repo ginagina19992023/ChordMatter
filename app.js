@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 85; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 86; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -726,7 +726,7 @@
   function vChords() {
     if (!route[1]) return vLib();
     const oldK = {}; document.querySelectorAll('.cxview .kb .k').forEach(k => { oldK[k.dataset.m] = k.getAttribute('class'); });
-    if (route[1]) { const r = decodeURIComponent(route[1]); if (ROOT_MAJ.includes(r)) CX.root = r; if (route[2] != null) CX.q = route[2] === '_' ? '' : route[2]; if (!T.Q[CX.q]) CX.q = ''; }
+    { const sig = route.join('-'); if (CX.sig !== sig) { CX.sig = sig; const r = decodeURIComponent(route[1]); if (ROOT_MAJ.includes(r)) CX.root = r; if (route[2] != null) CX.q = route[2] === '_' ? '' : route[2]; if (!T.Q[CX.q]) CX.q = ''; CX.inv = 0; } }
     const c = T.build(CX.root, CX.q, Math.min(CX.inv, T.Q[CX.q].ints.length - 1));
     const v = T.voicing(c), fg = T.blockFingers(c, CX.hand === 'L' ? 'L' : 'R');
     const fgR = T.blockFingers(c, 'R'), fgL = T.blockFingers(c, 'L');
@@ -791,7 +791,7 @@
   // ---- 和弦库首页：五度圈选根音 + 这个根音的 10 种和弦 ----
   const FIFTHS = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'Db', 'Ab', 'Eb', 'Bb', 'F'];
   function vLib() {
-    cxTheme(null);
+    CX.sig = null; cxTheme(null);
     const R = 112, ring = FIFTHS.map((r, i) => { const a = i * 30 * Math.PI / 180, on = r === CX.root; return `<button class="cr-b${on ? ' on' : ''}" data-act="libroot" data-v="${r}" aria-label="根音 ${D(r)}" style="left:${(140 + R * Math.sin(a) - 20).toFixed(1)}px;top:${(140 - R * Math.cos(a) - 20).toFixed(1)}px">${D(r)}</button>`; }).join('');
     const cards = CX_Q.map(q => {
       const c = T.build(CX.root, q, 0), v = T.voicing(c), h = cxHue(q);
