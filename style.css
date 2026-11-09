@@ -1219,3 +1219,14 @@ body.land #phone #pbar { margin-left: calc(env(safe-area-inset-left) + 62px); }
 .cxsticky.stuck .cxhold { height: 30px; }
 .cxtop { margin-top: 0; padding-top: 0; }
 @media (prefers-color-scheme: dark) { body.cxdark .cxsticky { background: var(--hs0); } body.cxdark .cxsticky.stuck { box-shadow: 0 1px 0 rgba(255,255,255,.1); } }
+
+.cxdeg .dr .dline { position: absolute; left: 26px; top: 0; width: 64px; height: 50px; border: 0; overflow: visible; transition: none; }
+.cxdeg .dr .dline path { fill: none; stroke: var(--line); stroke-width: 1.6; stroke-linecap: round; transition: stroke .5s; }
+.cxdeg .dr.mv .dline path { stroke: var(--h); }
+.cxdeg .dr.none .dline path { stroke-dasharray: 3 4; }
+@media (prefers-color-scheme: dark) { body.cxdark .cxdeg .dr.mv .dline path { stroke: var(--ha); } }
+
+.refsong .rs { display: block; padding: 6px 0; border-top: 1px solid var(--line); }
+.refsong .rs:first-of-type { border-top: 0; }
+.refsong .rs b { font-size: 15px; margin: 0; }
+.refsong .rs span { display: block; font-size: 12px; color: var(--mute); }

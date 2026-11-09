@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 91; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 93; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -692,7 +692,7 @@
   const CX = { root: 'C', q: '', inv: 0, hand: 'R', pat: 'block', lastH: null };
   // 每种和弦一个固定的色彩：[深色, 浅色]（深色 = 挪了/新加的音，浅色 = 没动的音）
   const QHUE = { '': ['#a35f00', '#f2c45c', '#5a3d0b', '#2e2008', '#17110a', '#ffc857'], m: ['#2f6fdb', '#a9c6f3', '#1c3560', '#141f38', '#0c1220', '#7cb8ff'], dim: ['#7a4fd0', '#cdb9f1', '#3d2466', '#22163d', '#130d22', '#c9a6ff'], aug: ['#0b7a72', '#9ad9d3', '#0f4a47', '#0e2a29', '#0a1717', '#5ee0d4'], '7': ['#d9480f', '#f5b08a', '#5c2410', '#2e170e', '#170d09', '#ff9a62'], maj7: ['#c2417a', '#f0b0cd', '#5a2140', '#2e1424', '#170b12', '#ff9cc8'], m7: ['#4a5bd6', '#b0b8f3', '#26306a', '#171c3d', '#0d1022', '#9aa8ff'], m7b5: ['#3f7a60', '#b0d2c0', '#1f4034', '#13261f', '#0b1511', '#8fd0aa'], dim7: ['#c0283a', '#efaab2', '#5a1f24', '#2a1215', '#170a0c', '#ff6b7c'], sus4: ['#5c7a00', '#d3e38f', '#3d4a0e', '#212809', '#121505', '#c6e45c'] };
-  const REF_SONGS = {"C": "月亮代表我的心", "Cm": "爱情转移（陈奕迅）", "Caug": "Yesterday Once More（卡朋特）", "Cdim": "梦中的婚礼（克莱德曼）", "C7": "蒲公英的约定（周杰伦）", "Cm7": "红豆（王菲）", "Cmaj7": "Imagine（约翰·列侬）", "Cdim7": "青花瓷·间奏（周杰伦）", "Csus4": "春天里（汪峰）", "D": "卡农（帕赫贝尔）", "Dm": "南方姑娘（赵雷）", "Daug": "经典进行 D–Daug–G", "Ddim": "梁祝·化蝶段", "D7": "Hotel California（Eagles）", "Dm7": "突然好想你（五月天）", "Dmaj7": "曾经的你（许巍）", "Ddim7": "梁祝（何占豪/陈钢）", "Dsus4": "爱情诺曼底（黄征）", "E": "同桌的你（老狼）", "Em": "小调歌曲常用色彩", "Eaug": "经典进行 E–Eaug–A", "Edim": "天鹅（圣桑）", "E7": "花海（周杰伦）", "Em7": "小情歌（苏打绿）", "Emaj7": "知足（五月天）", "Edim7": "Memory（音乐剧《猫》）", "Esus4": "安静（周杰伦）", "F": "童话（光良）", "Fm": "轨迹（周杰伦）", "Faug": "经典进行 F–Faug–B♭", "Fdim": "月光（德彪西）", "F7": "遥远的她（张学友）", "Fm7": "雨下一整晚（周杰伦）", "Fmaj7": "成都（赵雷）", "Fdim7": "月光·第一乐章（贝多芬）", "Fsus4": "喜欢你（Beyond）", "G": "平凡之路（朴树）", "Gm": "白桦林（朴树）", "Gaug": "是否（苏芮）", "Gdim": "天空之城（久石让）", "G7": "月亮代表我的心", "Gm7": "最长的电影（周杰伦）", "Gmaj7": "贝加尔湖畔（李健）", "Gdim7": "千与千寻·那个夏天（久石让）", "Gsus4": "蓝莲花（许巍）", "A": "真心英雄（张雨生等）", "Am": "白桦林（朴树）", "Aaug": "经典进行 A–Aaug–D", "Adim": "辛德勒的名单（威廉姆斯）", "A7": "Yesterday（The Beatles）", "Am7": "告白气球（周杰伦）", "Amaj7": "城里的月光（许美静）", "Adim7": "青花瓷（周杰伦）", "Asus4": "爱情诺曼底（黄征）", "B": "卡农（帕赫贝尔）", "Bm": "安和桥（宋冬野）", "Baug": "经典进行 B–Baug–E", "Bdim": "致爱丽丝（贝多芬）", "B7": "Autumn Leaves（秋叶）", "Bm7": "青花瓷（周杰伦）", "Bmaj7": "说好的幸福呢（周杰伦）", "Bdim7": "梁祝·化蝶段", "Bsus4": "灰色轨迹（Beyond）"};
+  const REF_SONGS = {"": [{"t": "Twist and Shout（扭腰舞）· The Beatles", "w": "副歌 D – G – A，都是大三和弦", "k": "D 大调", "u": "https://hooktheory.com/theorytab/view/the-beatles/twist-and-shout", "c": "ok"}, {"t": "Wild Thing · The Troggs", "w": "主歌 A – D – E – D", "k": "A 大调", "u": "https://hooktheory.com/theorytab/view/the-troggs/wild-thing", "c": "ok"}, {"t": "Johnny B. Goode · Chuck Berry", "w": "主歌和副歌 B♭ – E♭ – B♭ – F", "k": "B♭ 大调", "u": "https://hooktheory.com/theorytab/view/chuck-berry/johnny-b-goode", "c": "ok"}], "m": [{"t": "Eleanor Rigby · The Beatles", "w": "主歌在 Em 和 C 之间走，Em 是主和弦", "k": "E 小调", "u": "https://hooktheory.com/theorytab/view/the-beatles/eleanor-rigby", "c": "ok"}, {"t": "想见恨晚 · 彭佳慧", "w": "主歌以 C♯m 为主和弦", "k": "C♯ 小调", "u": "https://www.hooktheory.com/theorytab/view/julia-peng/xiang-jian-hen-wan", "c": "ok"}, {"t": "Hotel California · Eagles", "w": "主歌、尾声从 Bm 开始", "k": "B 小调", "u": "https://hooktheory.com/theorytab/view/eagles/hotel-california", "c": "mid"}], "aug": [{"t": "Oh! Darling · The Beatles", "w": "开头那一个和弦是 Eaug，下一步解决到 A", "k": "A 大调", "u": "https://www.jonmaclennan.com/blog/oh-darling-chords", "c": "ok"}], "7": [{"t": "Fly Me to the Moon · Bart Howard", "w": "Am7 – Dm7 – G7 – Cmaj7，G7 在第 3 小节", "k": "C 大调", "u": "https://www.learnjazzstandards.com/blog/fly-me-to-the-moon-chords/", "c": "ok"}, {"t": "Over the Rainbow · Harold Arlen", "w": "乐句末 Dm – G7 – C，G7 回到主和弦之前", "k": "C 大调", "u": "https://www.guitartabsexplorer.com/garland-judy/over-the-rainbow-chords", "c": "mid"}], "maj7": [{"t": "Imagine · John Lennon", "w": "开头 C – Cmaj7 – F，Cmaj7 是第 2 个和弦", "k": "C 大调", "u": "https://www.classicfm.com/discover-music/harmonic-analysis-imagine-john-lennon/", "c": "ok"}, {"t": "Fly Me to the Moon · Bart Howard", "w": "Am7 – Dm7 – G7 – Cmaj7，Cmaj7 是第 4 小节的落点", "k": "C 大调", "u": "https://www.learnjazzstandards.com/blog/fly-me-to-the-moon-chords/", "c": "ok"}, {"t": "Over the Rainbow · Harold Arlen", "w": "主歌第二句 C – Cmaj7 – Csus – Dm", "k": "C 大调", "u": "https://www.guitartabsexplorer.com/garland-judy/over-the-rainbow-chords", "c": "mid"}], "m7": [{"t": "Fly Me to the Moon · Bart Howard", "w": "A 段第一小节 Am7，后面还有 Dm7", "k": "C 大调", "u": "https://www.guitarcomposerstoolbox.com/jazz-standards/fly-me-to-the-moon-in-c", "c": "ok"}, {"t": "Autumn Leaves（枯叶）· Joseph Kosma", "w": "第一小节 Cm7，接 F7 和 B♭maj7", "k": "G 小调", "u": "https://www.guitarcomposerstoolbox.com/jazz-standards/autumn-leaves-in-g", "c": "mid"}], "m7b5": [{"t": "Autumn Leaves（枯叶）· Joseph Kosma", "w": "A 段第 5 个和弦 Am7♭5 → D7 → Gm", "k": "G 小调", "u": "https://www.guitarcomposerstoolbox.com/jazz-standards/autumn-leaves-in-g", "c": "ok"}, {"t": "Blue Bossa · Kenny Dorham", "w": "第 3 个和弦 Dm7♭5 → G7♭9 → Cm7", "k": "C 小调", "u": "https://www.guitarcomposerstoolbox.com/jazz-standards/blue-bossa-in-c", "c": "ok"}, {"t": "Fly Me to the Moon · Bart Howard", "w": "A 段第 6 个和弦 Bm7♭5 → E7♭9 → Am7", "k": "C 大调", "u": "https://www.guitarcomposerstoolbox.com/jazz-standards/fly-me-to-the-moon-in-c", "c": "ok"}], "dim7": [{"t": "I Got Rhythm · George Gershwin", "w": "C C/E | F F♯dim7 | C/G A7：F♯dim7 夹在 F 和 C/G 之间当过渡", "k": "C 大调", "u": "https://en.wikipedia.org/wiki/Diminished_seventh_chord", "c": "ok"}, {"t": "All Those Years Ago · George Harrison", "w": "D – Em – Edim7 – D，Edim7 是过渡和弦", "k": "D 大调（按和弦推出）", "u": "https://www.secretsofsongwriting.com/2018/03/23/using-the-diminished-seventh-chord-in-your-progressions/", "c": "mid"}], "sus4": [{"t": "Wonderwall · Oasis", "w": "前奏和主歌 Em7 – G – Dsus4 – A7sus4（按带变调夹的和弦谱写法）", "k": "", "u": "https://guitartabs.cc/tabs/o/oasis/wonderwall_crd_ver_8.html", "c": "ok"}]};
   const CX_ZH = { '': '大三', m: '小三', dim: '减三', aug: '增三', '7': '属七', maj7: '大七', m7: '小七', m7b5: '半减七', dim7: '减七', sus4: '挂四' };
   const CX_Q = ['', 'm', 'dim', 'aug', '7', 'maj7', 'm7', 'm7b5', 'dim7', 'sus4'];
   const cxHue = q => QHUE[q] || QHUE[''];
@@ -708,6 +708,7 @@
   const CX_PAT_NAME = { block: '柱式', broken: '逐键', alberti: '阿尔贝蒂', waltz: '华尔兹', oom: '低音+和弦' };
   const CX_LAB = { '': ['1', '3', '5'], m: ['1', '♭3', '5'], dim: ['1', '♭3', '♭5'], aug: ['1', '3', '♯5'], '7': ['1', '3', '5', '♭7'], maj7: ['1', '3', '5', '7'], m7: ['1', '♭3', '5', '♭7'], m7b5: ['1', '♭3', '♭5', '♭7'], dim7: ['1', '♭3', '♭5', '♭♭7'], sus4: ['1', '4', '5'] };
   const CX_STORY = { '': '1 · 3 · 5，最基本的三个音', m: '3 往下挪半音', dim: '3 和 5 都往下挪', aug: '5 往上挪半音', '7': '大三和弦，再加 ♭7', maj7: '大三和弦，再加 7', m7: '小三和弦，再加 ♭7', m7b5: '减三和弦，再加 ♭7', dim7: '3 和 5 都往下挪，再加 ♭♭7', sus4: '3 往上挪成 4' };
+  const cxPath = dy => `M0 25 H12 C32 25 32 ${25 + dy} 52 ${25 + dy} H64`; // 前一小段平、中间一条弧、最后一小段平
   const CX_DL = 64, CX_DU = 7; // 度数线：水平长度 / 每个半音升降的像素
   const CX_INV = ['原位', '一转', '二转', '三转'];
   // 一个音是「根音 / 没动 / 挪了」：和大三和弦（1-3-5）比，七音一律算新加的
@@ -764,10 +765,10 @@
         <p class="cxstory">${CX_STORY[CX.q]}</p>
         <div class="cxdeg">${[3, 2, 1, 0].map(k => {
           const i = k, sl = ['1', '3', '5', '7'][i], n = c.notes[i];
-          if (!n) return `<div class="dr none" data-i="${i}"><span class="dn">${sl}</span><span class="dstart"></span><span class="dline" style="width:${CX_DL}px"></span></div>`;
-          const alt = c.quality.ints[i][1] - [0, 4, 7, 11][i], role = cxRole(c, i), dy = -alt * CX_DU, len = Math.hypot(CX_DL, dy), ang = Math.atan2(dy, CX_DL);
+          if (!n) return `<div class="dr none" data-i="${i}"><span class="dn">${sl}</span><span class="dstart"></span><svg class="dline" width="64" height="50" viewBox="0 0 64 50"><path d="M0 25 H64"/></svg></div>`;
+          const alt = c.quality.ints[i][1] - [0, 4, 7, 11][i], role = cxRole(c, i), dy = -alt * CX_DU;
           const sub = i === 0 ? '根音' : i === 3 ? '新加的音' + (alt ? ' · 比 7 低 ' + (-alt === 1 ? '半音' : -alt + ' 个半音') : '') : role === 'st' ? '不动' : (alt < 0 ? '往下挪 ' : '往上挪 ') + (Math.abs(alt) === 1 ? '半音' : Math.abs(alt) + ' 个半音');
-          return `<div class="dr ${role}" data-i="${i}" data-dy="${dy}"><span class="dn">${sl}</span><span class="dstart"></span><span class="dline" style="width:${len.toFixed(1)}px;transform:rotate(${ang.toFixed(4)}rad)"></span><span class="dmove" style="transform:translateY(${dy}px)"><span class="dc ${role}">${CX_LAB[CX.q][i]}</span><span class="dt"><b>${D(n.name)}</b><small>${sub}</small></span></span></div>`;
+          return `<div class="dr ${role}" data-i="${i}" data-dy="${dy}"><span class="dn">${sl}</span><span class="dstart"></span><svg class="dline" width="64" height="50" viewBox="0 0 64 50"><path d="${cxPath(dy)}"/></svg><span class="dmove" style="transform:translateY(${dy}px)"><span class="dc ${role}">${CX_LAB[CX.q][i]}</span><span class="dt"><b>${D(n.name)}</b><small>${sub}</small></span></span></div>`;
         }).join('')}</div>
         <div class="cxview">${kb(bigN, { lo: CX.hand === 'R' ? 60 : 48, hi: CX.hand === 'R' ? 83 : CX.hand === 'L' ? 71 : 83 })}</div>
         <p class="cxline">${CX.hand !== 'R' ? '<span class="lhc">左手 ' + fgL.join('-') + '</span> ' : ''}${CX.hand !== 'L' ? '右手 ' + fgR.join('-') : ''} · ${c.quality.f}</p>
@@ -788,11 +789,15 @@
         ['练', `${arp.white && T.Q[CX.q].ints.length === 3 && !CX.q.startsWith('sus') ? `<a class="link" href="#arp-${CX.root + CX.q}"><small>练这个和弦</small><b>${D(CX.root + CX.q)} 琶音 · 带指法和收音</b><span>→</span></a>` : ''}<a class="link" href="#combo"><small>连起来记</small><b>组合和弦：一串一串记</b><span>→</span></a>`],
       ])}`;
     pagerInit();
-    // 度数线：从没升降的位置，慢慢滑到升/降之后的位置
+    // 度数线：从原来的位置，慢慢滑到升/降之后的位置（线是一条弧，圆圈跟着走）
     const rows = [...document.querySelectorAll('.cxdeg .dr[data-dy]')].filter(r => oldDy[r.dataset.i] != null && oldDy[r.dataset.i] !== +r.dataset.dy);
-    rows.forEach(r => { const dy = +r.dataset.dy, o = oldDy[r.dataset.i], ln = r.querySelector('.dline'), mv = r.querySelector('.dmove'), tl = ln.style.cssText, tm = mv.style.cssText;
-      r._t = [tl, tm]; ln.style.transition = mv.style.transition = 'none'; ln.style.width = Math.hypot(CX_DL, o * 1).toFixed(1) + 'px'; ln.style.transform = `rotate(${Math.atan2(o, CX_DL).toFixed(4)}rad)`; mv.style.transform = `translateY(${o}px)`; });
-    if (rows.length) { void document.body.offsetHeight; requestAnimationFrame(() => rows.forEach(r => { const ln = r.querySelector('.dline'), mv = r.querySelector('.dmove'); ln.style.cssText = r._t[0]; mv.style.cssText = r._t[1]; })); }
+    if (rows.length) {
+      const t0 = performance.now(), ez = t => 1 - Math.pow(1 - t, 3);
+      const paint = (r, dy) => { r.querySelector('.dline path').setAttribute('d', cxPath(dy)); r.querySelector('.dmove').style.transform = `translateY(${dy}px)`; };
+      rows.forEach(r => { r.querySelector('.dmove').style.transition = 'none'; paint(r, oldDy[r.dataset.i]); });
+      const step = now => { const t = Math.min(1, (now - t0) / 520); rows.forEach(r => paint(r, oldDy[r.dataset.i] + (+r.dataset.dy - oldDy[r.dataset.i]) * ez(t))); if (t < 1) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    }
     if (CX.io) CX.io.disconnect();
     { const se = document.getElementById('cxsent'), st = document.getElementById('cxst');
       if (se && st && window.IntersectionObserver) { CX.io = new IntersectionObserver(es => es.forEach(en => st.classList.toggle('stuck', !en.isIntersecting && en.boundingClientRect.top < 0)), { rootMargin: '-40px 0px 0px 0px', threshold: 0 }); CX.io.observe(se); } }
@@ -805,8 +810,8 @@
 
   document.addEventListener('toggle', e => { const d = e.target; if (d.matches && d.matches('details.cxstaff') && d.open) d.querySelectorAll('.staff').forEach(x => { try { Staff.draw(x); } catch (err) {} }); }, true);
   function refSongHtml(c) {
-    const t = REF_SONGS[c.root.name + c.q];
-    return t ? `<div class="refsong"><small>参考曲目</small><b>${esc(t)}</b><span>来自你给的和弦表。表里的歌我没有逐首核对过和弦，听感和弦以原曲为准。</span></div>` : '';
+    const L = REF_SONGS[c.q]; if (!L) return '';
+    return `<div class="refsong"><small>这种和弦在歌里 · 已找网页核对过</small>${L.map(x => `<a class="rs" href="${esc(x.u)}" target="_blank" rel="noopener"><b>${esc(x.t)}</b><span>${esc(x.w)}${x.k ? ' · ' + esc(x.k) : ''}${x.c === 'mid' ? ' · 只核对了一个来源' : ''}</span></a>`).join('')}</div>`;
   }
   // ---- 和弦库首页：五度圈选根音 + 这个根音的 10 种和弦 ----
   const FIFTHS = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'Db', 'Ab', 'Eb', 'Bb', 'F'];
