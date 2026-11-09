@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 90; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 91; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -754,9 +754,12 @@
     const curL = CX_LAB[CX.q];
     const nbrs = qlist.filter(q => q !== CX.q).map((q, k) => { const L = CX_LAB[q], add = L.filter(x => !curL.includes(x)), rem = curL.filter(x => !L.includes(x)); return { q, k, d: Math.max(add.length, rem.length) * 10 + add.length + rem.length, note: (rem.length ? rem.join(' ') + ' → ' : '') + (add.length ? (rem.length ? '' : '加 ') + add.join(' ') : '去掉 ' + rem.join(' ')) }; }).sort((x, y) => x.d - y.d || x.k - y.k).slice(0, 3);
     const bottom = v[0];
-    view.innerHTML = `<section class="cxtop" id="cxtop"><a class="cxback" href="#chords">← 和弦</a>
+    view.innerHTML = `<a class="cxback" href="#chords">← 和弦</a><div class="cxsent" id="cxsent"></div>
+      <div class="cxsticky" id="cxst">
         <div class="cxhead"><div class="cxname"><b>${D(c.sym)}</b><span>${qi[0]}和弦${invi ? ' · ' + INV[invi][0] : ''} · ${qi[1]}</span></div>
           <button class="cxhold" data-hold="inv" aria-label="转位：按住往下拖可以选">↻ ${CX_INV[invi]}</button><button class="cxhold go" data-hold="pat" aria-label="弹奏：点一下弹，按住往下拖选弹法">弹 <small>${CX_PAT_NAME[CX.pat]}</small></button></div>
+      </div>
+      <section class="cxtop" id="cxtop">
         <p class="cxhint">按住「↻」或「弹」往下拖，可以选转位 / 弹法</p>
         <p class="cxstory">${CX_STORY[CX.q]}</p>
         <div class="cxdeg">${[3, 2, 1, 0].map(k => {
@@ -790,6 +793,9 @@
     rows.forEach(r => { const dy = +r.dataset.dy, o = oldDy[r.dataset.i], ln = r.querySelector('.dline'), mv = r.querySelector('.dmove'), tl = ln.style.cssText, tm = mv.style.cssText;
       r._t = [tl, tm]; ln.style.transition = mv.style.transition = 'none'; ln.style.width = Math.hypot(CX_DL, o * 1).toFixed(1) + 'px'; ln.style.transform = `rotate(${Math.atan2(o, CX_DL).toFixed(4)}rad)`; mv.style.transform = `translateY(${o}px)`; });
     if (rows.length) { void document.body.offsetHeight; requestAnimationFrame(() => rows.forEach(r => { const ln = r.querySelector('.dline'), mv = r.querySelector('.dmove'); ln.style.cssText = r._t[0]; mv.style.cssText = r._t[1]; })); }
+    if (CX.io) CX.io.disconnect();
+    { const se = document.getElementById('cxsent'), st = document.getElementById('cxst');
+      if (se && st && window.IntersectionObserver) { CX.io = new IntersectionObserver(es => es.forEach(en => st.classList.toggle('stuck', !en.isIntersecting && en.boundingClientRect.top < 0)), { rootMargin: '-40px 0px 0px 0px', threshold: 0 }); CX.io.observe(se); } }
     const ks = [...document.querySelectorAll('.cxview .kb .k')];
     if (Object.keys(oldK).length) {
       ks.forEach(k => { const t = k.getAttribute('class'); k.dataset.t = t; k.setAttribute('class', oldK[k.dataset.m] || t.replace(/ (on|rt|st|mv)\b/g, '')); });
