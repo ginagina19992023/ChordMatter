@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 125; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 126; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -3727,14 +3727,24 @@
     } catch (e) {}
     return cv;
   }
+  // 分享图的背景：「当前背景色」= 跟着 App 现在的主题（深色就是深色底）；「白底」= 永远白色，发给别人更通用。开关记在 S.shareBg
   async function sharePreview(cv, name, title) {
-    if (isDarkTheme()) darkenCanvas(cv);
     document.querySelectorAll('.sharepop').forEach(x => x.remove());
-    const host = document.getElementById('phone') || document.body, url = cv.toDataURL('image/png');
+    const white = document.createElement('canvas'); white.width = cv.width; white.height = cv.height; white.getContext('2d').drawImage(cv, 0, 0);
+    const host = document.getElementById('phone') || document.body;
     const el = document.createElement('div'); el.className = 'sharepop';
-    el.innerHTML = `<div class="sharecard"><div class="shead"><b>${title}</b><button class="fsx" data-act="shareclose">×</button></div><img src="${url}" alt="${title}"><p class="fine">也可以长按图片，存到相册。</p><div class="row"><button class="btn" data-act="sharego">分享</button><button class="ghost" data-act="sharesave">保存图片</button></div></div>`;
-    host.appendChild(el);
-    el.__blob = await new Promise(r => cv.toBlob(r, 'image/png')); el.__name = name;
+    const mode = () => (S.shareBg === 'white' || !isDarkTheme() ? 'white' : 'current');
+    const render = async () => {
+      let out = white;
+      if (mode() === 'current') { out = document.createElement('canvas'); out.width = white.width; out.height = white.height; out.getContext('2d').drawImage(white, 0, 0); darkenCanvas(out); }
+      el.querySelector('img').src = out.toDataURL('image/png');
+      el.__blob = await new Promise(r => out.toBlob(r, 'image/png'));
+      el.querySelectorAll('[data-act=sharebg]').forEach(x => x.classList.toggle('on', x.dataset.v === mode()));
+    };
+    el.__render = render;
+    el.innerHTML = `<div class="sharecard"><div class="shead"><b>${title}</b><button class="fsx" data-act="shareclose">×</button></div><img alt="${title}"><div class="sharebg"><small>背景</small><span class="seg2"><a data-act="sharebg" data-v="current">当前背景色</a><a data-act="sharebg" data-v="white">白底</a></span></div><p class="fine">也可以长按图片，存到相册。</p><div class="row"><button class="btn" data-act="sharego">分享</button><button class="ghost" data-act="sharesave">保存图片</button></div></div>`;
+    host.appendChild(el); el.__name = name;
+    await render();
   }
   async function shareGo(save) {
     const el = document.querySelector('.sharepop'); if (!el || !el.__blob) return;
@@ -3987,6 +3997,7 @@
       case 'klset': { const cfg = klCfg(), k = el.dataset.k, v = el.dataset.v; if (k === 'label') cfg.label = v; else if (k === 'show') cfg.show[v] = cfg.show[v] ? 0 : 1; else cfg[k] = !cfg[k]; save(); klShow(KL.i); if (k === 'feel') { const sg = allSongs().find(x => x.id === route[1]); document.querySelectorAll('#grid .cell').forEach(cl => { const old = cl.querySelector('.cshape'); if (old) old.outerHTML = chordShape(cl.dataset.s, sg.key); }); } break; }
       case 'shareday': dayCardCanvas(el.dataset.v).then(cv => sharePreview(cv, 'ChordMatter-' + el.dataset.v + '.png', '今日卡片')).catch(() => toast('生成图片失败')); break;
       case 'sharemonth': monthCanvas().then(cv => cv ? sharePreview(cv, `ChordMatter-${CAL.y}-${CAL.m + 1}.png`, '这个月的练琴日历') : toast('日历还没画好')).catch(() => toast('生成图片失败')); break;
+      case 'sharebg': { S.shareBg = el.dataset.v; save(); const pop = document.querySelector('.sharepop'); if (pop && pop.__render) pop.__render(); break; }
       case 'sharego': shareGo(false); break;
       case 'sharesave': shareGo(true); break;
       case 'shareclose': document.querySelectorAll('.sharepop').forEach(x => x.remove()); break;
