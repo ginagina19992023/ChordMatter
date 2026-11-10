@@ -1476,3 +1476,7 @@ body.land .deskcal { top: 0; }
 .ring .sg.next { stroke-width: 4; animation: sgpulse 1.9s ease-in-out infinite; }
 @keyframes sgpulse { 0%, 100% { stroke-opacity: .28; filter: drop-shadow(0 0 0 var(--gc)); } 50% { stroke-opacity: 1; filter: drop-shadow(0 0 4px var(--gc)) drop-shadow(0 0 12px var(--gc)); } }
 @media (prefers-reduced-motion: reduce) { .ring .sg.next { animation: none; stroke-opacity: .7; filter: drop-shadow(0 0 5px var(--gc)); } }
+/* 「开始今天的练习」：默认橙色渐变 + 柔光 */
+.cta.flow .btn { background: linear-gradient(135deg, #ffa066 0%, #f06a2c 55%, #e8541e 100%); color: #fff; border: 0; font-weight: 600; letter-spacing: .02em; box-shadow: 0 8px 22px -6px rgba(232, 84, 30, .55), 0 0 0 1px rgba(255, 255, 255, .18) inset; transition: transform .15s ease, box-shadow .2s ease; }
+.cta.flow .btn:active { transform: scale(.985); box-shadow: 0 4px 14px -4px rgba(232, 84, 30, .55); }
+body.dark .cta.flow .btn { box-shadow: 0 8px 26px -6px rgba(255, 140, 80, .5), 0 0 0 1px rgba(255, 255, 255, .12) inset; }
