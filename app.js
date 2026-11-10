@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 128; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 129; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -1752,6 +1752,9 @@
       <h3 class="h3">外观</h3>
       <p class="fine">深色模式。整个 App 都会变；谱子里的音符、彩条会跟着换成适合深色的颜色。</p>
       <div class="chips">${[['auto', '跟随手机'], ['light', '始终浅色'], ['dark', '始终深色']].map(([v, t]) => `<button class="chip${th === v ? ' on' : ''}" data-act="theme" data-v="${v}">${t}</button>`).join('')}</div>
+      <h3 class="h3">开机动画</h3>
+      <p class="fine">打开 App 时，图标的三个样子（键盘线条 → 和弦色块 → 滑条光晕）依次切换，大约 3 秒，点一下可以跳过。每次打开 App 只放一次。</p>
+      <div class="chips"><button class="chip${S.splash !== false ? ' on' : ''}" data-act="splashset" data-v="1">开</button><button class="chip${S.splash === false ? ' on' : ''}" data-act="splashset" data-v="0">关</button><button class="chip" data-act="splashplay">现在看一遍</button></div>
       <h3 class="h3">记录和数据</h3>
       <a class="link" href="#me"><small>记录</small><b>练琴日历、进度、备份、云端同步</b><span>→</span></a>
       <a class="link" href="#cards"><small>卡册</small><b>曲谱卡</b><span>→</span></a>
@@ -4004,6 +4007,8 @@
       case 'info': { const sg = allSongs().find(x => x.id === route[1]); if (!sg) break; const [t, h] = songInfo(sg, el.dataset.k); infoPop(el, t, h); break; }
       case 'mytoggle': S.myOpen = !S.myOpen; save(); { const b = document.querySelector('.mybox'); if (b) b.hidden = !S.myOpen; } el.textContent = '我的原谱 ' + (S.myOpen ? '⌃' : '⌄'); break;
       case 'lvset': S.lv = S.lv || {}; S.lv[el.dataset.k] = el.dataset.v; save(); render(); break;
+      case 'splashset': S.splash = el.dataset.v === '1'; save(); vSet(); break;
+      case 'splashplay': { sessionStorage.removeItem('hx.splash'); location.href = location.pathname + location.search + location.hash; location.reload(); break; }
       case 'theme': S.theme = el.dataset.v; save(); cxGlobalDark(); vSet(); break;
       case 'colormode': S.colorMode = el.dataset.v; save(); render(); break;
       case 'gridmode': { S.gridMode = el.dataset.v; save(); const g = document.getElementById('grid'); if (g) g.dataset.mode = S.gridMode; document.querySelectorAll('.gmode button').forEach(x => x.classList.toggle('on', x.dataset.v === S.gridMode)); break; }

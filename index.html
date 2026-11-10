@@ -17,7 +17,50 @@
 <title>和弦</title>
 </head>
 <body>
+<div id="splash" aria-hidden="true">
+  <svg viewBox="0 0 300 300" preserveAspectRatio="xMidYMid meet">
+    <defs>
+      <filter id="spglow" x="-60%" y="-30%" width="220%" height="160%"><feGaussianBlur stdDeviation="9"/></filter>
+      <radialGradient id="spth" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#9aa8ff" stop-opacity=".9"/><stop offset=".45" stop-color="#9aa8ff" stop-opacity=".35"/><stop offset="1" stop-color="#9aa8ff" stop-opacity="0"/></radialGradient>
+    </defs>
+    <!-- A：键盘线条（白底，线条画出来，橙点落下） -->
+    <g class="spA">
+      <g stroke="#111" stroke-width="5.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <rect class="dr" x="52" y="84" width="196" height="132" rx="10" pathLength="1"/>
+        <path class="dr" d="M101 84v132" pathLength="1"/><path class="dr" d="M150 84v132" pathLength="1"/><path class="dr" d="M199 84v132" pathLength="1"/>
+      </g>
+      <g fill="#111"><rect class="bk" x="86" y="84" width="30" height="78" rx="3"/><rect class="bk" x="135" y="84" width="30" height="78" rx="3"/><rect class="bk" x="184" y="84" width="30" height="78" rx="3"/></g>
+      <circle class="dot" cx="150" cy="240" r="9.5" fill="#e8541e"/>
+    </g>
+    <!-- B：琴键亮起（深酒红底，和弦色发光） -->
+    <g class="spB">
+      <g>
+        <rect x="46" y="96" width="42" height="120" rx="7" fill="#efe6dc"/><rect x="90" y="96" width="42" height="120" rx="7" fill="#efe6dc"/><rect x="134" y="96" width="42" height="120" rx="7" fill="#efe6dc"/><rect x="178" y="96" width="42" height="120" rx="7" fill="#efe6dc"/><rect x="222" y="96" width="32" height="120" rx="7" fill="#efe6dc"/>
+        <g filter="url(#spglow)" class="kg"><rect x="90" y="96" width="42" height="120" rx="7" fill="#ff6b7c"/><rect x="178" y="96" width="42" height="120" rx="7" fill="#ffb3bb"/></g>
+        <rect class="kl" x="90" y="96" width="42" height="120" rx="7" fill="#ff6b7c"/><rect class="kl" x="134" y="96" width="42" height="120" rx="7" fill="#8e8a80"/><rect class="kl" x="178" y="96" width="42" height="120" rx="7" fill="#ff8d9a"/>
+        <g fill="#1a1315"><rect x="74" y="96" width="28" height="70" rx="4"/><rect x="118" y="96" width="28" height="70" rx="4"/><rect x="206" y="96" width="28" height="70" rx="4"/></g>
+      </g>
+    </g>
+    <!-- C：度数曲线 + 发光滑块（深蓝底） -->
+    <g class="spC">
+      <path class="cv" d="M52 96 H112 C138 96 138 128 164 128 H248" stroke="#9aa8ff" stroke-width="7" fill="none" stroke-linecap="round" pathLength="1"/>
+      <path class="cv" d="M52 150 H248" stroke="#efe6dc" stroke-opacity=".5" stroke-width="7" fill="none" stroke-linecap="round" pathLength="1"/>
+      <path class="cv" d="M52 204 H112 C138 204 138 172 164 172 H248" stroke="#9aa8ff" stroke-width="7" fill="none" stroke-linecap="round" pathLength="1"/>
+      <g class="th"><circle cx="164" cy="128" r="46" fill="url(#spth)"/><circle cx="164" cy="128" r="22" fill="#9aa8ff"/><circle cx="164" cy="172" r="46" fill="url(#spth)" opacity=".7"/><circle cx="164" cy="172" r="15" fill="#c7cdff"/></g>
+      <circle cx="52" cy="96" r="6" fill="#efe6dc"/><circle cx="52" cy="150" r="6" fill="#efe6dc"/><circle cx="52" cy="204" r="6" fill="#efe6dc"/>
+    </g>
+  </svg>
+</div>
 <button id="rotbtn" type="button">横屏预览</button>
+<script>
+(function () { try { var el = document.getElementById('splash'); var st = {}; try { st = JSON.parse(localStorage.getItem('hexian.v1') || '{}'); } catch (e) {}
+  var skip = st.splash === false || sessionStorage.getItem('hx.splash') || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || /[?&]nosplash/.test(location.search);
+  if (skip) { el.remove(); return; }
+  sessionStorage.setItem('hx.splash', '1'); document.documentElement.classList.add('splashing');
+  var done = function () { el.classList.add('out'); document.documentElement.classList.remove('splashing'); setTimeout(function () { el.remove(); }, 500); };
+  setTimeout(done, 3300); el.addEventListener('pointerdown', done);
+} catch (e) { var s = document.getElementById('splash'); if (s) s.remove(); } })();
+</script>
 <div id="phone">
 <main id="view"></main>
 <nav>
