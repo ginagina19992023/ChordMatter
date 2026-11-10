@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 148; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 149; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -4268,7 +4268,7 @@
     add([60], 0.5, 1.6, 0.5); add([64], 0.75, 1.5, 0.5); add([67], 1.0, 1.4, 0.5); add([48], 1.0, 2.2, 0.45);
     add([60, 64, 67, 71], 2.1, 1.7, 0.42, 0.04);
     add([72, 76, 79, 83, 86], 3.15, 0.9, 0.3, 0.15);
-    add([50, 57, 60, 65], 3.95, 0.5, 0.42, 0.02); add([43, 55, 59, 65], 4.3, 0.5, 0.42, 0.02); add([48, 64, 67, 74], 4.65, 2.4, 0.4, 0.05);
+    add([50, 57, 60, 65], 4.45, 0.5, 0.42, 0.02); add([43, 55, 59, 65], 4.8, 0.5, 0.42, 0.02); add([48, 64, 67, 74], 5.15, 2.4, 0.4, 0.05);
     const lo = m => { m -= 12; return m < 38 ? m + 12 : m; }; // 整体降一个八度（太低的低音留在原位，手机喇叭放不出来）
     const start = () => { const el = Math.max(0, (performance.now() - window.__splashT0) / 1000); A.schedule(N.map(n => [lo(n[0]), n[1] - el, n[2], n[3]])); };
     window.addEventListener('splashskip', () => A.cut());
