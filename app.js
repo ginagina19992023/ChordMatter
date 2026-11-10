@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 132; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 134; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -209,7 +209,19 @@
       lp.connect(g).connect(this.bus);
     },
     // 停掉所有已经排好的音：把旧的总线快速淡出后断开，换一条新的
+    // 整首歌别一次排好（上千个音 × 每个 8 个节点会把手机卡死）：只提前排接下来 2.5 秒，边播边排
+    schedule(list) {
+      this.init(); clearInterval(this._sch);
+      const L = list.slice().sort((x, y) => x[1] - y[1]), c = this.ctx, t0 = c.currentTime; let i = 0;
+      const pump = () => {
+        const el = c.currentTime - t0, lim = el + 2.5;
+        while (i < L.length && L[i][1] <= lim) { const n = L[i++]; if (n[1] + n[2] < el) continue; this.note(n[0], Math.max(0, n[1] - el), n[2], n[3]); }
+        if (i >= L.length) clearInterval(this._sch);
+      };
+      pump(); this._sch = setInterval(pump, 250);
+    },
     cut() {
+      clearInterval(this._sch);
       if (!this.ctx || !this.bus) return;
       const old = this.bus, now = this.ctx.currentTime;
       old.gain.cancelScheduledValues(now); old.gain.setValueAtTime(old.gain.value, now); old.gain.linearRampToValueAtTime(0, now + 0.04);
@@ -2346,16 +2358,19 @@
     const c = Object.assign({}, c0, { notes: ns });
     stopAll(); A.init();
     const r = 1 / SC.rate, el = c.el;
-    let lastY = -1, curM = null;
+    let lastY = -1, curM = null, lastM = undefined;
+    const gmap = new Map(); el.querySelectorAll('g.note').forEach(g => gmap.set(g.dataset.id || g.id, g));
+    const labs = new Map(); el.querySelectorAll('text.chordlab').forEach(t => labs.set(t.getAttribute('data-n'), t));
+    let curLab = null;
+    A.schedule(c.notes.map(n => [n.pitch, n.t * r + 0.05, Math.min(2.5, n.dur * r + 0.3), 0.55]));
     c.notes.forEach(n => {
-      A.note(n.pitch, n.t * r + 0.05, Math.min(2.5, n.dur * r + 0.3), 0.55);
       later(() => {
-        if (n.m != null && n.m !== curM) { curM = n.m; el.querySelectorAll('text.chordlab.now').forEach(t => t.classList.remove('now')); const lb = el.querySelector(`text.chordlab[data-n="${n.m}"]`); if (lb) lb.classList.add('now'); }
-        const g = el.querySelector('[data-id="' + n.id + '"]') || el.querySelector('[id="' + n.id + '"]'); if (!g) return;
+        if (n.m != null && n.m !== curM) { curM = n.m; if (curLab) curLab.classList.remove('now'); curLab = labs.get(String(n.m)) || null; if (curLab) curLab.classList.add('now'); }
+        const g = gmap.get(n.id); if (!g) return;
         g.classList.add('playing'); setTimeout(() => g.classList.remove('playing'), Math.max(120, n.dur * r * 1000));
-        const y = g.getBoundingClientRect().top;
+        if (n.m == null || n.m !== lastM) { lastM = n.m; const y = g.getBoundingClientRect().top;
         if (Math.abs(y - lastY) > 40) { const box = (document.getElementById('phone') && getComputedStyle(document.getElementById('phone')).overflowY === 'auto') ? document.getElementById('phone').getBoundingClientRect() : { top: 0, bottom: innerHeight }; if (y < box.top + 60 || y > box.bottom - 140) g.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
-        lastY = y;
+        lastY = y; }
       }, (n.t * r + 0.05) * 1000);
     });
     const end = Math.max(...c.notes.map(n => n.t + n.dur)) * r;

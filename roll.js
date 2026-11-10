@@ -141,7 +141,7 @@ const Roll = (() => {
     if (opt2.from == null) { cur.beat = -(cur.opt.lead || 2); cur.waitIdx = 0; cur.released = 0; } else cur.beat = opt2.from;
     cur.waiting = null; cur.mode = mode; cur.last2 = opt2; cur.running = true; cur.paused = false;
     let last = performance.now();
-    if (mode === 'play') { const b0 = cur.beat; cur.opt.events.forEach(e => { if (e.t >= b0 - 1e-6) A.note(e.midi, 0.1 + (e.t - b0) * spb, Math.min(3, e.d * spb + 0.15), e.hand === 'L' ? 0.5 : 0.62); }); }
+    if (mode === 'play') { const b0 = cur.beat; A.schedule(cur.opt.events.filter(e => e.t >= b0 - 1e-6).map(e => [e.midi, 0.1 + (e.t - b0) * spb, Math.min(3, e.d * spb + 0.15), e.hand === 'L' ? 0.5 : 0.62])); }
     const step = now => {
       if (!cur) return;
       const dt = (now - last) / 1000; last = now;

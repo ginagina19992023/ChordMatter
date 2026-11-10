@@ -59,9 +59,20 @@
     gl1: [{ x: 104, y: 92, w: 43, h: 124, rx: 7, fill: '#ff6b7c', o: 0 }, { x: 104, y: 92, w: 43, h: 124, rx: 7, fill: '#ff6b7c', o: 0.9 }, { x: 142, y: 106, w: 44, h: 44, rx: 22, fill: '#9aa8ff', o: 0.8 }, { x: 142, y: 106, w: 44, h: 44, rx: 22, fill: '#9aa8ff', o: 0.8 }],
     gl2: [{ x: 202, y: 92, w: 43, h: 124, rx: 7, fill: '#ffb3bb', o: 0 }, { x: 202, y: 92, w: 43, h: 124, rx: 7, fill: '#ffb3bb', o: 0.9 }, { x: 149, y: 157, w: 30, h: 30, rx: 15, fill: '#c7cdff', o: 0.7 }, { x: 149, y: 157, w: 30, h: 30, rx: 15, fill: '#c7cdff', o: 0.7 }]
   };
-  var BG = ['#ffffff', '#2a1215', '#141a36', '#141a36'];
+  // 在 B 和 C 之间加一个「油滴」阶段：键盘上的颜色被提炼成圆点，圆点变色，再长出三条线
+  (function () {
+    Object.keys(K).forEach(function (id) {
+      var B = K[id][1], C = K[id][2], D, cx = B.x + B.w / 2;
+      if (/^(l[123]|gl[12])$/.test(id)) D = { x: cx - 17, y: 137, w: 34, h: 34, rx: 17, fill: B.fill, o: B.o };
+      else if (/^w[134]$/.test(id)) D = { x: 52, y: C.y, w: 0, h: 7, rx: 3.5, fill: C.fill, stroke: C.fill, sw: 0, o: 0 };
+      else if (/^k/.test(id)) D = { x: 52, y: C.y + 6, w: 0, h: 0, rx: 0, fill: C.fill, o: 0 };
+      else D = { x: cx, y: 154, w: 0, h: 0, rx: 0, fill: B.fill, stroke: B.fill, sw: 0, o: 0 };
+      K[id].splice(2, 0, D);
+    });
+  })();
+  var BG = ['#ffffff', '#2a1215', '#1b1424', '#141a36', '#141a36'];
   // 段落：停 0.5 → A→B 1.1 → 停 0.25 → B→C 1.1 → 弯出去 0.65 → 停 0.35 → 淡出
-  var SEG = [[0.6, 1.8, 0, 1], [2.35, 3.45, 1, 2], [3.45, 4.1, 2, 3]], END = 4.5;
+  var SEG = [[0.6, 1.8, 0, 1], [2.35, 3.15, 1, 2], [3.15, 3.95, 2, 3], [3.95, 4.55, 3, 4]], END = 4.95;
   var DL = { l1: 0, l2: 0.25, l3: 0.5, gl1: 0, gl2: 0.5 }, TAPS = [[0.5, 126.5, 190, '#ff6b7c'], [0.75, 175.5, 190, '#ff6b7c'], [1.0, 224.5, 190, '#ff6b7c'], [2.1, 150, 150, '#9aa8ff']];
   var ease = function (t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
   var hx = function (c) { return [1, 3, 5].map(function (i) { return parseInt(c.slice(i, i + 2), 16); }); };
@@ -85,18 +96,18 @@
     // 橙点：A 里在键盘下面，之后缩小淡出
     var dp = s1 >= 1 || s0 >= 1 ? (s0 >= 1 ? 1 : p) : 0; $('dot').setAttribute('opacity', 1 - dp); $('dot').setAttribute('r', 9.5 * (1 - dp * 0.6)); $('dot').setAttribute('cy', 240 - 30 * dp);
     // C：拉直的条换成曲线，再一点点弯出去；光晕随滑块出现
-    var bend = s0 === 2 && s1 === 3 ? p : (s0 === 3 ? 1 : 0), cOn = (s0 === 2 && s1 === 3) || s0 === 3 ? 1 : 0;
+    var bend = s0 === 3 && s1 === 4 ? p : (s0 === 4 ? 1 : 0), cOn = (s0 === 3 && s1 === 4) || s0 === 4 ? 1 : 0;
     ['pc1', 'pc3'].forEach(function (id, k) {
       var y = k ? 204 : 96, y2 = k ? 172 : 128, yy = y + (y2 - y) * bend;
       $(id).setAttribute('d', 'M52 ' + y + ' H112 C138 ' + y + ' 138 ' + yy + ' 164 ' + yy + ' H248'); $(id).setAttribute('opacity', cOn);
     });
     ['w1', 'w5'].forEach(function (id) { $(id).setAttribute('opacity', cOn ? 0 : K[id][s1].o * p + K[id][s0].o * (1 - p)); });
-    var hl = s0 === 2 && s1 === 3 ? p : s0 === 3 ? 1 : (s1 === 2 ? p : 0);
+    var hl = s0 === 2 && s1 === 3 ? p : s0 >= 3 ? 1 : 0;
     $('halo1').setAttribute('opacity', hl * 0.9); $('halo2').setAttribute('opacity', hl * 0.7);
   }
   var t0 = performance.now(), fin = false;
   function done() { if (fin) return; fin = true; el.classList.add('out'); document.documentElement.classList.remove('splashing'); setTimeout(function () { el.remove(); }, 500); }
-  function tick(now) { if (fin) return; var t = (now - t0) / 1000; frame(Math.min(t, SEG[2][1])); if (t >= END) { done(); return; } requestAnimationFrame(tick); }
+  function tick(now) { if (fin) return; var t = (now - t0) / 1000; frame(Math.min(t, SEG[3][1])); if (t >= END) { done(); return; } requestAnimationFrame(tick); }
   frame(0); requestAnimationFrame(tick); el.addEventListener('pointerdown', done);
 } catch (e) { var s = document.getElementById('splash'); if (s) s.remove(); document.documentElement.classList.remove('splashing'); } })();
 </script>
