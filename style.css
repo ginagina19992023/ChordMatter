@@ -1429,3 +1429,35 @@ body.dark { --glow-edge: rgba(255,255,255,.55); --glow-shadow: 0 0 14px rgba(255
 #splash.out { opacity: 0; pointer-events: none; }
 #splash svg { width: min(72vw, 320px); height: auto; overflow: visible; }
 html.splashing #phone { visibility: hidden; }
+
+/* ---- 今天页：发光分段圆环 + 重新排版 ---- */
+.ring-wrap { width: min(62vw, 250px); height: min(62vw, 250px); margin: 6px auto 26px; }
+.ring { position: relative; width: 100%; height: 100%; overflow: visible; }
+.ring .sg { fill: none; stroke: var(--line); stroke-width: 3.2; stroke-linecap: round; transition: stroke .5s ease; }
+.ring .sg.on { stroke-width: 4; filter: drop-shadow(0 0 3px var(--gc)) drop-shadow(0 0 8px var(--gc)); }
+.ring-glow { position: absolute; inset: 8%; border-radius: 50%; background: radial-gradient(circle, rgba(255, 150, 120, .35), rgba(154, 168, 255, .16) 55%, transparent 72%); filter: blur(14px); pointer-events: none; animation: ringbreath 4.5s ease-in-out infinite; }
+@keyframes ringbreath { 50% { transform: scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .ring-glow { animation: none; } }
+.ring-t b { font-size: 52px; font-weight: 500; letter-spacing: -0.03em; line-height: 1; }
+.ring-t b em { font-style: normal; font-size: 24px; color: var(--mute); margin-left: 2px; letter-spacing: 0; }
+.ring-t small { margin-top: 8px; font-size: 13px; }
+.cta.flow { margin: 0 0 24px; }
+.bonus { margin-top: 22px; padding: 6px 14px 4px; border: 1px solid var(--line); border-style: solid; }
+.bonus h3 { margin: 10px 0 4px; font-size: 15px; font-weight: 600; }
+.bonus h3 small { font-weight: 400; color: var(--mute); }
+.bonus .brow { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-top: 1px solid var(--line); color: inherit; text-decoration: none; }
+.bonus .brow:first-of-type { border-top: 0; }
+.bonus .brow > span:first-child { flex: 1; min-width: 0; }
+.bonus .brow b { display: block; font-weight: 500; }
+.bonus .brow small { display: block; color: var(--mute); }
+.bonus .brow .arr { color: var(--mute); }
+.sechd { margin: 30px 2px 10px; font-size: 12px; letter-spacing: .12em; color: var(--mute); font-weight: 500; }
+.calcard .pills { margin-top: 12px; }
+.calcard .calweek { margin-bottom: 4px; }
+.minicards { overflow-x: auto; scrollbar-width: none; margin-right: -12px; padding-right: 12px; }
+.minicards::-webkit-scrollbar { display: none; }
+.mini { flex: 0 0 96px; aspect-ratio: 5 / 7.4; padding: 7px; }
+.mini b { font-size: 12.5px; -webkit-line-clamp: 4; }
+.unitbar { margin-top: 18px; }
+body.land .ring-wrap { width: 150px; height: 150px; }
+body.land .ring-t b { font-size: 36px; }
