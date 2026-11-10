@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 137; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 138; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -521,7 +521,8 @@
     const d = day(), cur = currentUnit(), song = todaysSong(), arp = todaysArp();
     const n = STEPS.filter(k => d[k]).length;
     const segCol = ['#ffa66b', '#ff7f7f', '#ff6b9a', '#9aa8ff'];
-    const seg = (i, on) => { const r = 40, a0 = (-90 + i * 90 + 7) * Math.PI / 180, a1 = (-90 + i * 90 + 83) * Math.PI / 180, P = (an) => (50 + r * Math.cos(an)).toFixed(2) + ' ' + (50 + r * Math.sin(an)).toFixed(2); return `<path class="sg${on ? ' on' : ''}" d="M${P(a0)} A${r} ${r} 0 0 1 ${P(a1)}"${on ? ` style="stroke:${segCol[i]};--gc:${segCol[i]}"` : ''}/>`; };
+    const nextI = STEPS.findIndex(k => !d[k]);
+    const seg = (i, on) => { const r = 40, a0 = (-90 + i * 90 + 7) * Math.PI / 180, a1 = (-90 + i * 90 + 83) * Math.PI / 180, P = (an) => (50 + r * Math.cos(an)).toFixed(2) + ' ' + (50 + r * Math.sin(an)).toFixed(2); return `<path class="sg${on ? ' on' : i === nextI ? ' next' : ''}" d="M${P(a0)} A${r} ${r} 0 0 1 ${P(a1)}"${on || i === nextI ? ` style="stroke:${segCol[i]};--gc:${segCol[i]}"` : ''}/>`; };
     const steps = [
       ['warm', '热身', place() === 'away' ? `${D(arp)} 琶音 · 屏幕上按指法点对 3 遍` : `${D(arp)} 琶音 · 在琴上一个音不错弹完 3 遍`, `#arp-${arp}-today`],
       ['learn', '学', coursesDone() ? `${cur.n} · ${cur.title}` : `${COURSES[courseOf(nextAny())].title} · ${nextAny().big}（今天学 2 课）`, stepHref('learn')],

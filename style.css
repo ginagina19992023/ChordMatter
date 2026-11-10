@@ -1472,3 +1472,7 @@ body.land .ring-t b { font-size: 36px; }
 .calweek.slim { margin: -40px 0 24px; border-top: 0; padding: 0; opacity: .9; }
 .recpills { margin: 26px 0 14px; }
 body.land .deskcal { top: 0; }
+/* 下一步那一段：呼吸脉冲，引人去点亮它 */
+.ring .sg.next { stroke-width: 4; animation: sgpulse 1.9s ease-in-out infinite; }
+@keyframes sgpulse { 0%, 100% { stroke-opacity: .28; filter: drop-shadow(0 0 0 var(--gc)); } 50% { stroke-opacity: 1; filter: drop-shadow(0 0 4px var(--gc)) drop-shadow(0 0 12px var(--gc)); } }
+@media (prefers-reduced-motion: reduce) { .ring .sg.next { animation: none; stroke-opacity: .7; filter: drop-shadow(0 0 5px var(--gc)); } }
