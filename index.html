@@ -108,7 +108,7 @@
   var t0 = performance.now(), fin = false;
   function done() { if (fin) return; fin = true; el.classList.add('out'); document.documentElement.classList.remove('splashing'); setTimeout(function () { el.remove(); }, 500); }
   function tick(now) { if (fin) return; var t = (now - t0) / 1000; frame(Math.min(t, SEG[3][1])); if (t >= END) { done(); return; } requestAnimationFrame(tick); }
-  frame(0); requestAnimationFrame(tick); el.addEventListener('pointerdown', function () { if (window.__splashBlocked) { window.__splashBlocked = false; t0 = performance.now(); window.__splashT0 = t0; window.dispatchEvent(new Event('splashunlock')); return; } done(); window.dispatchEvent(new Event('splashskip')); });
+  frame(0); requestAnimationFrame(tick); el.addEventListener('click', function () { if (window.__splashBlocked) { window.__splashBlocked = false; t0 = performance.now(); window.__splashT0 = t0; window.dispatchEvent(new Event('splashunlock')); return; } done(); window.dispatchEvent(new Event('splashskip')); });
 } catch (e) { var s = document.getElementById('splash'); if (s) s.remove(); document.documentElement.classList.remove('splashing'); } })();
 </script>
 <div id="phone">
