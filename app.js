@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 150; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 151; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -4063,10 +4063,10 @@
       case 'info': { const sg = allSongs().find(x => x.id === route[1]); if (!sg) break; const [t, h] = songInfo(sg, el.dataset.k); infoPop(el, t, h); break; }
       case 'mytoggle': S.myOpen = !S.myOpen; save(); { const b = document.querySelector('.mybox'); if (b) b.hidden = !S.myOpen; } el.textContent = '我的原谱 ' + (S.myOpen ? '⌃' : '⌄'); break;
       case 'lvset': S.lv = S.lv || {}; S.lv[el.dataset.k] = el.dataset.v; save(); render(); break;
-      case 'splashmode': S.splashMode = el.dataset.v === 'custom' ? 'custom' : 'def'; if (S.splashMode === 'custom' && !S.splashCfg) S.splashCfg = Object.assign({}, SplashMk.DEF); save(); vSet(); break;
+      case 'splashmode': S.splashMode = el.dataset.v === 'custom' ? 'custom' : 'def'; if (S.splashMode === 'custom' && !S.splashCfg) S.splashCfg = SplashMk.withPre(SplashMk.DEF); save(); vSet(); break;
       case 'spmk-set': { SplashMk.set({ [el.dataset.k]: isNaN(+el.dataset.v) || el.dataset.k === 'seq' || el.dataset.k === 'style' ? el.dataset.v : +el.dataset.v }); vSplashMk(); break; }
       case 'spmk-play': SplashMk.preview(); break;
-      case 'spmk-use': S.splashMode = 'custom'; S.splashCfg = SplashMk.cfg(); save(); toast('已设为开机动画。下次打开 App 就会放这一段'); break;
+      case 'spmk-use': S.splashMode = 'custom'; S.splashCfg = SplashMk.withPre(SplashMk.cfg()); save(); toast('已设为开机动画。下次打开 App 就会放这一段'); break;
       case 'splashsnd': S.splashSnd = el.dataset.v === '1'; save(); vSet(); break;
       case 'splashset': S.splash = el.dataset.v === '1'; save(); vSet(); break;
       case 'splashplay': { sessionStorage.removeItem('hx.splash'); location.href = location.pathname + location.search + location.hash; location.reload(); break; }
@@ -4276,71 +4276,39 @@
         const m = NOTE.exec(tk);
         if (m) { const pc = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[m[1].toUpperCase()] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0); return { label: m[1].toUpperCase() + m[2] + m[3], midis: [12 * (+m[3] + 1) + pc], h: QHUE[PCQ[((pc % 12) + 12) % 12]] || QHUE[''] }; }
         const c = T.parseChord(tk); if (!c) return null;
-        return { label: D(tk), midis: T.voicing(c).map(n => n.midi), h: cxHue(c.q) };
+        return { label: D(tk), midis: T.voicing(c).map(n => n.midi).sort((x, y) => x - y), h: cxHue(c.q) };
       }).filter(Boolean);
     }
-    const hx = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
-    const mixc = (a, b, t) => { const x = hx(a), y = hx(b); return `rgb(${[0, 1, 2].map(i => Math.round(x[i] + (y[i] - x[i]) * t)).join(',')})`; };
-    const ez = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-    function make(host, c) {
-      const items = parse(c.seq), spb = 60 / Math.max(30, c.bpm), notes = [], ev = [];
-      let cur = 0.5;
-      items.forEach(it => {
-        const t0 = cur, d = Math.max(0.2, c.beats * spb), step = c.style === 'arp' ? Math.min(spb / 3, 0.2) : 0;
-        ev.push({ t0, d, label: it.label, h: it.h });
-        it.midis.forEach((m, j) => notes.push({ m, t: t0 + j * step, d: d + 0.25, h: it.h }));
-        cur += d + Math.max(0, c.gap) * spb;
-      });
-      const total = cur + 1.2;
-      const ms = notes.map(n => n.m), lo = ms.length ? Math.floor(Math.min(...ms) / 12) * 12 : 48;
-      let hi = ms.length ? Math.floor(Math.max(...ms) / 12) * 12 + 11 : 71; if (hi - lo < 23) hi = lo + 23; if (hi - lo > 47) hi = lo + 47;
-      const cv = document.createElement('canvas'); cv.className = 'spcv'; host.innerHTML = ''; host.appendChild(cv);
-      const g = cv.getContext('2d'); let raf = 0, T0 = 0, onEnd = null;
-      const size = () => { const dpr = Math.min(2, window.devicePixelRatio || 1), w = host.clientWidth || 300, h = host.clientHeight || 400; cv.width = w * dpr; cv.height = h * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0); return [w, h]; };
-      function drawAt(t) {
-        const [w, h] = size();
-        let ci = -1; ev.forEach((e, i) => { if (e.t0 <= t) ci = i; });
-        const cu = ev[ci], pv = ev[ci - 1], hc = cu ? cu.h : QHUE[''], hp = pv ? pv.h : hc, k = cu ? ez(Math.min(1, (t - cu.t0) / 0.6)) : 0;
-        const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, cu ? mixc(hp[4], hc[4], k) : '#141414'); gr.addColorStop(1, cu ? mixc(hp[3], hc[3], k) : '#141414'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
-        const wh = []; for (let m = lo; m <= hi; m++) if (![1, 3, 6, 8, 10].includes(m % 12)) wh.push(m);
-        const kw = (w - 32) / wh.length, kh = Math.min(h * 0.34, kw * 5.2), ky = h * 0.5 - kh / 2 + 18, pos = {};
-        wh.forEach((m, i) => (pos[m] = { x: 16 + i * kw, w: kw - 1.5, b: false }));
-        for (let m = lo; m <= hi; m++) if ([1, 3, 6, 8, 10].includes(m % 12) && pos[m - 1]) pos[m] = { x: pos[m - 1].x + kw * 0.68, w: kw * 0.6, b: true };
-        const lit = {}; notes.forEach(n => { if (t < n.t) return; const off = n.t + n.d - 0.25, a = t < off ? 1 : Math.max(0, 1 - (t - off) / 0.35); if (a > (lit[n.m] ? lit[n.m].a : 0)) lit[n.m] = { a, h: n.h }; });
-        if (cu) { const rg = g.createRadialGradient(w / 2, ky + kh / 2, 10, w / 2, ky + kh / 2, w * 0.7); rg.addColorStop(0, mixc(hc[5], '#000000', 0.55) .replace('rgb', 'rgba').replace(')', `,${0.45 * k})`)); rg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = rg; g.fillRect(0, 0, w, h); }
-        const key = (m, black) => { const p = pos[m]; if (!p) return; const L = lit[m], base = black ? '#1a1315' : '#efe6dc', col = L ? mixc(base.length === 7 ? base : '#efe6dc', black ? L.h[0] : L.h[5], L.a) : base, bh = black ? kh * 0.62 : kh;
-          g.save(); if (L && L.a > 0.05) { g.shadowColor = L.h[5]; g.shadowBlur = 26 * L.a; } g.fillStyle = col; g.beginPath(); g.roundRect ? g.roundRect(p.x, ky, p.w, bh, black ? 3 : 5) : g.rect(p.x, ky, p.w, bh); g.fill(); g.restore(); };
-        wh.forEach(m => key(m, false)); for (const m in pos) if (pos[m].b) key(+m, true);
-        notes.forEach(n => { const u = (t - n.t) / 0.7, p = pos[n.m]; if (u < 0 || u > 1 || !p) return; g.strokeStyle = n.h[5]; g.globalAlpha = 0.8 * (1 - u); g.lineWidth = 2.5; g.beginPath(); g.arc(p.x + p.w / 2, ky + 4, 4 + 46 * (1 - Math.pow(1 - u, 3)), 0, 6.283); g.stroke(); g.globalAlpha = 1; });
-        if (cu) { g.globalAlpha = Math.min(1, (t - cu.t0) / 0.25); g.fillStyle = hc[5]; g.font = '600 40px -apple-system, "PingFang SC", sans-serif'; g.textAlign = 'center'; g.fillText(cu.label, w / 2, ky - 46); g.globalAlpha = 1; g.textAlign = 'start'; }
-      }
-      function start(sound) {
-        cancelAnimationFrame(raf); T0 = performance.now();
-        if (sound) { A.init(); A.cut(); A.schedule(notes.map(n => [n.m, n.t + 0.05, n.d, c.style === 'arp' ? 0.45 : 0.4])); }
-        const step = now => { const t = (now - T0) / 1000; drawAt(Math.min(t, total)); if (t >= total) { if (onEnd) onEnd(); return; } raf = requestAnimationFrame(step); };
-        raf = requestAnimationFrame(step);
-      }
-      drawAt(0);
-      return { start, stop() { cancelAnimationFrame(raf); }, total, drawAt, set onEnd(f) { onEnd = f; } };
+    // 动画需要的数据：每个和弦的名字、感觉色、三条声部线（最低 / 中间 / 最高音）、全部的音
+    function withPre(c) {
+      const it = parse(c.seq); if (!it.length) { const o = Object.assign({}, c); delete o.pre; return o; }
+      const v3 = ms => { const n = ms.length; return n >= 3 ? [ms[0], ms[Math.floor(n / 2)], ms[n - 1]] : n === 2 ? [ms[0], ms[1], ms[1]] : [ms[0], ms[0], ms[0]]; };
+      return Object.assign({}, c, { pre: { labels: it.map(x => x.label), acc: it.map(x => x.h[5]), voices: it.map(x => v3(x.midis)), midis: it.map(x => x.midis) } });
     }
     let pv = null;
-    function preview() { const st = document.getElementById('spstage'); if (!st) return; if (pv) pv.stop(); pv = make(st, cfg()); pv.start(true); }
+    function preview() {
+      const st = document.getElementById('spstage'); if (!st) return; if (pv) pv.stop();
+      st.innerHTML = HXSplash.MARK; const c = withPre(cfg());
+      pv = HXSplash.run(st, c, {}); A.init(); A.cut();
+      const pl = pv.plan || HXSplash.plan(c.pre ? c : Object.assign({ pre: { voices: [[60, 64, 67]], midis: [[60, 64, 67]], acc: ['#ffc857'], labels: ['C'] } }, c));
+      A.schedule(pl.notes);
+    }
+    function still(st) { st.innerHTML = HXSplash.MARK; const r = HXSplash.run(st, withPre(cfg()), {}); r.stop(); }
     function splash(sp) {
-      const c = cfg(), snd = S.splashSnd !== false, host = document.createElement('div'); host.className = 'spcustom'; sp.appendChild(host);
-      let m = make(host, c); m.onEnd = () => setTimeout(() => window.__splashFinish && window.__splashFinish(), 300);
-      const go = () => { m.stop(); m = make(host, c); m.onEnd = () => setTimeout(() => window.__splashFinish && window.__splashFinish(), 300); m.start(true); };
-      window.addEventListener('splashskip', () => { m.stop(); A.cut(); });
-      if (!snd) { m.start(false); return; }
+      const c = S.splashCfg, snd = S.splashSnd !== false; if (!c || !c.pre) return;
+      const pl = HXSplash.plan(c);
+      window.addEventListener('splashskip', () => A.cut());
+      if (!snd) return;
       try { A.init(); } catch (e) {}
-      m.start(true);
+      A.schedule(pl.notes);
       setTimeout(() => {
         if (A.ctx && A.ctx.state === 'running') return;
         A.cut(); window.__splashBlocked = true;
         const hn = document.createElement('div'); hn.className = 'sphint'; hn.textContent = '轻点屏幕 · 开启声音 ♪'; sp.appendChild(hn);
-        window.addEventListener('splashunlock', () => { hn.remove(); try { A.init(); } catch (e) {} go(); }, { once: true });
+        window.addEventListener('splashunlock', () => { hn.remove(); try { A.init(); } catch (e) {} A.schedule(pl.notes); }, { once: true });
       }, 250);
     }
-    return { DEF, cfg, set: p => { S.splashCfg = Object.assign(cfg(), p); save(); }, parse, make, preview, splash, stopPreview: () => { if (pv) pv.stop(); pv = null; } };
+    return { DEF, cfg, withPre, set: p => { S.splashCfg = withPre(Object.assign(cfg(), p)); save(); }, parse, preview, still, splash, stopPreview: () => { if (pv) pv.stop(); pv = null; } };
   })();
   function vSplashMk() {
     const c = SplashMk.cfg(), chip = (k, v, n) => `<button class="chip${String(c[k]) === String(v) ? ' on' : ''}" data-act="spmk-set" data-k="${k}" data-v="${v}">${n}</button>`;
@@ -4350,7 +4318,7 @@
       <div class="row"><button class="btn" data-act="spmk-play">▶ 预览（有声音）</button><button class="ghost" data-act="spmk-use">用作我的开机动画</button></div>
       <h3 class="h3">和弦 / 音</h3>
       <input id="spseq" class="inp" value="${esc(c.seq)}" autocapitalize="off" autocomplete="off" spellcheck="false">
-      <p class="fine">用空格隔开：和弦写 C、Am7、G/B，单个音写 C4、E4。最多 16 个。键盘上亮起来的颜色就是这个和弦的感觉色。</p>
+      <p class="fine">用空格隔开：和弦写 C、Am7、G/B，单个音写 C4、E4。最多 16 个。</p>
       <div class="chips scroll">${presets.map(([v, n]) => `<button class="chip" data-act="spmk-set" data-k="seq" data-v="${v}">${n}</button>`).join('')}</div>
       <select id="spsong" class="inp"><option value="">从曲目导入前 8 个和弦……</option>${allSongs().filter(s => s.sections.length).map(s => `<option value="${s.id}">${esc(s.title)}</option>`).join('')}</select>
       <h3 class="h3">速度 <small id="spbpmv">${c.bpm} 拍/分</small></h3>
@@ -4358,8 +4326,8 @@
       <h3 class="h3">每个和弦占几拍</h3><div class="chips">${chip('beats', 1, '1 拍')}${chip('beats', 2, '2 拍')}${chip('beats', 4, '4 拍')}</div>
       <h3 class="h3">和弦之间的间隔</h3><div class="chips">${chip('gap', 0, '连着')}${chip('gap', 0.5, '半拍')}${chip('gap', 1, '1 拍')}</div>
       <h3 class="h3">弹法</h3><div class="chips">${chip('style', 'block', '同时按下')}${chip('style', 'arp', '琶音（一个一个）')}</div>
-      <p class="fine">做好后点「用作我的开机动画」，并在设置里选「我做的动画」。动画和声音用同一条时间线，所以每个音落下的瞬间，键盘就亮一下、起一圈涟漪。</p>`;
-    const st = $('#spstage'); SplashMk.make(st, c);
+      <p class="fine">做好后点「用作我的开机动画」，并在设置里选「我做的动画」。动画还是原来那一套：白色键盘和下面的橙点 → 键变成第一个和弦的颜色 → 变成圆点 → 圆点沿着三条线，一个和弦一个和弦地升降过去（线的高低就是各个音的高低）。声音和画面用同一条时间线。</p>`;
+    SplashMk.still($('#spstage'));
     $('#spseq').onchange = e => { SplashMk.set({ seq: e.target.value }); vSplashMk(); };
     $('#spbpm').oninput = e => { $('#spbpmv').textContent = e.target.value + ' 拍/分'; };
     $('#spbpm').onchange = e => { SplashMk.set({ bpm: +e.target.value }); SplashMk.preview(); };
