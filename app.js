@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 146; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 147; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -1804,7 +1804,7 @@
       <h3 class="h3">开机动画</h3>
       <p class="fine">打开 App 时，图标的三个样子（键盘线条 → 和弦色块 → 滑条光晕）依次切换，大约 3 秒，点一下可以跳过。每次打开 App 只放一次。</p>
       <div class="chips"><button class="chip${S.splash !== false ? ' on' : ''}" data-act="splashset" data-v="1">开</button><button class="chip${S.splash === false ? ' on' : ''}" data-act="splashset" data-v="0">关</button><button class="chip" data-act="splashplay">现在看一遍</button></div>
-      <p class="fine">开机音乐：三个键依次点亮时是 C–E–G（大三和弦的根音、三音、五音），变成滑条、曲线时走一个 ii–V–I（Dm7 → G7 → Cmaj9）。iPhone 有时不允许 App 一打开就出声，那种情况下会安静地放完动画。</p>
+      <p class="fine">开机音乐：三个键依次点亮时是 C–E–G（大三和弦的根音、三音、五音），变成滑条、曲线时走一个 ii–V–I（Dm7 → G7 → Cadd9）。iPhone 有时不允许 App 一打开就出声，那种情况下会安静地放完动画。</p>
       <div class="chips"><button class="chip${S.splashSnd !== false ? ' on' : ''}" data-act="splashsnd" data-v="1">音乐 开</button><button class="chip${S.splashSnd === false ? ' on' : ''}" data-act="splashsnd" data-v="0">音乐 关</button></div>
       <h3 class="h3">记录和数据</h3>
       <a class="link" href="#me"><small>记录</small><b>练琴日历、进度、备份、云端同步</b><span>→</span></a>
@@ -4268,7 +4268,7 @@
     add([60], 0.5, 1.6, 0.5); add([64], 0.75, 1.5, 0.5); add([67], 1.0, 1.4, 0.5); add([48], 1.0, 2.2, 0.45);
     add([60, 64, 67, 71], 2.1, 1.7, 0.42, 0.04);
     add([72, 76, 79, 83, 86], 3.15, 0.9, 0.3, 0.15);
-    add([50, 57, 60, 65], 3.95, 0.5, 0.42, 0.02); add([43, 55, 59, 65], 4.3, 0.5, 0.42, 0.02); add([48, 64, 67, 71, 74], 4.65, 2.4, 0.45, 0.03);
+    add([50, 57, 60, 65], 3.95, 0.5, 0.42, 0.02); add([43, 55, 59, 65], 4.3, 0.5, 0.42, 0.02); add([48, 64, 67, 74], 4.65, 2.4, 0.4, 0.05);
     const start = () => { const el = Math.max(0, (performance.now() - window.__splashT0) / 1000); A.schedule(N.map(n => [n[0], n[1] - el, n[2], n[3]])); };
     window.addEventListener('splashskip', () => A.cut());
     // 点一下屏幕（手势）才能让 iPhone 出声：自动播放被拦住时，显示提示，点一下就带着声音从头再放一遍
