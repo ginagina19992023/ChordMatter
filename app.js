@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 144; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 145; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -4261,19 +4261,26 @@
   document.addEventListener('pointerdown', e => { window.__lastClick = [e.clientX, e.clientY]; }, true);
   // 开机音乐：和动画同一条时间线。颜色 → 音：三个键 = C E G（根音、三音、五音），滑条曲线 = 级数变化 ii–V–I
   (function splashMusic() {
-    if (!window.__splashT0 || !document.getElementById('splash') || S.splashSnd === false) return;
-    const el = (performance.now() - window.__splashT0) / 1000;
+    const sp = document.getElementById('splash');
+    if (!window.__splashT0 || !sp || S.splashSnd === false) return;
     const N = [];
-    const add = (ms, t, d, v, sp = 0) => ms.forEach((m, i) => N.push([m, t + i * sp, d, v]));
+    const add = (ms, t, d, v, g = 0) => ms.forEach((m, i) => N.push([m, t + i * g, d, v]));
     add([60], 0.5, 1.6, 0.5); add([64], 0.75, 1.5, 0.5); add([67], 1.0, 1.4, 0.5); add([48], 1.0, 2.2, 0.45);
     add([60, 64, 67, 71], 2.1, 1.7, 0.42, 0.04);
     add([72, 76, 79, 83, 86], 3.15, 0.9, 0.3, 0.15);
     add([50, 57, 60, 65], 3.95, 0.5, 0.42, 0.02); add([43, 55, 59, 65], 4.3, 0.5, 0.42, 0.02); add([48, 64, 67, 71, 74], 4.65, 2.4, 0.45, 0.03);
-    try { A.init(); } catch (e) { return; }
-    if (!A.ctx) return;
-    A.schedule(N.map(n => [n[0], n[1] - el, n[2], n[3]]));
-    setTimeout(() => { if (A.ctx && A.ctx.state !== 'running') A.cut(); }, 250);
-    window.addEventListener('splashskip', () => A.cut(), { once: true });
+    const start = () => { const el = Math.max(0, (performance.now() - window.__splashT0) / 1000); A.schedule(N.map(n => [n[0], n[1] - el, n[2], n[3]])); };
+    window.addEventListener('splashskip', () => A.cut());
+    // 点一下屏幕（手势）才能让 iPhone 出声：自动播放被拦住时，显示提示，点一下就带着声音从头再放一遍
+    const blocked = () => {
+      window.__splashBlocked = true;
+      const h = document.createElement('div'); h.className = 'sphint'; h.textContent = '轻点屏幕 · 开启声音 ♪'; sp.appendChild(h);
+      window.addEventListener('splashunlock', () => { h.remove(); try { A.init(); } catch (e) {} start(); }, { once: true });
+    };
+    try { A.init(); } catch (e) { return blocked(); }
+    if (!A.ctx) return blocked();
+    start();
+    setTimeout(() => { if (A.ctx && A.ctx.state !== 'running') { A.cut(); blocked(); } }, 250);
   })();
   document.addEventListener('staffplay', e => { A.init(); const ms = e.detail || []; if (ms.length === 1) A.note(ms[0], 0, 1.4, 0.7); else A.chord(ms, 0, 0.02, 1.4); });
   document.addEventListener('calpick', e => { calDetail(e.detail); });

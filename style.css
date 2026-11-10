@@ -1503,3 +1503,5 @@ body.land .deskcal { top: 0; }
 .deck:not(.open) .dcard:nth-child(n+4) { transform: translateY(26px) rotate(0deg) scale(.94); opacity: 0; pointer-events: none; }
 .deck.open .dcard { transform: translateY(calc(var(--i) * (var(--ch) + var(--gap)))); transition-delay: calc(var(--i) * 30ms); }
 .deckbtn { display: block; margin: 8px auto 0; border: 0; background: none; color: var(--mute); font-size: 13px; padding: 6px 12px; }
+#splash .sphint { position: absolute; left: 50%; bottom: calc(10% + env(safe-area-inset-bottom)); transform: translateX(-50%); padding: 9px 16px; border-radius: 999px; font-size: 13px; color: #8a8a8a; background: rgba(128, 128, 128, .12); white-space: nowrap; animation: sphint 1.8s ease-in-out infinite; pointer-events: none; }
+@keyframes sphint { 50% { opacity: .45; } }
