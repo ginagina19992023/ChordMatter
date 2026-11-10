@@ -125,7 +125,13 @@ window.HXSplash = (function () {
     var nC = pre ? pre.voices.length : 0, xs = [], vy = [[], [], []], RD = pre && nC > 1;
     if (RD) {
       for (var ci = 0; ci < nC; ci++) { xs.push(92 + ci * (148 / (nC - 1))); for (var vv = 0; vv < 3; vv++) vy[vv].push(clampN(base[vv] - (pre.voices[ci][vv] - pre.voices[0][vv]) * 6, 62, 264)); }
-      for (var v2 = 0; v2 < 3; v2++) { var d = 'M52 ' + vy[v2][0] + ' H' + xs[0]; for (var c2 = 0; c2 < nC - 1; c2++) { var xm = (xs[c2] + xs[c2 + 1]) / 2; d += ' C' + xm + ' ' + vy[v2][c2] + ' ' + xm + ' ' + vy[v2][c2 + 1] + ' ' + xs[c2 + 1] + ' ' + vy[v2][c2 + 1]; } d += ' H248'; $('rv' + v2).setAttribute('d', d); }
+      // 线的颜色：沿着线，每个和弦的位置是这个和弦的颜色，中间渐变；球走到哪，线在那里就是同一个颜色
+      var NS = 'http://www.w3.org/2000/svg', gid = 'spg' + Math.floor(Math.random() * 1e6), lg = document.createElementNS(NS, 'linearGradient');
+      lg.setAttribute('id', gid); lg.setAttribute('gradientUnits', 'userSpaceOnUse'); lg.setAttribute('x1', 52); lg.setAttribute('x2', 248); lg.setAttribute('y1', 0); lg.setAttribute('y2', 0);
+      var stops = [[0, pre.acc[0]]]; xs.forEach(function (x, j) { stops.push([(x - 52) / 196, pre.acc[j]]); }); stops.push([1, pre.acc[nC - 1]]);
+      stops.forEach(function (st) { var e = document.createElementNS(NS, 'stop'); e.setAttribute('offset', st[0]); e.setAttribute('stop-color', st[1]); lg.appendChild(e); });
+      root.querySelector('defs').appendChild(lg);
+      for (var v2 = 0; v2 < 3; v2++) { $('rv' + v2).setAttribute('stroke', 'url(#' + gid + ')'); var d = 'M52 ' + vy[v2][0] + ' H' + xs[0]; for (var c2 = 0; c2 < nC - 1; c2++) { var xm = (xs[c2] + xs[c2 + 1]) / 2; d += ' C' + xm + ' ' + vy[v2][c2] + ' ' + xm + ' ' + vy[v2][c2 + 1] + ' ' + xs[c2 + 1] + ' ' + vy[v2][c2 + 1]; } d += ' H248'; $('rv' + v2).setAttribute('d', d); }
     }
     // 当前的和弦（最近一次出现的那个），以及它和上一个之间的颜色渐变
     function evAt(t) { var e = -1; for (var k = 0; k < PL.events.length; k++) if (PL.events[k].t <= t + 0.02) e = k; return e; }
@@ -155,7 +161,7 @@ window.HXSplash = (function () {
       var eu = ease(u), xm2 = (xs[a] + xs[b]) / 2;
       for (var w = 0; w < 3; w++) {
         var ya = vy[w][a], yb = vy[w][b], m1 = 1 - eu, x = m1 * m1 * m1 * xs[a] + 3 * m1 * m1 * eu * xm2 + 3 * m1 * eu * eu * xm2 + eu * eu * eu * xs[b], y = m1 * m1 * m1 * ya + 3 * m1 * m1 * eu * ya + 3 * m1 * eu * eu * yb + eu * eu * eu * yb;
-        var hh = $('rh' + w), tt = $('rt' + w); hh.setAttribute('cx', x); hh.setAttribute('cy', y); hh.setAttribute('r', 34 * (1 + 0.5 * pulse)); hh.setAttribute('opacity', al * (0.8 + 0.2 * pulse)); tt.setAttribute('cx', x); tt.setAttribute('cy', y); tt.setAttribute('fill', pre.acc[cj]); tt.setAttribute('opacity', al);
+        var hh = $('rh' + w), tt = $('rt' + w); hh.setAttribute('cx', x); hh.setAttribute('cy', y); hh.setAttribute('r', 34 * (1 + 0.5 * pulse)); hh.setAttribute('opacity', al * (0.8 + 0.2 * pulse)); tt.setAttribute('cx', x); tt.setAttribute('cy', y); tt.setAttribute('fill', mixHex(pre.acc[a], pre.acc[b], eu)); tt.setAttribute('opacity', al);
       }
     }
     var t0 = performance.now(), raf = 0, stopped = false, endT = pre ? PL.end : 5.6, lastSeg = SEG[SEG.length - 1][1];
