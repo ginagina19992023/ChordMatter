@@ -1422,3 +1422,4 @@ body.dark { --glow-edge: rgba(255,255,255,.55); --glow-shadow: 0 0 14px rgba(255
 .sharebg .seg2 { margin: 0; }
 .sharebg .seg2 a { cursor: pointer; padding: 4px 12px; font-size: 13px; }
 .sharebg .seg2 a.on { background: var(--ink); color: var(--bg); font-weight: 600; }
+.sharebg .seg2 { flex-wrap: wrap; } .sharebg .seg2 a { padding: 4px 10px; }

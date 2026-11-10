@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 126; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 127; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -3727,22 +3727,46 @@
     } catch (e) {}
     return cv;
   }
-  // 分享图的背景：「当前背景色」= 跟着 App 现在的主题（深色就是深色底）；「白底」= 永远白色，发给别人更通用。开关记在 S.shareBg
+  // 分享图的背景三选一：「当前背景色」跟着 App 主题 · 「和弦色」用你最近看的那个和弦的渐变底（和弦页那种）· 「白底」永远白色。开关记在 S.shareBg
+  const hex2rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  function chordGradientBg(out) {
+    const L = S.cxLast, q = L && QHUE[L.q] ? L.q : '', h = QHUE[q] || QHUE[''], dark = isDarkTheme(), W = out.width, H = out.height, g = out.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 0, H);
+    if (dark) { gr.addColorStop(0, h[2]); gr.addColorStop(0.55, h[3]); gr.addColorStop(1, h[4]); }
+    else { const m = hex2rgb(h[1]); gr.addColorStop(0, `rgb(${Math.round(m[0] * 0.32 + 255 * 0.68)},${Math.round(m[1] * 0.32 + 255 * 0.68)},${Math.round(m[2] * 0.32 + 255 * 0.68)})`); gr.addColorStop(0.55, '#ffffff'); gr.addColorStop(1, '#ffffff'); }
+    return gr;
+  }
+  function applyChordBg(out, white) {
+    const dark = isDarkTheme(), W = out.width, H = out.height;
+    const bg = document.createElement('canvas'); bg.width = W; bg.height = H; const bgc = bg.getContext('2d'); bgc.fillStyle = chordGradientBg(out); bgc.fillRect(0, 0, W, H);
+    const base = document.createElement('canvas'); base.width = W; base.height = H; base.getContext('2d').drawImage(white, 0, 0); if (dark) darkenCanvas(base);
+    try {
+      const bi = bgc.getImageData(0, 0, W, H), pi = base.getContext('2d').getImageData(0, 0, W, H), b = bi.data, p = pi.data, ref = dark ? 18 : 255;
+      for (let i = 0; i < p.length; i += 4) {
+        const dist = Math.max(Math.abs(p[i] - ref), Math.abs(p[i + 1] - ref), Math.abs(p[i + 2] - ref)), t = dist >= 24 ? 0 : 1 - dist / 24; // 越接近原来的底色，越换成渐变
+        if (t > 0) { p[i] = p[i] * (1 - t) + b[i] * t; p[i + 1] = p[i + 1] * (1 - t) + b[i + 1] * t; p[i + 2] = p[i + 2] * (1 - t) + b[i + 2] * t; }
+      }
+      out.getContext('2d').putImageData(pi, 0, 0);
+    } catch (e) { out.getContext('2d').drawImage(base, 0, 0); }
+    return out;
+  }
   async function sharePreview(cv, name, title) {
     document.querySelectorAll('.sharepop').forEach(x => x.remove());
     const white = document.createElement('canvas'); white.width = cv.width; white.height = cv.height; white.getContext('2d').drawImage(cv, 0, 0);
     const host = document.getElementById('phone') || document.body;
     const el = document.createElement('div'); el.className = 'sharepop';
-    const mode = () => (S.shareBg === 'white' || !isDarkTheme() ? 'white' : 'current');
+    const mode = () => (S.shareBg === 'white' ? 'white' : S.shareBg === 'chord' ? 'chord' : isDarkTheme() ? 'current' : 'white');
     const render = async () => {
-      let out = white;
-      if (mode() === 'current') { out = document.createElement('canvas'); out.width = white.width; out.height = white.height; out.getContext('2d').drawImage(white, 0, 0); darkenCanvas(out); }
+      let out = white; const m = mode();
+      if (m === 'current') { out = document.createElement('canvas'); out.width = white.width; out.height = white.height; out.getContext('2d').drawImage(white, 0, 0); darkenCanvas(out); }
+      else if (m === 'chord') { out = document.createElement('canvas'); out.width = white.width; out.height = white.height; applyChordBg(out, white); }
       el.querySelector('img').src = out.toDataURL('image/png');
       el.__blob = await new Promise(r => out.toBlob(r, 'image/png'));
-      el.querySelectorAll('[data-act=sharebg]').forEach(x => x.classList.toggle('on', x.dataset.v === mode()));
+      el.querySelectorAll('[data-act=sharebg]').forEach(x => x.classList.toggle('on', x.dataset.v === m || (m === 'white' && x.dataset.v === 'white')));
     };
     el.__render = render;
-    el.innerHTML = `<div class="sharecard"><div class="shead"><b>${title}</b><button class="fsx" data-act="shareclose">×</button></div><img alt="${title}"><div class="sharebg"><small>背景</small><span class="seg2"><a data-act="sharebg" data-v="current">当前背景色</a><a data-act="sharebg" data-v="white">白底</a></span></div><p class="fine">也可以长按图片，存到相册。</p><div class="row"><button class="btn" data-act="sharego">分享</button><button class="ghost" data-act="sharesave">保存图片</button></div></div>`;
+    const L = S.cxLast, cname = L && ROOT_MAJ.includes(L.r) ? D(L.r + L.q) : '';
+    el.innerHTML = `<div class="sharecard"><div class="shead"><b>${title}</b><button class="fsx" data-act="shareclose">×</button></div><img alt="${title}"><div class="sharebg"><small>背景</small><span class="seg2"><a data-act="sharebg" data-v="current">当前背景色</a><a data-act="sharebg" data-v="chord">和弦色${cname ? ' · ' + cname : ''}</a><a data-act="sharebg" data-v="white">白底</a></span></div><p class="fine">「和弦色」是你最近在和弦页看的那个和弦的渐变底；也可以长按图片，存到相册。</p><div class="row"><button class="btn" data-act="sharego">分享</button><button class="ghost" data-act="sharesave">保存图片</button></div></div>`;
     host.appendChild(el); el.__name = name;
     await render();
   }
