@@ -79,6 +79,7 @@ window.HXSplash = (function () {
       K[id].splice(2, 0, D);
     });
   })();
+  if (pre) { K.w1[3].o = 0; K.w3[3].o = 0; K.w4[3].o = 0; } // 自定义动画里，三个彩色的音直接变成线上的三个点，不再经过「两个点」的中间画面
   var BG = ['#ffffff', '#2a1215', '#1b1424', '#141a36', '#141a36'];
   // 段落：停 0.5 → A→B 1.1 → 停 0.25 → B→C 1.1 → 弯出去 0.65 → 停 0.35 → 淡出
   var SEG = [[0.6, 1.8, 0, 1], [2.35, 3.15, 1, 2], [3.15, 3.95, 2, 3], [4.45, 5.15, 3, 4]], END = 5.6;
@@ -116,22 +117,22 @@ window.HXSplash = (function () {
       $(id).setAttribute('d', 'M52 ' + y + ' H112 C138 ' + y + ' 138 ' + yy + ' 164 ' + yy + ' H248'); $(id).setAttribute('opacity', cOn);
     });
     ['w1', 'w5'].forEach(function (id) { $(id).setAttribute('opacity', cOn ? 0 : K[id][s1].o * p + K[id][s0].o * (1 - p)); });
-    var hl = s0 === 2 && s1 === 3 ? p : s0 >= 3 ? 1 : 0;
+    var hl = pre ? 0 : (s0 === 2 && s1 === 3 ? p : s0 >= 3 ? 1 : 0);
     $('halo1').setAttribute('opacity', hl * 0.9); $('halo2').setAttribute('opacity', hl * 0.7);
     if (pre) ride(t);
   }
 
     var base = [204, 150, 96], clampN = function (v, a, b) { return Math.max(a, Math.min(b, v)); };
-    var nC = pre ? pre.voices.length : 0, xs = [], vy = [[], [], []], RD = pre && nC > 1;
+    var nC = pre ? pre.voices.length : 0, xs = [], vy = [[], [], []], RD = pre && nC > 0;
     if (RD) {
-      for (var ci = 0; ci < nC; ci++) { xs.push(92 + ci * (148 / (nC - 1))); for (var vv = 0; vv < 3; vv++) vy[vv].push(clampN(base[vv] - (pre.voices[ci][vv] - pre.voices[0][vv]) * 6, 62, 264)); }
+      for (var ci = 0; ci < nC; ci++) { xs.push(nC > 1 ? 92 + ci * (148 / (nC - 1)) : 150); for (var vv = 0; vv < 3; vv++) vy[vv].push(clampN(base[vv] - (pre.voices[ci][vv] - pre.voices[0][vv]) * 6, 62, 264)); }
       // 线的颜色：沿着线，每个和弦的位置是这个和弦的颜色，中间渐变；球走到哪，线在那里就是同一个颜色
       var NS = 'http://www.w3.org/2000/svg', gid = 'spg' + Math.floor(Math.random() * 1e6), lg = document.createElementNS(NS, 'linearGradient');
       lg.setAttribute('id', gid); lg.setAttribute('gradientUnits', 'userSpaceOnUse'); lg.setAttribute('x1', 52); lg.setAttribute('x2', 248); lg.setAttribute('y1', 0); lg.setAttribute('y2', 0);
       var stops = [[0, pre.acc[0]]]; xs.forEach(function (x, j) { stops.push([(x - 52) / 196, pre.acc[j]]); }); stops.push([1, pre.acc[nC - 1]]);
       stops.forEach(function (st) { var e = document.createElementNS(NS, 'stop'); e.setAttribute('offset', st[0]); e.setAttribute('stop-color', st[1]); lg.appendChild(e); });
       root.querySelector('defs').appendChild(lg);
-      for (var v2 = 0; v2 < 3; v2++) { $('rv' + v2).setAttribute('stroke', 'url(#' + gid + ')'); var d = 'M52 ' + vy[v2][0] + ' H' + xs[0]; for (var c2 = 0; c2 < nC - 1; c2++) { var xm = (xs[c2] + xs[c2 + 1]) / 2; d += ' C' + xm + ' ' + vy[v2][c2] + ' ' + xm + ' ' + vy[v2][c2 + 1] + ' ' + xs[c2 + 1] + ' ' + vy[v2][c2 + 1]; } d += ' H248'; $('rv' + v2).setAttribute('d', d); }
+      for (var v2 = 0; v2 < 3; v2++) { $('rv' + v2).setAttribute('stroke', 'url(#' + gid + ')'); $('rv' + v2).setAttribute('pathLength', 1); $('rv' + v2).setAttribute('stroke-dasharray', 1); var d = 'M52 ' + vy[v2][0] + ' H' + xs[0]; for (var c2 = 0; c2 < nC - 1; c2++) { var xm = (xs[c2] + xs[c2 + 1]) / 2; d += ' C' + xm + ' ' + vy[v2][c2] + ' ' + xm + ' ' + vy[v2][c2 + 1] + ' ' + xs[c2 + 1] + ' ' + vy[v2][c2 + 1]; } d += ' H248'; $('rv' + v2).setAttribute('d', d); }
     }
     // 当前的和弦（最近一次出现的那个），以及它和上一个之间的颜色渐变
     function evAt(t) { var e = -1; for (var k = 0; k < PL.events.length; k++) if (PL.events[k].t <= t + 0.02) e = k; return e; }
@@ -141,6 +142,10 @@ window.HXSplash = (function () {
       accNow = mixHex(pre.acc[pj], pre.acc[ev.j], k); ltNow = mixHex(accNow, '#ffffff', 0.45);
       [1, 2].forEach(function (si) { K.l1[si].fill = '#8e8a80'; K.l2[si].fill = accNow; K.l3[si].fill = ltNow; K.gl1[si].fill = accNow; K.gl2[si].fill = ltNow; });
       K.gl1[1].x = 55 + 49 * 2; K.gl1[2].x = 55 + 49 * 2 + 21.5 - 17;
+      if (RD) { // 线这一步里的三个点：位置就在这个和弦在三条线上的位置，颜色是这个和弦的颜色
+        var cx = xs[ev.j]; ['l1', 'l2', 'l3'].forEach(function (id, w) { var o = K[id][3]; o.x = cx - 13; o.y = vy[w][ev.j] - 13; o.w = 26; o.h = 26; o.rx = 13; o.fill = accNow; o.o = 1; });
+        K.gl1[3] = { x: cx - 22, y: vy[2][ev.j] - 22, w: 44, h: 44, rx: 22, fill: accNow, o: 0.8 }; K.gl2[3] = { x: cx - 15, y: vy[0][ev.j] - 15, w: 30, h: 30, rx: 15, fill: accNow, o: 0.7 };
+      }
     }
     function dotX(t) { var x = 150, px = 150, t1 = -9; PL.hops.forEach(function (h) { if (h[0] <= t) { px = x; x = h[1]; t1 = h[0]; } }); return px + (x - px) * ease(clampN((t - t1) / 0.14, 0, 1)); }
     function ripples(t) {
@@ -152,9 +157,9 @@ window.HXSplash = (function () {
       var lab = $('rlab'), e = Math.max(0, evAt(t)), ev = PL.events[e], cj = ev.j;
       lab.textContent = pre.labels[cj]; lab.setAttribute('fill', pre.acc[cj]); lab.setAttribute('opacity', clampN((t - PL.events[0].t + 0.1) / 0.4, 0, 1));
       var psn = 0, kf = PL.kf; for (var q = 1; q < kf.length; q++) if (t <= kf[q][0]) { var A0 = kf[q - 1], B0 = kf[q]; psn = B0[0] === A0[0] ? B0[1] : A0[1] + (B0[1] - A0[1]) * (t - A0[0]) / (B0[0] - A0[0]); break; }
-      var al = RD ? clampN((psn - 2.7) / 0.3, 0, 1) : 0;
+      var alL = RD ? clampN(psn - 2, 0, 1) : 0, al = RD ? clampN((psn - 2.85) / 0.15, 0, 1) : 0;
       if (al > 0) ['w1', 'w2', 'w3', 'w4', 'l1', 'l2', 'l3', 'gl1', 'gl2', 'halo1', 'halo2'].forEach(function (id) { var n = $(id); n.setAttribute('opacity', parseFloat(n.getAttribute('opacity') || 0) * (1 - al)); });
-      for (var v = 0; v < 3; v++) { $('rv' + v).setAttribute('opacity', al); $('rh' + v).setAttribute('opacity', 0); $('rt' + v).setAttribute('opacity', 0); }
+      for (var v = 0; v < 3; v++) { $('rv' + v).setAttribute('opacity', alL > 0 ? 1 : 0); $('rv' + v).setAttribute('stroke-dashoffset', 1 - alL); $('rh' + v).setAttribute('opacity', 0); $('rt' + v).setAttribute('opacity', 0); }
       if (!RD || al <= 0) return;
       var nx = PL.events[e + 1], a = cj, b = cj, u = 0, pulse = ev.scene === 'line' ? Math.exp(-6 * Math.max(0, t - ev.t)) : 0;
       if (nx && nx.scene === 'line' && ev.scene === 'line') { b = nx.j; var ivE = nx.t - ev.t; u = clampN((t - (ev.t + 0.4 * ivE)) / (0.6 * ivE), 0, 1); }
