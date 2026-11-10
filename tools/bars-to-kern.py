@@ -16,12 +16,14 @@ def parse_hand(s):
         d = Fraction(4, n); add = d
         for _ in range(dots): add /= 2; d += add
         pits = [p for p in pit.split('+') if p]
-        ev.append((t, d, pits, tie_open, tie_close, n, dots))
-        t += d
+        grace = any(re.search(r'[qQ]$', p) for p in pits)  # 小音符（装饰音）：谱上有但不占拍
+        if grace: d = Fraction(0)
+        ev.append((t, d, pits, tie_open, tie_close, n, dots, grace))
+        if not grace: t += d
     return ev, t
 
 def cell(e):
-    t, d, pits, op, cl, n, dots = e
+    t, d, pits, op, cl, n, dots, grace = e
     base = str(n) + '.' * dots
     out = []
     for p in pits:
@@ -39,8 +41,15 @@ def main():
         if lt != 4 or rt != 4: problems.append((b['bar'], float(lt), float(rt)))
         L.append('=%d\t=%d' % (b['bar'], b['bar']))
         ons = sorted(set([e[0] for e in lh] + [e[0] for e in rh]))
-        lm = {e[0]: e for e in lh}; rm = {e[0]: e for e in rh}
+        lm = {e[0]: e for e in lh if not e[7]}; rm = {e[0]: e for e in rh if not e[7]}
+        lg = {}; rg = {}
+        for e in lh:
+            if e[7]: lg.setdefault(e[0], []).append(e)
+        for e in rh:
+            if e[7]: rg.setdefault(e[0], []).append(e)
         for o in ons:
+            for gi in range(max(len(lg.get(o, [])), len(rg.get(o, [])))):  # 小音符先单独一行，再接主音
+                L.append((cell(lg[o][gi]) if gi < len(lg.get(o, [])) else '.') + '\t' + (cell(rg[o][gi]) if gi < len(rg.get(o, [])) else '.'))
             L.append((cell(lm[o]) if o in lm else '.') + '\t' + (cell(rm[o]) if o in rm else '.'))
     last = max(b['bar'] for b in bars)
     L += ['==\t==', '*-\t*-']

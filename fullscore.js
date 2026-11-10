@@ -100,19 +100,25 @@ const FullScore = (() => {
     const acc = (sub.slice(m.index + n).match(/^[#\-n]*/) || [''])[0];
     return 12 * (oct + 1) + pc + (acc.split('#').length - 1) - (acc.split('-').length - 1);
   }
+  // ova：8va 记号——谱上写的比实际低一个八度。数组 = 只左手；{L:[小节], R:[小节]} = 左右手分别指定。发声时升高一个八度。
   function events(kern, ova) {
-    const ms = parse(kern), out = [], open = {}, ovaSet = new Set(ova || []); // ova：这些小节左手谱上写的比实际低一个八度（8va），发声时升高
-
+    const ms = parse(kern), out = [], open = {};
+    const oL = new Set(Array.isArray(ova) ? ova : (ova && ova.L) || []), oR = new Set((ova && !Array.isArray(ova) && ova.R) || []);
     let off = 0;
     ms.forEach(m => {
       m.rows.filter(r => r.f).forEach(r => r.f.forEach((tok, sp) => {
         if (!tok || tok === '.' || /^[*!=]/.test(tok)) return;
         tok.split(' ').forEach(sub => {
-          if (/r/.test(sub) || /q/.test(sub)) return;
-          let midi = kernMidi(sub); const d = dur(sub); if (midi == null || !d) return; if (sp === 0 && ovaSet.has(m.n)) midi += 12;
+          if (/r/.test(sub) || /[qQ]/.test(sub)) return; // 休止、装饰音（小音符）不占时间
+          let midi = kernMidi(sub); const d = dur(sub); if (midi == null || !d) return;
+          if (sp === 0 ? oL.has(m.n) : oR.has(m.n)) midi += 12;
           const key = sp + ':' + midi;
           if (/[\]_]/.test(sub) && open[key]) { open[key].d += d; if (/\]/.test(sub)) delete open[key]; return; }
-          const e = { t: off + r.t, d, midi, hand: sp === 0 ? 'L' : 'R', bar: m.n }; out.push(e);
+          const hand = sp === 0 ? 'L' : 'R', t0 = off + r.t;
+          // 颤音 T：主音和上方二度快速交替；回音 M / m：主音-上方（下方）音-主音，然后持续
+          if (/T/.test(sub) && d >= 0.5) { const step = 0.125; let k = 0; for (let x = 0; x < d - 1e-6; x += step, k++) out.push({ t: t0 + x, d: Math.min(step, d - x), midi: k % 2 ? midi + 2 : midi, hand, bar: m.n }); return; }
+          if (/[Mm]/.test(sub.replace(/[a-gA-G#\-\[\]\d.]/g, '')) && d >= 0.5) { const up = /M/.test(sub) ? 2 : -1; [0, up, 0].forEach((s, k) => out.push({ t: t0 + k * 0.125, d: k < 2 ? 0.125 : d - 0.25, midi: midi + s, hand, bar: m.n })); return; }
+          const e = { t: t0, d, midi, hand, bar: m.n }; out.push(e);
           if (/\[/.test(sub)) open[key] = e;
         });
       }));
