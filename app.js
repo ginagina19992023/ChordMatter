@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 136; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 137; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -529,14 +529,16 @@
       ['song', '用', `${song.title.split(' ')[0]} · ${place() === 'away' ? '屏幕上点出和弦' : '在琴上弹下来'} 第 ${Math.min(4, songLv(song.id) + 1)} 层`, `#mem-${song.id}-today`],
     ];
     view.innerHTML = `
-      <header class="top"><div><small>${new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })}</small><h1>今天</h1></div>
+      <header class="top"><div><h1>今天</h1></div>
         <a class="stat" href="#me"><b>${streak()}</b><small>连续天</small></a><a class="stat" href="#me"><b>${S.xp}</b><small>XP</small></a></header>
       ${modeSwitch()}
+      <div class="heroring"><a class="deskcal" href="#me-cal" aria-label="练琴日历"><i></i><b>${new Date().getMonth() + 1}月</b><strong>${new Date().getDate()}</strong><small>${new Date().toLocaleDateString('zh-CN', { weekday: 'short' })}</small></a>
       <section class="ring-wrap">
         <i class="ring-glow" style="opacity:${0.25 + n * 0.18}"></i>
         <svg viewBox="0 0 100 100" class="ring">${STEPS.map((k, i) => seg(i, !!d[k])).join('')}</svg>
         <div class="ring-t"><b>${n}<em>/4</em></b><small>${n === 4 ? '今天完成了' : '约 12 分钟'}</small></div>
-      </section>
+      </section></div>
+      <a class="calweek slim" href="#me-cal">${calHtml(calWeeks(new Date().getFullYear(), new Date().getMonth(), today()), true)}</a>
       ${n < 4 ? `<div class="cta flow">${flowBtn(n === 0 ? '开始今天的练习' : '继续 · ' + steps.find(x => !d[x[0]])[1])}</div>` : '<p class="donemsg">今天的 4 步都完成了。想多练可以试试下面的即兴伴奏。</p>'}
       <ol class="steps">${steps.map(([k, t, s, h], i) => `<li><a href="${h}" class="${d[k] ? 'done' : ''}"><span class="dot">${d[k] ? '✓' : i + 1}</span><span><b>${t}</b><small>${esc(s)}${d[k] ? (d[k + 'M'] === 'away' ? ' · 今天在屏幕上完成' : d[k + 'M'] === 'piano' ? ' · 今天在琴上完成' : '') : ''}</small></span><span class="arr">→</span></a></li>`).join('')}</ol>
       ${todoBox()}
@@ -546,9 +548,7 @@
         <a class="brow" href="#acctest"><span><b>考一段配和弦</b><small>听一段旋律，给它配和弦</small></span><span class="arr">→</span></a>
         <a class="brow" href="#sing-${SING[dayNum(today()) % SING.length].id}"><span><b>跟弹 · 唱《${SING[dayNum(today()) % SING.length].title}》</b><small>边弹边唱，练和弦转换</small></span><span class="arr">→</span></a></section>
       <h3 class="sechd">我的记录</h3>
-      <section class="calcard"><div class="calcard-h"><b>练琴日历</b><small>一天一小节 · 越高练得越久</small><a class="pill" href="#me-cal">看整个月 →</a></div>
-        <a class="calweek" href="#me-cal">${calHtml(calWeeks(new Date().getFullYear(), new Date().getMonth(), today()), true)}</a>
-        <div class="pills"><button class="pill" data-act="shareday" data-v="${today()}">导出今天的音符 · 分享卡片</button></div></section>
+      <div class="pills recpills"><a class="pill" href="#me-cal">看整个月 →</a><button class="pill" data-act="shareday" data-v="${today()}">导出今天的音符 · 分享卡片</button></div>
       ${cardBox()}`;
   }
   // 有钢琴 / 没钢琴：只在页眉右上角切换（全局），页面里不再单独放选择
