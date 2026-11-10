@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 141; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 142; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -1660,11 +1660,11 @@
     S.songSec = S.songSec || {};
     if (route[2]) { const n0 = +route[2].split('.')[0]; const k = st.findIndex((x, i) => n0 >= x && n0 < x + parseBars(s.sections[i].bars).length); if (k >= 0) S.songSec[s.id] = k; S.songTab = 'sheet'; }
     const long = s.sections.flatMap(x => parseBars(x.bars)).length > 12;
-    let si = S.songSec[s.id]; if (si == null) si = long ? 0 : -1;
+    let si = S.songSec[s.id]; if (si == null) si = long && !hasFull(s.id) ? 0 : -1;
     const tab = S.songTab || 'sheet', v = S.songView || 'sheet';
     RL.maxLv = hasFull(s.id) ? 3 : 2; RL.lvl3name = '两只手全部音符'; if (RL.lvl > RL.maxLv || (RL.lvl === 3 && rollPassed() < 2)) RL.lvl = 1;
     const tabs = `<div class="tabs">${[['sheet', '谱'], ['shape', '结构'], ['play', '练']].map(([k, n]) => `<button class="tab${tab === k ? ' on' : ''}" data-act="songtab" data-v="${k}">${n}</button>`).join('')}</div>`;
-    const secChips = v === 'roll' || s.sections.length < 2 ? '' : `<div class="chips scroll secchips">${s.sections.map((x, i) => `<button class="chip${si === i ? ' on' : ''}" data-act="songsec" data-v="${i}">${esc(x.name.replace(/\s*[‖:].*$/, ''))}</button>`).join('')}<button class="chip${si < 0 ? ' on' : ''}" data-act="songsec" data-v="-1">全曲</button></div>`;
+    const secChips = v === 'roll' || s.sections.length < 2 ? '' : `<div class="chips scroll secchips"><button class="chip${si < 0 ? ' on' : ''}" data-act="songsec" data-v="-1">全曲</button>${s.sections.map((x, i) => `<button class="chip${si === i ? ' on' : ''}" data-act="songsec" data-v="${i}">${esc(x.name.replace(/\s*[‖:].*$/, ''))}</button>`).join('')}</div>`;
     let body = '';
     if (tab === 'sheet') body = `
       <div class="chips scroll"><button class="chip${v === 'sheet' ? ' on' : ''}" data-act="songview" data-v="sheet">谱 + 和弦</button><button class="chip${v === 'roll' ? ' on' : ''}" data-act="songview" data-v="roll">瀑布流</button><button class="chip${v === 'grid' ? ' on' : ''}" data-act="songview" data-v="grid">和弦格子</button>${hasFull(s.id) ? `<a class="chip linkchip" href="#cmp-${s.id}">原曲↔和弦 →</a>` : ''}<button class="pill info" data-act="info" data-k="how">ⓘ</button></div>
