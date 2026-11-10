@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 143; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 144; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -591,20 +591,47 @@
     return list[dayNum(today()) % list.length];
   }
 
+  // 路径页的入口卡片：像一叠卡片折在一起，上次点过的在最上面；下拉或点「展开」才摊开
+  function pathDeck() {
+    const pct = (arr) => arr.filter(x => symDone(x.id)).length / arr.length * 100;
+    const cards = [
+      { id: 'sym', href: '#sym', k: `先学这个 · ${SYMS.filter(x => symDone(x.id)).length}/${SYMS.length}`, t: '符号入门：一次学一个符号', m: pct(SYMS), d: 'C、♯、m、7、/、级数、罗马数字……逐个看演示、在键盘上试' },
+      { id: 'inv', href: '#inv', k: `${symAllDone() ? '接着学' : '学完符号入门后'} · ${INVS.filter(x => symDone(x.id)).length}/${INVS.length}`, t: '转位十课：先找最低音，不背形状', m: pct(INVS), d: '最低音 → 根三五 → 原位 / 一转 / 二转 → 五线谱 → 写法 → 指法' },
+      { id: 'logic', href: '#logic', k: `第三门 · ${LOGICS.filter(x => symDone(x.id)).length}/${LOGICS.length}`, t: '读懂谱面逻辑：稳、走、紧、结尾、2–5–1……', m: pct(LOGICS), d: '曲目页里看到的每个词，各有一课' },
+      { id: 'sight', href: '#sight', k: `视奏 · 今天 ${(S.log || []).filter(e => e.t === 'sightp' && e.d === today()).length} 条`, t: `视奏：${S.sightGrade || 5} 级小曲，预读 30 秒后一口气弹`, d: '每次一首没见过的 8 小节双手小曲 · 收音按小节评音准和节奏' },
+      { id: 'combo', href: '#combo', k: '一串一串记', t: '组合和弦：4536、1564、2–5–1……', d: '把常用的一串和弦当成一个词记 · 抠掉一个换成「稳 / 走 / 紧」' },
+      { id: 'know', href: '#know', k: '看不懂符号？', t: '知识点：从「C、G7 是什么」到「一级二级三级」', d: '随时查，不用按顺序' },
+    ];
+    const last = S.pathLast, i0 = cards.findIndex(c => c.id === last);
+    if (i0 > 0) cards.unshift(cards.splice(i0, 1)[0]);
+    return `<div class="deckwrap"><div class="deck" id="deck" style="--n:${cards.length}">${cards.map((c, i) => `<a class="dcard" data-deck="${c.id}" style="--i:${i}" href="${c.href}"><small>${c.k}</small><b>${c.t}</b>${c.m != null ? `<span class="meter"><i style="width:${c.m}%"></i></span>` : ''}<small class="dd">${c.d}</small></a>`).join('')}</div>
+      <button class="deckbtn" data-act="deck">展开全部 ${cards.length} 张 ⌄</button></div>`;
+  }
+  function deckInit() {
+    const dk = document.getElementById('deck'); if (!dk || dk.dataset.on) return; dk.dataset.on = 1;
+    const btn = dk.parentElement.querySelector('.deckbtn');
+    const set = on => { dk.classList.toggle('open', on); btn.textContent = on ? '收起 ⌃' : `展开全部 ${dk.children.length} 张 ⌄`; };
+    btn.onclick = () => set(!dk.classList.contains('open'));
+    dk.addEventListener('click', e => {
+      const c = e.target.closest('.dcard'); if (!c) return;
+      if (!dk.classList.contains('open') && c.style.getPropertyValue('--i') !== '0') { e.preventDefault(); set(true); return; }
+      S.pathLast = c.dataset.deck; save();
+    });
+    let y0 = null;
+    dk.addEventListener('touchstart', e => { y0 = e.touches[0].clientY; }, { passive: true });
+    dk.addEventListener('touchmove', e => { if (y0 == null) return; const dy = e.touches[0].clientY - y0; if (dy > 36 && !dk.classList.contains('open')) { set(true); y0 = null; } else if (dy < -36 && dk.classList.contains('open')) { set(false); y0 = null; } }, { passive: true });
+    dk.addEventListener('touchend', () => { y0 = null; });
+  }
   function vPath() {
     const cur = currentUnit();
     view.innerHTML = `<header class="top"><div><small>${UNITS.length} 个单元 · 由浅入深</small><h1>路径</h1></div><a class="stat" href="#know"><b>?</b><small>知识点</small></a></header>
-      <a class="unitbar sym1" href="#sym"><small>先学这个 · ${SYMS.filter(x => symDone(x.id)).length}/${SYMS.length}</small><b>符号入门：一次学一个符号</b><span class="meter"><i style="width:${SYMS.filter(x => symDone(x.id)).length / SYMS.length * 100}%"></i></span><small>C、♯、m、7、/、级数、罗马数字……逐个看演示、在键盘上试</small></a>
-      <a class="unitbar sym1" href="#inv"><small>${symAllDone() ? '接着学' : '学完符号入门后'} · ${INVS.filter(x => symDone(x.id)).length}/${INVS.length}</small><b>转位十课：先找最低音，不背形状</b><span class="meter"><i style="width:${INVS.filter(x => symDone(x.id)).length / INVS.length * 100}%"></i></span><small>最低音 → 根三五 → 原位 / 一转 / 二转 → 五线谱 → 写法 → 指法 → 手少移动</small></a>
-      <a class="unitbar sym1" href="#logic"><small>第三门 · ${LOGICS.filter(x => symDone(x.id)).length}/${LOGICS.length}</small><b>读懂谱面逻辑：稳、走、紧、结尾、2–5–1……</b><span class="meter"><i style="width:${LOGICS.filter(x => symDone(x.id)).length / LOGICS.length * 100}%"></i></span><small>曲目页里看到的每个词，各有一课</small></a>
-      <a class="unitbar sym1" href="#sight"><small>视奏 · 今天 ${(S.log || []).filter(e => e.t === 'sightp' && e.d === today()).length} 条</small><b>视奏：${S.sightGrade || 5} 级小曲，预读 30 秒后一口气弹</b><small>每次一首没见过的 8 小节双手小曲 · 收音按小节评音准和节奏 · 另有基础认音 14 关</small></a>
-      <a class="unitbar sym1" href="#combo"><small>一串一串记</small><b>组合和弦：4536、1564、2–5–1……</b><small>把常用的一串和弦当成一个词记 · 抠掉一个换成「稳 / 走 / 紧」，变出新的进行</small></a>
-      <a class="unitbar" href="#know"><small>看不懂符号？</small><b>知识点：从「C、G7 是什么」到「一级二级三级」</b></a>
+      ${pathDeck()}
       <ol class="path">${UNITS.map(u => {
         const st = unitState(u.id).done ? 'done' : u === cur ? 'cur' : unlocked(u) ? '' : 'lock';
         return `<li class="${st}"><a href="${st === 'lock' ? '#path' : '#unit-' + u.id}"><span class="node">${st === 'done' ? '✓' : u.n}</span><span><b>${u.title}</b><small>${u.en}${st === 'lock' ? ' · 未解锁' : unitState(u.id).skipped ? ' · 已跳过' : ' · ' + mastery(u.id) + '%'}</small></span></a></li>`;
       }).join('')}</ol>
       <p class="fine">规则：单元最近 10 题以上、正确率 ≥ 80% 即掌握，自动解锁下一单元。已掌握的单元会在每日练习里按薄弱程度自动复习。</p>`;
+    deckInit();
   }
 
   function renderBlocks(blocks, key = 'C') {
