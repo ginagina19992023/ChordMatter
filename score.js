@@ -91,6 +91,10 @@ const Score = (() => {
       [...mg.querySelectorAll(':scope > g.staff')].forEach((sg, si) => sg.querySelectorAll('g.note').forEach(nn => { staffOf[nn.dataset.id || nn.id] = si; barOf[nn.dataset.id || nn.id] = mn; }));
     });
     notes.forEach(n => { n.staff = staffOf[n.id]; n.m = barOf[n.id]; });
+    // 连音线：被连住的后一个音不再单独发声，前一个音一直延长到它结束
+    const byId = {}; notes.forEach(n => (byId[n.id] = n));
+    const ties = []; el.querySelectorAll('g.tie').forEach(g => { try { const a = tk.getElementAttr(g.dataset.id || g.id); const s0 = String(a.startid || '').replace('#', ''), e0 = String(a.endid || '').replace('#', ''); if (byId[s0] && byId[e0]) ties.push([byId[s0], byId[e0]]); } catch (err) {} });
+    ties.sort((x, y) => x[0].t - y[0].t).forEach(([a, b]) => { const root = a.tieRoot || a; root.dur = Math.max(root.dur, b.t + b.dur - root.t); b.silent = true; b.tieRoot = root; });
     cur = { el, notes, sc, tk };
     el.onclick = e => {
       const g = e.target.closest('g.note, g.chord');

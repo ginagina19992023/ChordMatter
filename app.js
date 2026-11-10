@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 142; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 143; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -541,7 +541,7 @@
       </section></div>
       <div class="calwrap"><a class="calweek slim" href="#me-cal">${calHtml(calWeeks(new Date().getFullYear(), new Date().getMonth(), today()), true)}</a>
         <button class="wkshare" data-act="calshare" aria-label="分享日历"><svg viewBox="0 0 24 24"><path d="M12 15V4M8 8l4-4 4 4M5 12v7h14v-7"/></svg></button>
-        <div class="sharepop" hidden><button data-act="sharepick" data-v="day">分享今天</button><button data-act="sharepick" data-v="month">分享本月</button></div></div>
+        <div class="wkpop" hidden><button data-act="sharepick" data-v="day">分享今天</button><button data-act="sharepick" data-v="month">分享本月</button></div></div>
       ${n < 4 ? `<div class="cta flow">${flowBtn(n === 0 ? '开始今天的练习' : '继续 · ' + steps.find(x => !d[x[0]])[1])}</div>` : '<p class="donemsg">今天的 4 步都完成了。想多练可以试试下面的即兴伴奏。</p>'}
       <ol class="steps">${steps.map(([k, t, s, h], i) => `<li><a href="${h}" class="${d[k] ? 'done' : ''}"><span class="dot">${d[k] ? '✓' : i + 1}</span><span><b>${t}</b><small>${esc(s)}${d[k] ? (d[k + 'M'] === 'away' ? ' · 今天在屏幕上完成' : d[k + 'M'] === 'piano' ? ' · 今天在琴上完成' : '') : ''}</small></span><span class="arr">→</span></a></li>`).join('')}</ol>
       ${todoBox()}
@@ -1777,6 +1777,8 @@
       <h3 class="h3">开机动画</h3>
       <p class="fine">打开 App 时，图标的三个样子（键盘线条 → 和弦色块 → 滑条光晕）依次切换，大约 3 秒，点一下可以跳过。每次打开 App 只放一次。</p>
       <div class="chips"><button class="chip${S.splash !== false ? ' on' : ''}" data-act="splashset" data-v="1">开</button><button class="chip${S.splash === false ? ' on' : ''}" data-act="splashset" data-v="0">关</button><button class="chip" data-act="splashplay">现在看一遍</button></div>
+      <p class="fine">开机音乐：三个键依次点亮时是 C–E–G（大三和弦的根音、三音、五音），变成滑条、曲线时走一个 ii–V–I（Dm7 → G7 → Cmaj9）。iPhone 有时不允许 App 一打开就出声，那种情况下会安静地放完动画。</p>
+      <div class="chips"><button class="chip${S.splashSnd !== false ? ' on' : ''}" data-act="splashsnd" data-v="1">音乐 开</button><button class="chip${S.splashSnd === false ? ' on' : ''}" data-act="splashsnd" data-v="0">音乐 关</button></div>
       <h3 class="h3">记录和数据</h3>
       <a class="link" href="#me"><small>记录</small><b>练琴日历、进度、备份、云端同步</b><span>→</span></a>
       <a class="link" href="#cards"><small>卡册</small><b>曲谱卡</b><span>→</span></a>
@@ -1784,7 +1786,7 @@
   }
   function vMe() {
     CAL = CAL || { y: new Date().getFullYear(), m: new Date().getMonth() };
-    view.innerHTML = `<header class="top"><div><a class="back" href="#today">←</a><small>记录</small><h1>我</h1></div></header>
+    view.innerHTML = `<header class="top"><div><a class="back" href="#set">←</a><small>记录</small><h1>我</h1></div></header>
       <section class="stats"><div><b>${streak()}</b><small>连续天</small></div><div><b>${S.xp}</b><small>XP</small></div><div><b>${UNITS.filter(u => unitState(u.id).done).length}/${UNITS.length}</b><small>单元</small></div></section>
       ${pkSummary()}
       <h3 class="h3 calh">练琴日历</h3><div class="calhead"><button class="ghost sm" data-act="calmonth" data-v="-1">‹</button><b>${CAL.y} 年 ${CAL.m + 1} 月</b><button class="ghost sm" data-act="calmonth" data-v="1">›</button></div>
@@ -2372,7 +2374,7 @@
     const gmap = new Map(); el.querySelectorAll('g.note').forEach(g => gmap.set(g.dataset.id || g.id, g));
     const labs = new Map(); el.querySelectorAll('text.chordlab').forEach(t => labs.set(t.getAttribute('data-n'), t));
     let curLab = null;
-    A.schedule(c.notes.map(n => [n.pitch, n.t * r + 0.05, Math.min(2.5, n.dur * r + 0.3), 0.55]));
+    A.schedule(c.notes.filter(n => !n.silent).map(n => [n.pitch, n.t * r + 0.05, Math.min(2.5, n.dur * r + 0.3), 0.55]));
     c.notes.forEach(n => {
       later(() => {
         if (n.m != null && n.m !== curM) { curM = n.m; if (curLab) curLab.classList.remove('now'); curLab = labs.get(String(n.m)) || null; if (curLab) curLab.classList.add('now'); }
@@ -4032,6 +4034,7 @@
       case 'info': { const sg = allSongs().find(x => x.id === route[1]); if (!sg) break; const [t, h] = songInfo(sg, el.dataset.k); infoPop(el, t, h); break; }
       case 'mytoggle': S.myOpen = !S.myOpen; save(); { const b = document.querySelector('.mybox'); if (b) b.hidden = !S.myOpen; } el.textContent = '我的原谱 ' + (S.myOpen ? '⌃' : '⌄'); break;
       case 'lvset': S.lv = S.lv || {}; S.lv[el.dataset.k] = el.dataset.v; save(); render(); break;
+      case 'splashsnd': S.splashSnd = el.dataset.v === '1'; save(); vSet(); break;
       case 'splashset': S.splash = el.dataset.v === '1'; save(); vSet(); break;
       case 'splashplay': { sessionStorage.removeItem('hx.splash'); location.href = location.pathname + location.search + location.hash; location.reload(); break; }
       case 'theme': S.theme = el.dataset.v; save(); cxGlobalDark(); vSet(); break;
@@ -4049,9 +4052,9 @@
       case 'tagreset': e.preventDefault(); if (S.tags) delete S.tags[el.dataset.id]; save(); render(); document.querySelectorAll('.tpop').forEach(x => x.remove()); break;
       case 'klstep': { const s = allSongs().find(x => x.id === route[1]); klShow(KL.i + +el.dataset.v); playChord(songFlat(s)[KL.i]); break; }
       case 'klset': { const cfg = klCfg(), k = el.dataset.k, v = el.dataset.v; if (k === 'label') cfg.label = v; else if (k === 'show') cfg.show[v] = cfg.show[v] ? 0 : 1; else cfg[k] = !cfg[k]; save(); klShow(KL.i); if (k === 'feel') { const sg = allSongs().find(x => x.id === route[1]); document.querySelectorAll('#grid .cell').forEach(cl => { const old = cl.querySelector('.cshape'); if (old) old.outerHTML = chordShape(cl.dataset.s, sg.key); }); } break; }
-      case 'calshare': { const pop = el.parentElement.querySelector('.sharepop'); if (pop) pop.hidden = !pop.hidden; break; }
+      case 'calshare': { const pop = el.parentElement.querySelector('.wkpop'); if (pop) pop.hidden = !pop.hidden; break; }
       case 'sharepick': {
-        const pop = el.closest('.sharepop'); if (pop) pop.hidden = true;
+        const pop = el.closest('.wkpop'); if (pop) pop.hidden = true;
         if (el.dataset.v === 'day') dayCardCanvas(today()).then(cv => sharePreview(cv, 'ChordMatter-' + today() + '.png', '今日卡片')).catch(() => toast('生成图片失败'));
         else { CAL = { y: new Date().getFullYear(), m: new Date().getMonth() }; let tmp = null; if (!document.querySelector('#calmonth svg')) { tmp = document.createElement('div'); tmp.id = 'calmonth'; tmp.style.cssText = 'position:fixed;left:-9999px;top:0;width:700px'; tmp.innerHTML = calHtml(calWeeks(CAL.y, CAL.m)); document.body.appendChild(tmp); Staff.mount(tmp); } monthCanvas().finally(() => tmp && tmp.remove()).then(cv => cv ? sharePreview(cv, `ChordMatter-${CAL.y}-${CAL.m + 1}.png`, '这个月的练琴日历') : toast('日历还没画好')).catch(() => toast('生成图片失败')); }
         break;
@@ -4229,6 +4232,22 @@
   window.addEventListener('hashchange', render);
   if (darkMQ.addEventListener) darkMQ.addEventListener('change', () => { cxGlobalDark(); render(); });
   document.addEventListener('pointerdown', e => { window.__lastClick = [e.clientX, e.clientY]; }, true);
+  // 开机音乐：和动画同一条时间线。颜色 → 音：三个键 = C E G（根音、三音、五音），滑条曲线 = 级数变化 ii–V–I
+  (function splashMusic() {
+    if (!window.__splashT0 || !document.getElementById('splash') || S.splashSnd === false) return;
+    const el = (performance.now() - window.__splashT0) / 1000;
+    const N = [];
+    const add = (ms, t, d, v, sp = 0) => ms.forEach((m, i) => N.push([m, t + i * sp, d, v]));
+    add([60], 0.5, 1.6, 0.5); add([64], 0.75, 1.5, 0.5); add([67], 1.0, 1.4, 0.5); add([48], 1.0, 2.2, 0.45);
+    add([60, 64, 67, 71], 2.1, 1.7, 0.42, 0.04);
+    add([72, 76, 79, 83, 86], 3.15, 0.9, 0.3, 0.15);
+    add([50, 57, 60, 65], 3.95, 0.5, 0.42, 0.02); add([43, 55, 59, 65], 4.3, 0.5, 0.42, 0.02); add([48, 64, 67, 71, 74], 4.65, 2.4, 0.45, 0.03);
+    try { A.init(); } catch (e) { return; }
+    if (!A.ctx) return;
+    A.schedule(N.map(n => [n[0], n[1] - el, n[2], n[3]]));
+    setTimeout(() => { if (A.ctx && A.ctx.state !== 'running') A.cut(); }, 250);
+    window.addEventListener('splashskip', () => A.cut(), { once: true });
+  })();
   document.addEventListener('staffplay', e => { A.init(); const ms = e.detail || []; if (ms.length === 1) A.note(ms[0], 0, 1.4, 0.7); else A.chord(ms, 0, 0.02, 1.4); });
   document.addEventListener('calpick', e => { calDetail(e.detail); });
   render();

@@ -41,7 +41,7 @@
   try { st = JSON.parse(localStorage.getItem('hexian.v1') || '{}'); } catch (e) {}
   var skip = st.splash === false || sessionStorage.getItem('hx.splash') || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || /[?&]nosplash/.test(location.search);
   if (skip) { el.remove(); return; }
-  sessionStorage.setItem('hx.splash', '1'); document.documentElement.classList.add('splashing');
+  sessionStorage.setItem('hx.splash', '1'); document.documentElement.classList.add('splashing'); window.__splashT0 = performance.now();
   var $ = function (i) { return document.getElementById(i); };
   // 每个形状在 4 个时刻的样子：A 键盘线条 → B 和弦色块 → C 滑条（拉直）→ C 滑条（弯出去）。时刻之间全部连续插值，不是淡入淡出。
   var K = {
@@ -108,7 +108,7 @@
   var t0 = performance.now(), fin = false;
   function done() { if (fin) return; fin = true; el.classList.add('out'); document.documentElement.classList.remove('splashing'); setTimeout(function () { el.remove(); }, 500); }
   function tick(now) { if (fin) return; var t = (now - t0) / 1000; frame(Math.min(t, SEG[3][1])); if (t >= END) { done(); return; } requestAnimationFrame(tick); }
-  frame(0); requestAnimationFrame(tick); el.addEventListener('pointerdown', done);
+  frame(0); requestAnimationFrame(tick); el.addEventListener('pointerdown', function () { done(); window.dispatchEvent(new Event('splashskip')); });
 } catch (e) { var s = document.getElementById('splash'); if (s) s.remove(); document.documentElement.classList.remove('splashing'); } })();
 </script>
 <div id="phone">
