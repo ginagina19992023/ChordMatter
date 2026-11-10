@@ -42,6 +42,12 @@
   var skip = st.splash === false || sessionStorage.getItem('hx.splash') || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || /[?&]nosplash/.test(location.search);
   if (skip) { el.remove(); return; }
   sessionStorage.setItem('hx.splash', '1'); document.documentElement.classList.add('splashing'); window.__splashT0 = performance.now();
+  if (st.splashMode === 'custom' && st.splashCfg) { // 用「开机动画制作器」做的动画：由 app.js 里的 SplashMk 画
+    window.__splashCustom = true; var sv0 = el.querySelector('svg'); if (sv0) sv0.style.display = 'none'; el.style.background = '#141414';
+    var fin2 = false; window.__splashFinish = function () { if (fin2) return; fin2 = true; el.classList.add('out'); document.documentElement.classList.remove('splashing'); setTimeout(function () { el.remove(); }, 500); };
+    el.addEventListener('click', function () { if (window.__splashBlocked) { window.__splashBlocked = false; window.dispatchEvent(new Event('splashunlock')); return; } window.__splashFinish(); window.dispatchEvent(new Event('splashskip')); });
+    setTimeout(window.__splashFinish, 25000); return;
+  }
   var $ = function (i) { return document.getElementById(i); };
   // 每个形状在 4 个时刻的样子：A 键盘线条 → B 和弦色块 → C 滑条（拉直）→ C 滑条（弯出去）。时刻之间全部连续插值，不是淡入淡出。
   var K = {
