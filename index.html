@@ -29,6 +29,7 @@
     <rect id="w1"/><rect id="w2"/><rect id="w3"/><rect id="w4"/><rect id="w5"/>
     <rect id="l1"/><rect id="l2"/><rect id="l3"/>
     <rect id="k1"/><rect id="k2"/><rect id="k3"/>
+    <circle id="rp0" r="0" fill="none" stroke-width="3" opacity="0"/><circle id="rp1" r="0" fill="none" stroke-width="3" opacity="0"/><circle id="rp2" r="0" fill="none" stroke-width="3" opacity="0"/><circle id="rp3" r="0" fill="none" stroke-width="3" opacity="0"/>
     <circle id="dot" cx="150" cy="240" r="9.5" fill="#e8541e"/>
     <circle id="halo1" cx="164" cy="128" r="46" fill="url(#spth)" opacity="0"/><circle id="halo2" cx="164" cy="172" r="46" fill="url(#spth)" opacity="0"/>
   </svg>
@@ -60,7 +61,8 @@
   };
   var BG = ['#ffffff', '#2a1215', '#141a36', '#141a36'];
   // 段落：停 0.5 → A→B 1.1 → 停 0.25 → B→C 1.1 → 弯出去 0.65 → 停 0.35 → 淡出
-  var SEG = [[0.5, 1.6, 0, 1], [1.85, 2.95, 1, 2], [2.95, 3.6, 2, 3]], END = 3.95;
+  var SEG = [[0.6, 1.8, 0, 1], [2.35, 3.45, 1, 2], [3.45, 4.1, 2, 3]], END = 4.5;
+  var DL = { l1: 0, l2: 0.25, l3: 0.5, gl1: 0, gl2: 0.5 }, TAPS = [[0.5, 126.5, 190, '#ff6b7c'], [0.75, 175.5, 190, '#ff6b7c'], [1.0, 224.5, 190, '#ff6b7c'], [2.1, 150, 150, '#9aa8ff']];
   var ease = function (t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
   var hx = function (c) { return [1, 3, 5].map(function (i) { return parseInt(c.slice(i, i + 2), 16); }); };
   var mixc = function (a, b, t) { var x = hx(a), y = hx(b); return 'rgb(' + [0, 1, 2].map(function (i) { return Math.round(x[i] + (y[i] - x[i]) * t); }).join(',') + ')'; };
@@ -72,11 +74,14 @@
     }
     el.style.background = mixc(BG[s0], BG[s1], p);
     Object.keys(K).forEach(function (id) {
-      var n = $(id), a = K[id][s0], b = K[id][s1], f = function (k) { return lerp(a[k], b[k], p); };
+      var n = $(id), a = K[id][s0], b = K[id][s1], pp = p;
+      if (s0 === 0 && s1 === 1 && DL[id] !== undefined) pp = Math.max(0, Math.min(1, (p - DL[id]) / 0.5));
+      var f = function (k) { return lerp(a[k], b[k], pp); };
       n.setAttribute('x', f('x')); n.setAttribute('y', f('y')); n.setAttribute('width', Math.max(0, f('w'))); n.setAttribute('height', Math.max(0, f('h'))); n.setAttribute('rx', f('rx'));
-      n.setAttribute('fill', mixc(a.fill, b.fill, p)); n.setAttribute('opacity', f('o'));
-      if (a.stroke) { n.setAttribute('stroke', mixc(a.stroke, b.stroke, p)); n.setAttribute('stroke-width', f('sw')); }
+      n.setAttribute('fill', mixc(a.fill, b.fill, pp)); n.setAttribute('opacity', f('o'));
+      if (a.stroke) { n.setAttribute('stroke', mixc(a.stroke, b.stroke, pp)); n.setAttribute('stroke-width', f('sw')); }
     });
+    TAPS.forEach(function (T, i) { var u = (t - T[0]) / 0.55, r = $('rp' + i); if (u < 0 || u > 1) { r.setAttribute('opacity', 0); return; } r.setAttribute('cx', T[1]); r.setAttribute('cy', T[2]); r.setAttribute('stroke', T[3]); r.setAttribute('r', 6 + 30 * (1 - Math.pow(1 - u, 3))); r.setAttribute('opacity', 0.9 * (1 - u)); });
     // 橙点：A 里在键盘下面，之后缩小淡出
     var dp = s1 >= 1 || s0 >= 1 ? (s0 >= 1 ? 1 : p) : 0; $('dot').setAttribute('opacity', 1 - dp); $('dot').setAttribute('r', 9.5 * (1 - dp * 0.6)); $('dot').setAttribute('cy', 240 - 30 * dp);
     // C：拉直的条换成曲线，再一点点弯出去；光晕随滑块出现
