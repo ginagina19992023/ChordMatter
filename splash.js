@@ -26,25 +26,26 @@ window.HXSplash = (function () {
   function plan(cfg) {
     var pre = cfg.pre, spb = 60 / Math.max(30, cfg.bpm || 84), iv = Math.max(0.45, ((cfg.beats || 2) + (cfg.gap || 0)) * spb), N = pre.voices.length, arp = cfg.style === 'arp';
     var ord = cfg.order; if (typeof ord === 'string') ord = ord.split(','); ord = (ord || []).filter(function (x, i, a) { return ST[x] != null && a.indexOf(x) === i; }); if (!ord.length) ord = ['dot', 'color', 'line'];
-    var S = ord.length, t = 0.5, kf = [[0, ST[ord[0]]], [0.5, ST[ord[0]]]], events = [], notes = [], ripples = [], hops = [], lastJ = 0, ivDot = Math.max(iv, 0.15 * 3 + 0.45);
+    var S = ord.length, t = 0.5, kf = [[0, ST[ord[0]]], [0.5, ST[ord[0]]]], events = [], notes = [], ripples = [], hops = [], ivDot = Math.max(iv, 0.15 * 3 + 0.45);
+    // 每个和弦只在自己的时刻弹一次；换「语言」时不再重弹，上一个和弦的声音一直延续到下一个和弦出现，画面在这段时间里变形
     for (var s = 0; s < S; s++) {
+      var to = ST[ord[s]];
       if (s > 0) {
-        var from = ST[ord[s - 1]], to = ST[ord[s]], dur = Math.max(0.9, Math.abs(to - from) * 0.7);
-        kf.push([t, from], [t + dur, to]);
-        pre.midis[lastJ].slice(0, 3).forEach(function (m, k) { notes.push([m + 12, t + dur * 0.4 + k * 0.12, 0.8, 0.25]); });
-        t += dur + 0.25; kf.push([t, to]);
+        var from = ST[ord[s - 1]], dur = Math.max(0.9, Math.abs(to - from) * 0.7);
+        kf.push([t, from], [t + dur, to]); t += dur + 0.25; kf.push([t, to]);
       }
-      var st = Math.min(N - 1, Math.floor(s * N / S)), en = Math.max(st, Math.ceil((s + 1) * N / S) - 1);
-      for (var j = st; j <= en; j++) {
+      var js = []; for (var j0 = 0; j0 < N; j0++) if (Math.min(S - 1, Math.floor(j0 * S / N)) === s) js.push(j0);
+      if (!js.length) { t += 1.0; kf.push([t, to]); continue; }
+      js.forEach(function (j) {
         var sc = ord[s], spread = sc === 'dot' ? 0.15 : (arp ? Math.min(spb / 3, 0.2) : 0.012), v = pre.voices[j];
-        events.push({ j: j, t: t, scene: sc, iv: sc === 'dot' ? ivDot : iv });
-        pre.midis[j].forEach(function (m, k) { notes.push([m, t + k * spread, (sc === 'dot' ? ivDot : iv) + 0.3, 0.45]); });
+        events.push({ j: j, t: t, scene: sc, iv: sc === 'dot' ? ivDot : iv, spread: spread });
         if (sc !== 'line') for (var k = 0; k < 3; k++) { ripples.push([t + k * spread, KEYX[k], 190, pre.acc[j]]); if (sc === 'dot') hops.push([t + k * spread, KEYX[k]]); }
-        t += sc === 'dot' ? ivDot : iv; lastJ = j;
-      }
+        t += sc === 'dot' ? ivDot : iv;
+      });
     }
-    kf.push([t + 0.9, ST[ord[S - 1]]]);
-    return { events: events, kf: kf, notes: notes, ripples: ripples, hops: hops, end: t + 0.9, order: ord };
+    var endT = t + 0.9; kf.push([endT, ST[ord[S - 1]]]);
+    events.forEach(function (ev, i) { var dur = (events[i + 1] ? events[i + 1].t : endT) - ev.t + 0.3; pre.midis[ev.j].forEach(function (m, k) { notes.push([m, ev.t + k * ev.spread, dur, 0.45]); }); });
+    return { events: events, kf: kf, notes: notes, ripples: ripples, hops: hops, end: endT, order: ord };
   }
   function run(root, cfg, opt) {
     opt = opt || {};
