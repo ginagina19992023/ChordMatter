@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 139; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 141; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -539,7 +539,9 @@
         <svg viewBox="0 0 100 100" class="ring">${STEPS.map((k, i) => seg(i, !!d[k])).join('')}</svg>
         <div class="ring-t"><b>${n}<em>/4</em></b><small>${n === 4 ? '今天完成了' : '约 12 分钟'}</small></div>
       </section></div>
-      <a class="calweek slim" href="#me-cal">${calHtml(calWeeks(new Date().getFullYear(), new Date().getMonth(), today()), true)}</a>
+      <div class="calwrap"><a class="calweek slim" href="#me-cal">${calHtml(calWeeks(new Date().getFullYear(), new Date().getMonth(), today()), true)}</a>
+        <button class="wkshare" data-act="calshare" aria-label="分享日历"><svg viewBox="0 0 24 24"><path d="M12 15V4M8 8l4-4 4 4M5 12v7h14v-7"/></svg></button>
+        <div class="sharepop" hidden><button data-act="sharepick" data-v="day">分享今天</button><button data-act="sharepick" data-v="month">分享本月</button></div></div>
       ${n < 4 ? `<div class="cta flow">${flowBtn(n === 0 ? '开始今天的练习' : '继续 · ' + steps.find(x => !d[x[0]])[1])}</div>` : '<p class="donemsg">今天的 4 步都完成了。想多练可以试试下面的即兴伴奏。</p>'}
       <ol class="steps">${steps.map(([k, t, s, h], i) => `<li><a href="${h}" class="${d[k] ? 'done' : ''}"><span class="dot">${d[k] ? '✓' : i + 1}</span><span><b>${t}</b><small>${esc(s)}${d[k] ? (d[k + 'M'] === 'away' ? ' · 今天在屏幕上完成' : d[k + 'M'] === 'piano' ? ' · 今天在琴上完成' : '') : ''}</small></span><span class="arr">→</span></a></li>`).join('')}</ol>
       ${todoBox()}
@@ -4047,6 +4049,13 @@
       case 'tagreset': e.preventDefault(); if (S.tags) delete S.tags[el.dataset.id]; save(); render(); document.querySelectorAll('.tpop').forEach(x => x.remove()); break;
       case 'klstep': { const s = allSongs().find(x => x.id === route[1]); klShow(KL.i + +el.dataset.v); playChord(songFlat(s)[KL.i]); break; }
       case 'klset': { const cfg = klCfg(), k = el.dataset.k, v = el.dataset.v; if (k === 'label') cfg.label = v; else if (k === 'show') cfg.show[v] = cfg.show[v] ? 0 : 1; else cfg[k] = !cfg[k]; save(); klShow(KL.i); if (k === 'feel') { const sg = allSongs().find(x => x.id === route[1]); document.querySelectorAll('#grid .cell').forEach(cl => { const old = cl.querySelector('.cshape'); if (old) old.outerHTML = chordShape(cl.dataset.s, sg.key); }); } break; }
+      case 'calshare': { const pop = el.parentElement.querySelector('.sharepop'); if (pop) pop.hidden = !pop.hidden; break; }
+      case 'sharepick': {
+        const pop = el.closest('.sharepop'); if (pop) pop.hidden = true;
+        if (el.dataset.v === 'day') dayCardCanvas(today()).then(cv => sharePreview(cv, 'ChordMatter-' + today() + '.png', '今日卡片')).catch(() => toast('生成图片失败'));
+        else { CAL = { y: new Date().getFullYear(), m: new Date().getMonth() }; let tmp = null; if (!document.querySelector('#calmonth svg')) { tmp = document.createElement('div'); tmp.id = 'calmonth'; tmp.style.cssText = 'position:fixed;left:-9999px;top:0;width:700px'; tmp.innerHTML = calHtml(calWeeks(CAL.y, CAL.m)); document.body.appendChild(tmp); Staff.mount(tmp); } monthCanvas().finally(() => tmp && tmp.remove()).then(cv => cv ? sharePreview(cv, `ChordMatter-${CAL.y}-${CAL.m + 1}.png`, '这个月的练琴日历') : toast('日历还没画好')).catch(() => toast('生成图片失败')); }
+        break;
+      }
       case 'shareday': dayCardCanvas(el.dataset.v).then(cv => sharePreview(cv, 'ChordMatter-' + el.dataset.v + '.png', '今日卡片')).catch(() => toast('生成图片失败')); break;
       case 'sharemonth': monthCanvas().then(cv => cv ? sharePreview(cv, `ChordMatter-${CAL.y}-${CAL.m + 1}.png`, '这个月的练琴日历') : toast('日历还没画好')).catch(() => toast('生成图片失败')); break;
       case 'sharebg': { S.shareBg = el.dataset.v; save(); const pop = document.querySelector('.sharepop'); if (pop && pop.__render) pop.__render(); break; }
