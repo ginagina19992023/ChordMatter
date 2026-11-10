@@ -20,46 +20,80 @@
 <div id="splash" aria-hidden="true">
   <svg viewBox="0 0 300 300" preserveAspectRatio="xMidYMid meet">
     <defs>
-      <filter id="spglow" x="-60%" y="-30%" width="220%" height="160%"><feGaussianBlur stdDeviation="9"/></filter>
+      <filter id="spglow" x="-80%" y="-40%" width="260%" height="180%"><feGaussianBlur stdDeviation="9"/></filter>
       <radialGradient id="spth" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#9aa8ff" stop-opacity=".9"/><stop offset=".45" stop-color="#9aa8ff" stop-opacity=".35"/><stop offset="1" stop-color="#9aa8ff" stop-opacity="0"/></radialGradient>
     </defs>
-    <!-- A：键盘线条（白底，线条画出来，橙点落下） -->
-    <g class="spA">
-      <g stroke="#111" stroke-width="5.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
-        <rect class="dr" x="52" y="84" width="196" height="132" rx="10" pathLength="1"/>
-        <path class="dr" d="M101 84v132" pathLength="1"/><path class="dr" d="M150 84v132" pathLength="1"/><path class="dr" d="M199 84v132" pathLength="1"/>
-      </g>
-      <g fill="#111"><rect class="bk" x="86" y="84" width="30" height="78" rx="3"/><rect class="bk" x="135" y="84" width="30" height="78" rx="3"/><rect class="bk" x="184" y="84" width="30" height="78" rx="3"/></g>
-      <circle class="dot" cx="150" cy="240" r="9.5" fill="#e8541e"/>
-    </g>
-    <!-- B：琴键亮起（深酒红底，和弦色发光） -->
-    <g class="spB">
-      <g>
-        <rect x="46" y="96" width="42" height="120" rx="7" fill="#efe6dc"/><rect x="90" y="96" width="42" height="120" rx="7" fill="#efe6dc"/><rect x="134" y="96" width="42" height="120" rx="7" fill="#efe6dc"/><rect x="178" y="96" width="42" height="120" rx="7" fill="#efe6dc"/><rect x="222" y="96" width="32" height="120" rx="7" fill="#efe6dc"/>
-        <g filter="url(#spglow)" class="kg"><rect x="90" y="96" width="42" height="120" rx="7" fill="#ff6b7c"/><rect x="178" y="96" width="42" height="120" rx="7" fill="#ffb3bb"/></g>
-        <rect class="kl" x="90" y="96" width="42" height="120" rx="7" fill="#ff6b7c"/><rect class="kl" x="134" y="96" width="42" height="120" rx="7" fill="#8e8a80"/><rect class="kl" x="178" y="96" width="42" height="120" rx="7" fill="#ff8d9a"/>
-        <g fill="#1a1315"><rect x="74" y="96" width="28" height="70" rx="4"/><rect x="118" y="96" width="28" height="70" rx="4"/><rect x="206" y="96" width="28" height="70" rx="4"/></g>
-      </g>
-    </g>
-    <!-- C：度数曲线 + 发光滑块（深蓝底） -->
-    <g class="spC">
-      <path class="cv" d="M52 96 H112 C138 96 138 128 164 128 H248" stroke="#9aa8ff" stroke-width="7" fill="none" stroke-linecap="round" pathLength="1"/>
-      <path class="cv" d="M52 150 H248" stroke="#efe6dc" stroke-opacity=".5" stroke-width="7" fill="none" stroke-linecap="round" pathLength="1"/>
-      <path class="cv" d="M52 204 H112 C138 204 138 172 164 172 H248" stroke="#9aa8ff" stroke-width="7" fill="none" stroke-linecap="round" pathLength="1"/>
-      <g class="th"><circle cx="164" cy="128" r="46" fill="url(#spth)"/><circle cx="164" cy="128" r="22" fill="#9aa8ff"/><circle cx="164" cy="172" r="46" fill="url(#spth)" opacity=".7"/><circle cx="164" cy="172" r="15" fill="#c7cdff"/></g>
-      <circle cx="52" cy="96" r="6" fill="#efe6dc"/><circle cx="52" cy="150" r="6" fill="#efe6dc"/><circle cx="52" cy="204" r="6" fill="#efe6dc"/>
-    </g>
+    <g id="sp-glow" filter="url(#spglow)"><rect id="gl1"/><rect id="gl2"/></g>
+    <path id="pc1" d="" fill="none" stroke="#9aa8ff" stroke-width="7" stroke-linecap="round" opacity="0"/>
+    <path id="pc3" d="" fill="none" stroke="#9aa8ff" stroke-width="7" stroke-linecap="round" opacity="0"/>
+    <rect id="w1"/><rect id="w2"/><rect id="w3"/><rect id="w4"/><rect id="w5"/>
+    <rect id="l1"/><rect id="l2"/><rect id="l3"/>
+    <rect id="k1"/><rect id="k2"/><rect id="k3"/>
+    <circle id="dot" cx="150" cy="240" r="9.5" fill="#e8541e"/>
+    <circle id="halo1" cx="164" cy="128" r="46" fill="url(#spth)" opacity="0"/><circle id="halo2" cx="164" cy="172" r="46" fill="url(#spth)" opacity="0"/>
   </svg>
 </div>
 <button id="rotbtn" type="button">横屏预览</button>
 <script>
-(function () { try { var el = document.getElementById('splash'); var st = {}; try { st = JSON.parse(localStorage.getItem('hexian.v1') || '{}'); } catch (e) {}
+(function () { try {
+  var el = document.getElementById('splash'), st = {};
+  try { st = JSON.parse(localStorage.getItem('hexian.v1') || '{}'); } catch (e) {}
   var skip = st.splash === false || sessionStorage.getItem('hx.splash') || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || /[?&]nosplash/.test(location.search);
   if (skip) { el.remove(); return; }
   sessionStorage.setItem('hx.splash', '1'); document.documentElement.classList.add('splashing');
-  var done = function () { el.classList.add('out'); document.documentElement.classList.remove('splashing'); setTimeout(function () { el.remove(); }, 500); };
-  setTimeout(done, 3300); el.addEventListener('pointerdown', done);
-} catch (e) { var s = document.getElementById('splash'); if (s) s.remove(); } })();
+  var $ = function (i) { return document.getElementById(i); };
+  // 每个形状在 4 个时刻的样子：A 键盘线条 → B 和弦色块 → C 滑条（拉直）→ C 滑条（弯出去）。时刻之间全部连续插值，不是淡入淡出。
+  var K = {
+    w1: [{ x: 52, y: 84, w: 49, h: 132, rx: 3, fill: '#ffffff', stroke: '#111111', sw: 5.5, o: 1 }, { x: 46, y: 96, w: 42, h: 120, rx: 7, fill: '#efe6dc', stroke: '#efe6dc', sw: 0, o: 1 }, { x: 52, y: 92.5, w: 196, h: 7, rx: 3.5, fill: '#9aa8ff', stroke: '#9aa8ff', sw: 0, o: 1 }, { x: 52, y: 92.5, w: 196, h: 7, rx: 3.5, fill: '#9aa8ff', stroke: '#9aa8ff', sw: 0, o: 0 }],
+    w2: [{ x: 101, y: 84, w: 49, h: 132, rx: 3, fill: '#ffffff', stroke: '#111111', sw: 5.5, o: 1 }, { x: 90, y: 96, w: 42, h: 120, rx: 7, fill: '#efe6dc', stroke: '#efe6dc', sw: 0, o: 1 }, { x: 52, y: 123, w: 196, h: 0, rx: 0, fill: '#efe6dc', stroke: '#efe6dc', sw: 0, o: 0 }, { x: 52, y: 123, w: 196, h: 0, rx: 0, fill: '#efe6dc', stroke: '#efe6dc', sw: 0, o: 0 }],
+    w3: [{ x: 150, y: 84, w: 49, h: 132, rx: 3, fill: '#ffffff', stroke: '#111111', sw: 5.5, o: 1 }, { x: 134, y: 96, w: 42, h: 120, rx: 7, fill: '#efe6dc', stroke: '#efe6dc', sw: 0, o: 1 }, { x: 52, y: 146.5, w: 196, h: 7, rx: 3.5, fill: '#8d8c97', stroke: '#8d8c97', sw: 0, o: 1 }, { x: 52, y: 146.5, w: 196, h: 7, rx: 3.5, fill: '#8d8c97', stroke: '#8d8c97', sw: 0, o: 1 }],
+    w4: [{ x: 199, y: 84, w: 49, h: 132, rx: 3, fill: '#ffffff', stroke: '#111111', sw: 5.5, o: 1 }, { x: 178, y: 96, w: 42, h: 120, rx: 7, fill: '#efe6dc', stroke: '#efe6dc', sw: 0, o: 1 }, { x: 52, y: 177, w: 196, h: 0, rx: 0, fill: '#efe6dc', stroke: '#efe6dc', sw: 0, o: 0 }, { x: 52, y: 177, w: 196, h: 0, rx: 0, fill: '#efe6dc', stroke: '#efe6dc', sw: 0, o: 0 }],
+    w5: [{ x: 248, y: 84, w: 0, h: 132, rx: 3, fill: '#ffffff', stroke: '#111111', sw: 0, o: 0 }, { x: 222, y: 96, w: 32, h: 120, rx: 7, fill: '#efe6dc', stroke: '#efe6dc', sw: 0, o: 1 }, { x: 52, y: 200.5, w: 196, h: 7, rx: 3.5, fill: '#9aa8ff', stroke: '#9aa8ff', sw: 0, o: 1 }, { x: 52, y: 200.5, w: 196, h: 7, rx: 3.5, fill: '#9aa8ff', stroke: '#9aa8ff', sw: 0, o: 0 }],
+    k1: [{ x: 86, y: 84, w: 30, h: 78, rx: 3, fill: '#111111', o: 1 }, { x: 74, y: 96, w: 28, h: 70, rx: 4, fill: '#1a1315', o: 1 }, { x: 46, y: 90, w: 12, h: 12, rx: 6, fill: '#efe6dc', o: 1 }, { x: 46, y: 90, w: 12, h: 12, rx: 6, fill: '#efe6dc', o: 1 }],
+    k2: [{ x: 135, y: 84, w: 30, h: 78, rx: 3, fill: '#111111', o: 1 }, { x: 118, y: 96, w: 28, h: 70, rx: 4, fill: '#1a1315', o: 1 }, { x: 46, y: 144, w: 12, h: 12, rx: 6, fill: '#efe6dc', o: 1 }, { x: 46, y: 144, w: 12, h: 12, rx: 6, fill: '#efe6dc', o: 1 }],
+    k3: [{ x: 184, y: 84, w: 30, h: 78, rx: 3, fill: '#111111', o: 1 }, { x: 206, y: 96, w: 28, h: 70, rx: 4, fill: '#1a1315', o: 1 }, { x: 46, y: 198, w: 12, h: 12, rx: 6, fill: '#efe6dc', o: 1 }, { x: 46, y: 198, w: 12, h: 12, rx: 6, fill: '#efe6dc', o: 1 }],
+    l1: [{ x: 101, y: 84, w: 49, h: 132, rx: 3, fill: '#ffffff', o: 0 }, { x: 90, y: 96, w: 42, h: 120, rx: 7, fill: '#ff6b7c', o: 1 }, { x: 142, y: 106, w: 44, h: 44, rx: 22, fill: '#9aa8ff', o: 1 }, { x: 142, y: 106, w: 44, h: 44, rx: 22, fill: '#9aa8ff', o: 1 }],
+    l2: [{ x: 150, y: 84, w: 49, h: 132, rx: 3, fill: '#ffffff', o: 0 }, { x: 134, y: 96, w: 42, h: 120, rx: 7, fill: '#8e8a80', o: 1 }, { x: 150, y: 140, w: 20, h: 20, rx: 10, fill: '#8e8a80', o: 0 }, { x: 150, y: 140, w: 20, h: 20, rx: 10, fill: '#8e8a80', o: 0 }],
+    l3: [{ x: 199, y: 84, w: 49, h: 132, rx: 3, fill: '#ffffff', o: 0 }, { x: 178, y: 96, w: 42, h: 120, rx: 7, fill: '#ff8d9a', o: 1 }, { x: 149, y: 157, w: 30, h: 30, rx: 15, fill: '#c7cdff', o: 1 }, { x: 149, y: 157, w: 30, h: 30, rx: 15, fill: '#c7cdff', o: 1 }],
+    gl1: [{ x: 101, y: 84, w: 49, h: 132, rx: 3, fill: '#ff6b7c', o: 0 }, { x: 90, y: 96, w: 42, h: 120, rx: 7, fill: '#ff6b7c', o: 0.9 }, { x: 142, y: 106, w: 44, h: 44, rx: 22, fill: '#9aa8ff', o: 0.8 }, { x: 142, y: 106, w: 44, h: 44, rx: 22, fill: '#9aa8ff', o: 0.8 }],
+    gl2: [{ x: 199, y: 84, w: 49, h: 132, rx: 3, fill: '#ffb3bb', o: 0 }, { x: 178, y: 96, w: 42, h: 120, rx: 7, fill: '#ffb3bb', o: 0.9 }, { x: 149, y: 157, w: 30, h: 30, rx: 15, fill: '#c7cdff', o: 0.7 }, { x: 149, y: 157, w: 30, h: 30, rx: 15, fill: '#c7cdff', o: 0.7 }]
+  };
+  var BG = ['#ffffff', '#2a1215', '#141a36', '#141a36'];
+  // 段落：停 0.5 → A→B 1.1 → 停 0.25 → B→C 1.1 → 弯出去 0.65 → 停 0.35 → 淡出
+  var SEG = [[0.5, 1.6, 0, 1], [1.85, 2.95, 1, 2], [2.95, 3.6, 2, 3]], END = 3.95;
+  var ease = function (t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
+  var hx = function (c) { return [1, 3, 5].map(function (i) { return parseInt(c.slice(i, i + 2), 16); }); };
+  var mixc = function (a, b, t) { var x = hx(a), y = hx(b); return 'rgb(' + [0, 1, 2].map(function (i) { return Math.round(x[i] + (y[i] - x[i]) * t); }).join(',') + ')'; };
+  var lerp = function (a, b, t) { return a + (b - a) * t; };
+  function frame(t) {
+    var s0 = 0, s1 = 0, p = 0;
+    if (t < SEG[0][0]) { s0 = s1 = 0; } else {
+      for (var i = 0; i < SEG.length; i++) { var g = SEG[i]; if (t >= g[0] && t <= g[1]) { s0 = g[2]; s1 = g[3]; p = ease((t - g[0]) / (g[1] - g[0])); break; } if (t > g[1]) { s0 = s1 = g[3]; } }
+    }
+    el.style.background = mixc(BG[s0], BG[s1], p);
+    Object.keys(K).forEach(function (id) {
+      var n = $(id), a = K[id][s0], b = K[id][s1], f = function (k) { return lerp(a[k], b[k], p); };
+      n.setAttribute('x', f('x')); n.setAttribute('y', f('y')); n.setAttribute('width', Math.max(0, f('w'))); n.setAttribute('height', Math.max(0, f('h'))); n.setAttribute('rx', f('rx'));
+      n.setAttribute('fill', mixc(a.fill, b.fill, p)); n.setAttribute('opacity', f('o'));
+      if (a.stroke) { n.setAttribute('stroke', mixc(a.stroke, b.stroke, p)); n.setAttribute('stroke-width', f('sw')); }
+    });
+    // 橙点：A 里在键盘下面，之后缩小淡出
+    var dp = s1 >= 1 || s0 >= 1 ? (s0 >= 1 ? 1 : p) : 0; $('dot').setAttribute('opacity', 1 - dp); $('dot').setAttribute('r', 9.5 * (1 - dp * 0.6)); $('dot').setAttribute('cy', 240 - 30 * dp);
+    // C：拉直的条换成曲线，再一点点弯出去；光晕随滑块出现
+    var bend = s0 === 2 && s1 === 3 ? p : (s0 === 3 ? 1 : 0), cOn = (s0 === 2 && s1 === 3) || s0 === 3 ? 1 : 0;
+    ['pc1', 'pc3'].forEach(function (id, k) {
+      var y = k ? 204 : 96, y2 = k ? 172 : 128, yy = y + (y2 - y) * bend;
+      $(id).setAttribute('d', 'M52 ' + y + ' H112 C138 ' + y + ' 138 ' + yy + ' 164 ' + yy + ' H248'); $(id).setAttribute('opacity', cOn);
+    });
+    ['w1', 'w5'].forEach(function (id) { $(id).setAttribute('opacity', cOn ? 0 : K[id][s1].o * p + K[id][s0].o * (1 - p)); });
+    var hl = s0 === 2 && s1 === 3 ? p : s0 === 3 ? 1 : (s1 === 2 ? p : 0);
+    $('halo1').setAttribute('opacity', hl * 0.9); $('halo2').setAttribute('opacity', hl * 0.7);
+  }
+  var t0 = performance.now(), fin = false;
+  function done() { if (fin) return; fin = true; el.classList.add('out'); document.documentElement.classList.remove('splashing'); setTimeout(function () { el.remove(); }, 500); }
+  function tick(now) { if (fin) return; var t = (now - t0) / 1000; frame(Math.min(t, SEG[2][1])); if (t >= END) { done(); return; } requestAnimationFrame(tick); }
+  frame(0); requestAnimationFrame(tick); el.addEventListener('pointerdown', done);
+} catch (e) { var s = document.getElementById('splash'); if (s) s.remove(); document.documentElement.classList.remove('splashing'); } })();
 </script>
 <div id="phone">
 <main id="view"></main>

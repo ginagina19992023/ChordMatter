@@ -1424,28 +1424,8 @@ body.dark { --glow-edge: rgba(255,255,255,.55); --glow-shadow: 0 0 14px rgba(255
 .sharebg .seg2 a.on { background: var(--ink); color: var(--bg); font-weight: 600; }
 .sharebg .seg2 { flex-wrap: wrap; } .sharebg .seg2 a { padding: 4px 10px; }
 
-/* ---- 开机动画：A 键盘线条 → B 和弦色块 → C 滑条光晕，约 3.3 秒，点一下可跳过 ---- */
-#splash { position: fixed; inset: 0; z-index: 999; display: flex; align-items: center; justify-content: center; background: #fff; animation: spbg 3.3s ease-in-out forwards; transition: opacity .45s ease; }
+/* ---- 开机动画：A 键盘线条 → B 和弦色块 → C 滑条光晕，形状连续变形（脚本里逐帧插值），约 4 秒，点一下可跳过 ---- */
+#splash { position: fixed; inset: 0; z-index: 999; display: flex; align-items: center; justify-content: center; background: #fff; transition: opacity .45s ease; }
 #splash.out { opacity: 0; pointer-events: none; }
 #splash svg { width: min(72vw, 320px); height: auto; overflow: visible; }
 html.splashing #phone { visibility: hidden; }
-@keyframes spbg { 0%, 28% { background: #ffffff; } 40%, 62% { background: #2a1215; } 76%, 100% { background: #141a36; } }
-#splash .spA, #splash .spB, #splash .spC { opacity: 0; }
-#splash .spA { animation: spa 3.3s linear forwards; }
-#splash .spB { animation: spb 3.3s linear forwards; transform-origin: 150px 156px; }
-#splash .spC { animation: spc 3.3s linear forwards; transform-origin: 150px 150px; }
-@keyframes spa { 0% { opacity: 1; } 28% { opacity: 1; } 38% { opacity: 0; } 100% { opacity: 0; } }
-@keyframes spb { 0%, 28% { opacity: 0; transform: scale(.94); } 40% { opacity: 1; transform: scale(1); } 62% { opacity: 1; transform: scale(1); } 72% { opacity: 0; transform: scale(1.04); } 100% { opacity: 0; } }
-@keyframes spc { 0%, 62% { opacity: 0; transform: scale(.96); } 76% { opacity: 1; transform: scale(1); } 100% { opacity: 1; transform: scale(1.02); } }
-#splash .dr { stroke-dasharray: 1; stroke-dashoffset: 1; animation: spdraw .8s ease-out .15s forwards; }
-@keyframes spdraw { to { stroke-dashoffset: 0; } }
-#splash .bk { opacity: 0; animation: spfade .3s ease-out .75s forwards; }
-#splash .dot { transform: translateY(-40px); opacity: 0; animation: spdrop .45s cubic-bezier(.3,1.5,.5,1) .95s forwards; }
-@keyframes spfade { to { opacity: 1; } }
-@keyframes spdrop { to { transform: none; opacity: 1; } }
-#splash .kl { opacity: 0; animation: spkey .4s ease-out forwards; } #splash .kl:nth-of-type(1) { animation-delay: 1.35s; } #splash .kl:nth-of-type(2) { animation-delay: 1.5s; } #splash .kl:nth-of-type(3) { animation-delay: 1.65s; }
-#splash .kg { opacity: 0; animation: spkey .6s ease-out 1.5s forwards; }
-@keyframes spkey { to { opacity: 1; } }
-#splash .cv { stroke-dasharray: 1; stroke-dashoffset: 1; animation: spdraw .7s ease-out 2.5s forwards; }
-#splash .th { opacity: 0; transform: translateX(-60px); animation: spslide .55s cubic-bezier(.2,.9,.3,1) 2.8s forwards; }
-@keyframes spslide { to { opacity: 1; transform: none; } }
