@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 151; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 152; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -4268,7 +4268,7 @@
   // ---------------- 开机动画制作器 ----------------
   // 把一串和弦（或单个音）按速度、间隔排成时间线：键盘上的键按和弦的颜色亮起、起涟漪，背景随和弦换色，同时发声
   const SplashMk = (() => {
-    const DEF = { seq: 'C G Am F', bpm: 84, beats: 2, gap: 0, style: 'block' };
+    const DEF = { seq: 'C G Am F', bpm: 84, beats: 2, gap: 0, style: 'block', order: 'dot,color,line' };
     const cfg = () => Object.assign({}, DEF, S.splashCfg || {});
     const NOTE = /^([A-Ga-g])([#b]?)(-?\d)$/, PCQ = ['', 'm', '7', 'maj7', 'm7', 'dim7', 'sus4', 'aug', 'dim', 'm7b5', '', 'm'];
     function parse(seq) {
@@ -4321,6 +4321,9 @@
       <p class="fine">用空格隔开：和弦写 C、Am7、G/B，单个音写 C4、E4。最多 16 个。</p>
       <div class="chips scroll">${presets.map(([v, n]) => `<button class="chip" data-act="spmk-set" data-k="seq" data-v="${v}">${n}</button>`).join('')}</div>
       <select id="spsong" class="inp"><option value="">从曲目导入前 8 个和弦……</option>${allSongs().filter(s => s.sections.length).map(s => `<option value="${s.id}">${esc(s.title)}</option>`).join('')}</select>
+      <h3 class="h3">三种语言的顺序 <small>· 点 = 圆点指示要弹的键 · 色 = 键按和弦色亮起 · 线 = 升降线</small></h3>
+      <div class="chips scroll">${[['dot,color,line', '点 → 色 → 线'], ['dot,line,color', '点 → 线 → 色'], ['color,dot,line', '色 → 点 → 线'], ['color,line,dot', '色 → 线 → 点'], ['line,dot,color', '线 → 点 → 色'], ['line,color,dot', '线 → 色 → 点'], ['dot,color', '只有 点 → 色'], ['color,line', '只有 色 → 线'], ['dot,line', '只有 点 → 线']].map(([v, n]) => chip('order', v, n)).join('')}</div>
+      <p class="fine">任意两种之间的变换，都是沿着「点 — 色 — 圆点 — 线」这条链一步一步变形；和弦按顺序分给各个语言去演出。</p>
       <h3 class="h3">速度 <small id="spbpmv">${c.bpm} 拍/分</small></h3>
       <input id="spbpm" type="range" min="40" max="160" step="2" value="${c.bpm}" style="width:100%">
       <h3 class="h3">每个和弦占几拍</h3><div class="chips">${chip('beats', 1, '1 拍')}${chip('beats', 2, '2 拍')}${chip('beats', 4, '4 拍')}</div>

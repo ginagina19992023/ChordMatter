@@ -20,16 +20,31 @@ window.HXSplash = (function () {
     <circle id="rt0" r="13" fill="#c7cdff" opacity="0"/><circle id="rt1" r="13" fill="#c7cdff" opacity="0"/><circle id="rt2" r="13" fill="#c7cdff" opacity="0"/>
     <text id="rlab" x="150" y="34" text-anchor="middle" font-size="30" font-weight="600" fill="#c7cdff" opacity="0" font-family="-apple-system, PingFang SC, sans-serif"></text></g>
   </svg>`;
-  // 时间线（秒）。点按 0.5 / 0.75 / 1.0 = 第一个和弦的三个音；2.1 整个和弦；3.15 亮音；4.1 起圆点沿曲线走，依次到每个和弦
+  // 三种「语言」：dot = 圆点指示要弹的键；color = 键按和弦色亮起；line = 和弦用升降线呈现。
+  // 它们在同一条链上：dot(0) — color(1) — 圆点(2，中间态) — line(3)。任意两种之间的变换，就是沿着这条链走几步，每一步都是形状连续变形。
+  var ST = { dot: 0, color: 1, line: 3 }, KEYX = [126.5, 175.5, 224.5];
   function plan(cfg) {
-    var pre = cfg.pre, spb = 60 / Math.max(30, cfg.bpm || 84), iv = Math.max(0.45, ((cfg.beats || 2) + (cfg.gap || 0)) * spb), n = pre.voices.length, arr = [], notes = [], arp = cfg.style === 'arp';
-    for (var i = 0; i < n; i++) arr.push(4.4 + i * iv);
-    var v0 = pre.voices[0], all0 = pre.midis[0];
-    notes.push([v0[0], 0.5, 1.5, 0.5], [v0[1], 0.75, 1.5, 0.5], [v0[2], 1.0, 1.4, 0.5]);
-    all0.forEach(function (m, j) { notes.push([m, 2.1 + j * 0.04, 1.7, 0.42]); });
-    all0.concat(all0.map(function (m) { return m + 12; })).slice(0, 5).forEach(function (m, j) { notes.push([m, 3.15 + j * 0.15, 0.9, 0.3]); });
-    for (var k = 1; k < n; k++) { var step = arp ? Math.min(spb / 3, 0.2) : 0.012; pre.midis[k].forEach(function (m, j) { notes.push([m, arr[k] + j * step, iv + 0.3, 0.42]); }); }
-    return { arr: arr, notes: notes, iv: iv, end: n > 1 ? arr[n - 1] + 1.1 : 5.2 };
+    var pre = cfg.pre, spb = 60 / Math.max(30, cfg.bpm || 84), iv = Math.max(0.45, ((cfg.beats || 2) + (cfg.gap || 0)) * spb), N = pre.voices.length, arp = cfg.style === 'arp';
+    var ord = cfg.order; if (typeof ord === 'string') ord = ord.split(','); ord = (ord || []).filter(function (x, i, a) { return ST[x] != null && a.indexOf(x) === i; }); if (!ord.length) ord = ['dot', 'color', 'line'];
+    var S = ord.length, t = 0.5, kf = [[0, ST[ord[0]]], [0.5, ST[ord[0]]]], events = [], notes = [], ripples = [], hops = [], lastJ = 0, ivDot = Math.max(iv, 0.15 * 3 + 0.45);
+    for (var s = 0; s < S; s++) {
+      if (s > 0) {
+        var from = ST[ord[s - 1]], to = ST[ord[s]], dur = Math.max(0.9, Math.abs(to - from) * 0.7);
+        kf.push([t, from], [t + dur, to]);
+        pre.midis[lastJ].slice(0, 3).forEach(function (m, k) { notes.push([m + 12, t + dur * 0.4 + k * 0.12, 0.8, 0.25]); });
+        t += dur + 0.25; kf.push([t, to]);
+      }
+      var st = Math.min(N - 1, Math.floor(s * N / S)), en = Math.max(st, Math.ceil((s + 1) * N / S) - 1);
+      for (var j = st; j <= en; j++) {
+        var sc = ord[s], spread = sc === 'dot' ? 0.15 : (arp ? Math.min(spb / 3, 0.2) : 0.012), v = pre.voices[j];
+        events.push({ j: j, t: t, scene: sc, iv: sc === 'dot' ? ivDot : iv });
+        pre.midis[j].forEach(function (m, k) { notes.push([m, t + k * spread, (sc === 'dot' ? ivDot : iv) + 0.3, 0.45]); });
+        if (sc !== 'line') for (var k = 0; k < 3; k++) { ripples.push([t + k * spread, KEYX[k], 190, pre.acc[j]]); if (sc === 'dot') hops.push([t + k * spread, KEYX[k]]); }
+        t += sc === 'dot' ? ivDot : iv; lastJ = j;
+      }
+    }
+    kf.push([t + 0.9, ST[ord[S - 1]]]);
+    return { events: events, kf: kf, notes: notes, ripples: ripples, hops: hops, end: t + 0.9, order: ord };
   }
   function run(root, cfg, opt) {
     opt = opt || {};
@@ -52,10 +67,6 @@ window.HXSplash = (function () {
   };
   var pre = cfg && cfg.pre, PL = pre ? plan(cfg) : null;
   var mixHex = function (a, b, t) { var p = function (c) { return [1, 3, 5].map(function (i) { return parseInt(c.slice(i, i + 2), 16); }); }, x = p(a), y = p(b); return '#' + [0, 1, 2].map(function (i) { var v = Math.round(x[i] + (y[i] - x[i]) * t); return (v < 16 ? '0' : '') + v.toString(16); }).join(''); };
-  if (pre) { // 第一个和弦的颜色：根音灰、其余按这个和弦的感觉色
-    var acc0 = pre.acc[0], lt0 = mixHex(acc0, '#ffffff', 0.45);
-    K.l1[1].fill = '#8e8a80'; K.l2[1].fill = acc0; K.l3[1].fill = lt0; K.gl1[1].fill = acc0; K.gl1[1].x = 55 + 49 * 2; K.gl2[1].fill = lt0;
-  }
   // 在 B 和 C 之间加一个「油滴」阶段：键盘上的颜色被提炼成圆点，圆点变色，再长出三条线
   (function () {
     Object.keys(K).forEach(function (id) {
@@ -71,14 +82,18 @@ window.HXSplash = (function () {
   // 段落：停 0.5 → A→B 1.1 → 停 0.25 → B→C 1.1 → 弯出去 0.65 → 停 0.35 → 淡出
   var SEG = [[0.6, 1.8, 0, 1], [2.35, 3.15, 1, 2], [3.15, 3.95, 2, 3], [4.45, 5.15, 3, 4]], END = 5.6;
   var DL = { l1: 0, l2: 0.25, l3: 0.5, gl1: 0, gl2: 0.5 }, TAPS = [[0.5, 126.5, 190, '#ff6b7c'], [0.75, 175.5, 190, '#ff6b7c'], [1.0, 224.5, 190, '#ff6b7c'], [2.1, 150, 154, '#ff8d9a']];
-  if (pre) { SEG = SEG.slice(0, 3); TAPS.forEach(function (x, i) { x[3] = i === 3 ? lt0 : acc0; }); }
   var ease = function (t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
   var hx = function (c) { return [1, 3, 5].map(function (i) { return parseInt(c.slice(i, i + 2), 16); }); };
   var mixc = function (a, b, t) { var x = hx(a), y = hx(b); return 'rgb(' + [0, 1, 2].map(function (i) { return Math.round(x[i] + (y[i] - x[i]) * t); }).join(',') + ')'; };
   var lerp = function (a, b, t) { return a + (b - a) * t; };
   function frame(t) {
-    var s0 = 0, s1 = 0, p = 0;
-    if (t < SEG[0][0]) { s0 = s1 = 0; } else {
+    var s0 = 0, s1 = 0, p = 0, ps = 0;
+    if (pre) {
+      var kf = PL.kf; ps = kf[kf.length - 1][1];
+      for (var q = 1; q < kf.length; q++) if (t <= kf[q][0]) { var A0 = kf[q - 1], B0 = kf[q]; ps = B0[0] === A0[0] ? B0[1] : A0[1] + (B0[1] - A0[1]) * (t - A0[0]) / (B0[0] - A0[0]); break; }
+      s0 = Math.min(3, Math.floor(ps + 1e-9)); s1 = Math.min(3, Math.ceil(ps - 1e-9)); p = s1 === s0 ? 0 : ease(ps - s0);
+      chordNow(t);
+    } else if (t < SEG[0][0]) { s0 = s1 = 0; } else {
       for (var i = 0; i < SEG.length; i++) { var g = SEG[i]; if (t >= g[0] && t <= g[1]) { s0 = g[2]; s1 = g[3]; p = ease((t - g[0]) / (g[1] - g[0])); break; } if (t > g[1]) { s0 = s1 = g[3]; } }
     }
     el.style.background = mixc(BG[s0], BG[s1], p);
@@ -90,9 +105,9 @@ window.HXSplash = (function () {
       n.setAttribute('fill', mixc(a.fill, b.fill, pp)); n.setAttribute('opacity', f('o'));
       if (a.stroke) { n.setAttribute('stroke', mixc(a.stroke, b.stroke, pp)); n.setAttribute('stroke-width', f('sw')); }
     });
-    TAPS.forEach(function (T, i) { var u = (t - T[0]) / 0.55, r = $('rp' + i); if (u < 0 || u > 1) { r.setAttribute('opacity', 0); return; } r.setAttribute('cx', T[1]); r.setAttribute('cy', T[2]); r.setAttribute('stroke', T[3]); r.setAttribute('r', 1 + 36 * (1 - Math.pow(1 - u, 3))); r.setAttribute('opacity', 0.9 * Math.min(1, u * 5) * (1 - u)); });
+    if (pre) ripples(t); else TAPS.forEach(function (T, i) { var u = (t - T[0]) / 0.55, r = $('rp' + i); if (u < 0 || u > 1) { r.setAttribute('opacity', 0); return; } r.setAttribute('cx', T[1]); r.setAttribute('cy', T[2]); r.setAttribute('stroke', T[3]); r.setAttribute('r', 1 + 36 * (1 - Math.pow(1 - u, 3))); r.setAttribute('opacity', 0.9 * Math.min(1, u * 5) * (1 - u)); });
     // 橙点：A 里在键盘下面，之后缩小淡出
-    var dp = s1 >= 1 || s0 >= 1 ? (s0 >= 1 ? 1 : p) : 0; $('dot').setAttribute('opacity', 1 - dp); $('dot').setAttribute('r', 9.5 * (1 - dp * 0.6)); $('dot').setAttribute('cy', 240 - 30 * dp);
+    var dp = s1 >= 1 || s0 >= 1 ? (s0 >= 1 ? 1 : p) : 0; if (pre) $('dot').setAttribute('cx', dotX(t)); $('dot').setAttribute('opacity', 1 - dp); $('dot').setAttribute('r', 9.5 * (1 - dp * 0.6)); $('dot').setAttribute('cy', 240 - 30 * dp);
     // C：拉直的条换成曲线，再一点点弯出去；光晕随滑块出现
     var bend = s0 === 3 && s1 === 4 ? p : (s0 === 4 ? 1 : 0), cOn = (s0 === 3 && s1 === 4) || s0 === 4 ? 1 : 0;
     ['pc1', 'pc3'].forEach(function (id, k) {
@@ -111,19 +126,35 @@ window.HXSplash = (function () {
       for (var ci = 0; ci < nC; ci++) { xs.push(92 + ci * (148 / (nC - 1))); for (var vv = 0; vv < 3; vv++) vy[vv].push(clampN(base[vv] - (pre.voices[ci][vv] - pre.voices[0][vv]) * 6, 62, 264)); }
       for (var v2 = 0; v2 < 3; v2++) { var d = 'M52 ' + vy[v2][0] + ' H' + xs[0]; for (var c2 = 0; c2 < nC - 1; c2++) { var xm = (xs[c2] + xs[c2 + 1]) / 2; d += ' C' + xm + ' ' + vy[v2][c2] + ' ' + xm + ' ' + vy[v2][c2 + 1] + ' ' + xs[c2 + 1] + ' ' + vy[v2][c2 + 1]; } d += ' H248'; $('rv' + v2).setAttribute('d', d); }
     }
+    // 当前的和弦（最近一次出现的那个），以及它和上一个之间的颜色渐变
+    function evAt(t) { var e = -1; for (var k = 0; k < PL.events.length; k++) if (PL.events[k].t <= t + 0.02) e = k; return e; }
+    var accNow = null, ltNow = null;
+    function chordNow(t) {
+      var e = Math.max(0, evAt(t)), ev = PL.events[e], pj = e > 0 ? PL.events[e - 1].j : ev.j, k = clampN((t - ev.t) / 0.3, 0, 1);
+      accNow = mixHex(pre.acc[pj], pre.acc[ev.j], k); ltNow = mixHex(accNow, '#ffffff', 0.45);
+      [1, 2].forEach(function (si) { K.l1[si].fill = '#8e8a80'; K.l2[si].fill = accNow; K.l3[si].fill = ltNow; K.gl1[si].fill = accNow; K.gl2[si].fill = ltNow; });
+      K.gl1[1].x = 55 + 49 * 2; K.gl1[2].x = 55 + 49 * 2 + 21.5 - 17;
+    }
+    function dotX(t) { var x = 150, px = 150, t1 = -9; PL.hops.forEach(function (h) { if (h[0] <= t) { px = x; x = h[1]; t1 = h[0]; } }); return px + (x - px) * ease(clampN((t - t1) / 0.14, 0, 1)); }
+    function ripples(t) {
+      var used = 0;
+      PL.ripples.forEach(function (R) { var u = (t - R[0]) / 0.55; if (u < 0 || u > 1 || used >= 4) return; var r = $('rp' + used++); r.setAttribute('cx', R[1]); r.setAttribute('cy', R[2]); r.setAttribute('stroke', R[3]); r.setAttribute('r', 1 + 36 * (1 - Math.pow(1 - u, 3))); r.setAttribute('opacity', 0.9 * Math.min(1, u * 5) * (1 - u)); });
+      for (; used < 4; used++) $('rp' + used).setAttribute('opacity', 0);
+    }
     function ride(t) {
-      var lab = $('rlab'), arr = PL.arr, cur = 0;
-      for (var k = 0; k < arr.length; k++) if (t >= arr[k] - 0.02) cur = k;
-      lab.textContent = pre.labels[cur]; lab.setAttribute('fill', pre.acc[cur]); lab.setAttribute('opacity', t < 1.1 ? 0 : Math.min(1, (t - 1.1) / 0.4));
-      if (!RD) return;
-      var al = clampN((t - 4.1) / 0.3, 0, 1);
+      var lab = $('rlab'), e = Math.max(0, evAt(t)), ev = PL.events[e], cj = ev.j;
+      lab.textContent = pre.labels[cj]; lab.setAttribute('fill', pre.acc[cj]); lab.setAttribute('opacity', clampN((t - PL.events[0].t + 0.1) / 0.4, 0, 1));
+      var psn = 0, kf = PL.kf; for (var q = 1; q < kf.length; q++) if (t <= kf[q][0]) { var A0 = kf[q - 1], B0 = kf[q]; psn = B0[0] === A0[0] ? B0[1] : A0[1] + (B0[1] - A0[1]) * (t - A0[0]) / (B0[0] - A0[0]); break; }
+      var al = RD ? clampN((psn - 2.7) / 0.3, 0, 1) : 0;
       if (al > 0) ['w1', 'w2', 'w3', 'w4', 'l1', 'l2', 'l3', 'gl1', 'gl2', 'halo1', 'halo2'].forEach(function (id) { var n = $(id); n.setAttribute('opacity', parseFloat(n.getAttribute('opacity') || 0) * (1 - al)); });
-      var seg = Math.min(cur, nC - 2), a0 = arr[seg], iv = PL.iv, u = cur >= nC - 1 ? 1 : clampN((t - (a0 + 0.4 * iv)) / (0.6 * iv), 0, 1), e = ease(u), xm2 = (xs[seg] + xs[seg + 1]) / 2;
-      var pulse = Math.exp(-6 * Math.max(0, t - arr[cur]));
-      for (var v = 0; v < 3; v++) {
-        var ya = vy[v][seg], yb = vy[v][seg + 1], m1 = 1 - e, x = m1 * m1 * m1 * xs[seg] + 3 * m1 * m1 * e * xm2 + 3 * m1 * e * e * xm2 + e * e * e * xs[seg + 1], y = m1 * m1 * m1 * ya + 3 * m1 * m1 * e * ya + 3 * m1 * e * e * yb + e * e * e * yb;
-        $('rv' + v).setAttribute('opacity', al);
-        var h = $('rh' + v), tt = $('rt' + v); h.setAttribute('cx', x); h.setAttribute('cy', y); h.setAttribute('r', 34 * (1 + 0.5 * pulse)); h.setAttribute('opacity', al * (0.8 + 0.2 * pulse)); tt.setAttribute('cx', x); tt.setAttribute('cy', y); tt.setAttribute('fill', pre.acc[cur]); tt.setAttribute('opacity', al);
+      for (var v = 0; v < 3; v++) { $('rv' + v).setAttribute('opacity', al); $('rh' + v).setAttribute('opacity', 0); $('rt' + v).setAttribute('opacity', 0); }
+      if (!RD || al <= 0) return;
+      var nx = PL.events[e + 1], a = cj, b = cj, u = 0, pulse = ev.scene === 'line' ? Math.exp(-6 * Math.max(0, t - ev.t)) : 0;
+      if (nx && nx.scene === 'line' && ev.scene === 'line') { b = nx.j; var ivE = nx.t - ev.t; u = clampN((t - (ev.t + 0.4 * ivE)) / (0.6 * ivE), 0, 1); }
+      var eu = ease(u), xm2 = (xs[a] + xs[b]) / 2;
+      for (var w = 0; w < 3; w++) {
+        var ya = vy[w][a], yb = vy[w][b], m1 = 1 - eu, x = m1 * m1 * m1 * xs[a] + 3 * m1 * m1 * eu * xm2 + 3 * m1 * eu * eu * xm2 + eu * eu * eu * xs[b], y = m1 * m1 * m1 * ya + 3 * m1 * m1 * eu * ya + 3 * m1 * eu * eu * yb + eu * eu * eu * yb;
+        var hh = $('rh' + w), tt = $('rt' + w); hh.setAttribute('cx', x); hh.setAttribute('cy', y); hh.setAttribute('r', 34 * (1 + 0.5 * pulse)); hh.setAttribute('opacity', al * (0.8 + 0.2 * pulse)); tt.setAttribute('cx', x); tt.setAttribute('cy', y); tt.setAttribute('fill', pre.acc[cj]); tt.setAttribute('opacity', al);
       }
     }
     var t0 = performance.now(), raf = 0, stopped = false, endT = pre ? PL.end : 5.6, lastSeg = SEG[SEG.length - 1][1];
