@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 164; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 165; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -179,7 +179,7 @@
   const A = {
     ctx: null,
     init() {
-      try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+      try { if (navigator.audioSession) navigator.audioSession.type = (typeof Listen !== 'undefined' && Listen.active()) ? 'play-and-record' : 'playback'; } catch (e) {}
       // 离开 App 再回来，iPhone 会把声音通道挂起/打断，有时怎么叫都叫不醒：回来后的第一次触摸，直接换一个全新的声音通道
       if (this.ctx && (this.stale || this.ctx.state === 'closed' || this.ctx.state === 'interrupted')) { try { this.ctx.close(); } catch (e) {} this.ctx = null; this.stale = false; }
       if (!this.ctx) {
@@ -2262,7 +2262,7 @@
       DR.mode = 'mic'; DR.listening = true; if (!S.micOK) { S.micOK = 1; save(); } toast('在听了，开始弹吧');
     } catch (e) {
       S.micOK = 0; S.place = 'away'; save();
-      toast(e && e.name === 'NotAllowedError' ? '没有麦克风权限 · 改为在屏幕键盘上点' : '这里用不了麦克风 · 改为在屏幕键盘上点');
+      toast(e && e.name === 'NotAllowedError' ? '没有麦克风权限 · 改为在屏幕键盘上点' : '这里用不了麦克风（' + ((e && (e.name || e.message)) || '未知') + '）· 改为在屏幕键盘上点');
       render(); return;
     }
     DR.hooks.onMode && DR.hooks.onMode();
@@ -3119,7 +3119,7 @@
     const P = SP.P, spb = 60 / (P.tempo.bpm * spRate()), step = P.time === '6/8' ? 1.5 : 1, total = P.bars.length * P.bq;
     if (mode === 'mic') {
       try { await Listen.start(A.ctx, spEvent); if (!S.micOK) { S.micOK = 1; save(); } }
-      catch (e) { toast(e && e.name === 'NotAllowedError' ? '没有麦克风权限 · 先用「两只手打节奏」' : '这里用不了麦克风 · 先用「两只手打节奏」'); return; }
+      catch (e) { toast(e && e.name === 'NotAllowedError' ? '没有麦克风权限 · 先用「两只手打节奏」' : '这里用不了麦克风（' + ((e && (e.name || e.message)) || '未知') + '）· 先用「两只手打节奏」'); return; }
     }
     if (mode === 'selftest') { Listen.attach(A.bus, spEvent); }
     const lead = P.bq * spb, start = A.ctx.currentTime + 0.25 + lead;
@@ -3618,7 +3618,7 @@
     if (Listen.active()) { Listen.stop(); SR.mic = false; sightPaint(); const b = $('#smic'); if (b) { b.classList.remove('on'); b.textContent = '🎙 在琴上弹（收音）'; } return; }
     A.init();
     try { await Listen.start(A.ctx, sightEvent); SR.mic = true; if (!S.micOK) { S.micOK = 1; save(); } toast('在听了：看到就弹'); }
-    catch (e) { SR.mic = false; toast(e && e.name === 'NotAllowedError' ? '没有麦克风权限 · 用屏幕键盘点' : '这里用不了麦克风 · 用屏幕键盘点'); }
+    catch (e) { SR.mic = false; toast(e && e.name === 'NotAllowedError' ? '没有麦克风权限 · 用屏幕键盘点' : '这里用不了麦克风（' + ((e && (e.name || e.message)) || '未知') + '）· 用屏幕键盘点'); }
     const b = $('#smic'); if (b) { b.classList.toggle('on', !!SR.mic); b.textContent = SR.mic ? '🎙 在听…' : '🎙 在琴上弹（收音）'; }
   }
   function sightEvent(ev) {

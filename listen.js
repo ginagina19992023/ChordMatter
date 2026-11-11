@@ -66,7 +66,10 @@ const Listen = (() => {
     stop();
     ctx = audioCtx; cb = onEvent;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('nomic');
-    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    // iPhone：音频通道被设成「只播放」时，麦克风打不开。要先切到「播放 + 录音」
+    try { if (navigator.audioSession) navigator.audioSession.type = 'play-and-record'; } catch (e) {}
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); }
+    catch (e) { if (e && e.name === 'NotAllowedError') throw e; stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } // 有的手机不接受关掉降噪这些参数：退一步用默认参数再试
     if (ctx.state !== 'running') await ctx.resume();
     src = ctx.createMediaStreamSource(stream);
     attach(src);
