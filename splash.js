@@ -15,9 +15,9 @@ window.HXSplash = (function () {
     <circle id="rp0" r="0" fill="none" stroke-width="3" opacity="0"/><circle id="rp1" r="0" fill="none" stroke-width="3" opacity="0"/><circle id="rp2" r="0" fill="none" stroke-width="3" opacity="0"/><circle id="rp3" r="0" fill="none" stroke-width="3" opacity="0"/>
     <circle id="dot" cx="150" cy="240" r="9.5" fill="#e8541e"/>
     <circle id="halo1" cx="164" cy="128" r="46" fill="url(#spth)" opacity="0"/><circle id="halo2" cx="164" cy="172" r="46" fill="url(#spth)" opacity="0"/>
-    <g id="rd"><path id="rv0" d="" fill="none" stroke="#9aa8ff" stroke-width="7" stroke-linecap="round" opacity="0"/><path id="rv1" d="" fill="none" stroke="#9aa8ff" stroke-width="7" stroke-linecap="round" opacity="0"/><path id="rv2" d="" fill="none" stroke="#9aa8ff" stroke-width="7" stroke-linecap="round" opacity="0"/>
-    <circle id="rh0" r="34" fill="url(#spth)" opacity="0"/><circle id="rh1" r="34" fill="url(#spth)" opacity="0"/><circle id="rh2" r="34" fill="url(#spth)" opacity="0"/>
-    <circle id="rt0" r="13" fill="#c7cdff" opacity="0"/><circle id="rt1" r="13" fill="#c7cdff" opacity="0"/><circle id="rt2" r="13" fill="#c7cdff" opacity="0"/>
+    <g id="rd"><path id="rv0" d="" fill="none" stroke="#9aa8ff" stroke-width="7" stroke-linecap="round" opacity="0"/><path id="rv1" d="" fill="none" stroke="#9aa8ff" stroke-width="7" stroke-linecap="round" opacity="0"/><path id="rv2" d="" fill="none" stroke="#9aa8ff" stroke-width="7" stroke-linecap="round" opacity="0"/><path id="rv3" d="" fill="none" stroke="#9aa8ff" stroke-width="7" stroke-linecap="round" opacity="0"/>
+    <circle id="rh0" r="34" fill="url(#spth)" opacity="0"/><circle id="rh1" r="34" fill="url(#spth)" opacity="0"/><circle id="rh2" r="34" fill="url(#spth)" opacity="0"/><circle id="rh3" r="34" fill="url(#spth)" opacity="0"/>
+    <circle id="rt0" r="13" fill="#c7cdff" opacity="0"/><circle id="rt1" r="13" fill="#c7cdff" opacity="0"/><circle id="rt2" r="13" fill="#c7cdff" opacity="0"/><circle id="rt3" r="13" fill="#c7cdff" opacity="0"/>
     <text id="rlab" x="150" y="34" text-anchor="middle" font-size="30" font-weight="600" fill="#c7cdff" opacity="0" font-family="-apple-system, PingFang SC, sans-serif"></text></g>
   </svg>`;
   // 三种「语言」：dot = 圆点指示要弹的键；color = 键按和弦色亮起；line = 和弦用升降线呈现。
@@ -123,24 +123,30 @@ window.HXSplash = (function () {
   }
 
     var base = [204, 150, 96], clampN = function (v, a, b) { return Math.max(a, Math.min(b, v)); };
-    var nC = pre ? pre.voices.length : 0, xs = [], vy = [[], [], []], RD = pre && nC > 0;
+    var nC = pre ? pre.voices.length : 0, xs = [], vy = [[], [], [], []], RD = pre && nC > 0;
     var YS = 6; if (pre) { var mxd = 1; pre.voices.forEach(function (vc) { vc.forEach(function (m, i) { mxd = Math.max(mxd, Math.abs(m - pre.voices[0][i])); }); }); YS = Math.min(6, 70 / mxd); }
-    var LS = (cfg && cfg.lines) || 'voices', YS1 = 6; if (pre) { var mx1 = 1; pre.voices.forEach(function (vc) { mx1 = Math.max(mx1, Math.abs(vc[0] - pre.voices[0][0])); }); YS1 = Math.min(6, 80 / mx1); }
-    var NL = LS === 'single' ? 1 : 3;
+    var LS = (cfg && cfg.lines === 'voices') || !(pre && pre.alts) ? 'voices' : 'degree', YS1 = 6; if (pre) { var mx1 = 1; pre.voices.forEach(function (vc) { mx1 = Math.max(mx1, Math.abs(vc[0] - pre.voices[0][0])); }); YS1 = Math.min(6, 80 / mx1); }
+    var NL = 3; if (LS === 'degree') { pre.alts.forEach(function (al) { if (al.length > 3) NL = 4; }); if (NL === 4) base = [216, 170, 124, 78]; }
+    // 度数线（和弦页那样）：每条线是和弦的一个度数 1 / 3 / 5 / 7。和这个和弦的大调音阶度数一样就平着走，改了几个半音就弯几个半音：根音灰、没动的浅色、动了的用和弦色
+    var roleCol = function (i, j) { if (LS !== 'degree') return pre.acc[j]; var r = pre.roles[j][i]; return r === 'rt' ? '#8e8a80' : r === 'st' ? '#c7cdff' : r === 'mv' ? pre.acc[j] : '#4d5278'; };
     if (RD) {
       for (var ci = 0; ci < nC; ci++) { xs.push(nC > 1 ? 92 + ci * (148 / (nC - 1)) : 150); var pv = pre.voices[ci], p0 = pre.voices[0];
-        if (LS === 'default') { vy[0].push(clampN(150 + (pv[1] - pv[0]) * 10, 62, 264)); vy[1].push(150); vy[2].push(clampN(150 - (pv[2] - pv[1]) * 10, 62, 264)); } // 中间一条不动，上下两条随和弦的宽窄弯近、弯远
+        if (LS === 'degree') { for (var di = 0; di < NL; di++) { var al = pre.alts[ci][di]; vy[di].push(al == null ? base[di] : clampN(base[di] - al * 14, 40, 264)); } }
+        else if (LS === 'default') { vy[0].push(clampN(150 + (pv[1] - pv[0]) * 10, 62, 264)); vy[1].push(150); vy[2].push(clampN(150 - (pv[2] - pv[1]) * 10, 62, 264)); } // 中间一条不动，上下两条随和弦的宽窄弯近、弯远
         else if (LS === 'single') { var yy = clampN(150 - (pv[0] - p0[0]) * YS1, 62, 264); vy[0].push(yy); vy[1].push(yy); vy[2].push(yy); } // 只有一条线：跟着根音（最低音）升降
         else for (var vv = 0; vv < 3; vv++) vy[vv].push(clampN(base[vv] - (pv[vv] - p0[vv]) * YS, 62, 264)); }
       // 线的颜色：沿着线，每个和弦的位置是这个和弦的颜色，中间渐变；球走到哪，线在那里就是同一个颜色
-      var NS = 'http://www.w3.org/2000/svg', gid = 'spg' + Math.floor(Math.random() * 1e6), lg = document.createElementNS(NS, 'linearGradient');
-      lg.setAttribute('id', gid); lg.setAttribute('gradientUnits', 'userSpaceOnUse'); lg.setAttribute('x1', 52); lg.setAttribute('x2', 248); lg.setAttribute('y1', 0); lg.setAttribute('y2', 0);
-      var stops = [[0, pre.acc[0]]]; xs.forEach(function (x, j) { stops.push([(x - 52) / 196, pre.acc[j]]); }); stops.push([1, pre.acc[nC - 1]]);
-      stops.forEach(function (st) { var e = document.createElementNS(NS, 'stop'); e.setAttribute('offset', st[0]); e.setAttribute('stop-color', st[1]); lg.appendChild(e); });
-      root.querySelector('defs').appendChild(lg);
+      var NS = 'http://www.w3.org/2000/svg', gids = [];
+      for (var gi = 0; gi < NL; gi++) {
+        var gid = 'spg' + Math.floor(Math.random() * 1e6) + gi, lg = document.createElementNS(NS, 'linearGradient'); gids.push(gid);
+        lg.setAttribute('id', gid); lg.setAttribute('gradientUnits', 'userSpaceOnUse'); lg.setAttribute('x1', 52); lg.setAttribute('x2', 248); lg.setAttribute('y1', 0); lg.setAttribute('y2', 0);
+        var stops = [[0, roleCol(gi, 0)]]; xs.forEach(function (x, j) { stops.push([(x - 52) / 196, roleCol(gi, j)]); }); stops.push([1, roleCol(gi, nC - 1)]);
+        stops.forEach(function (st) { var e = document.createElementNS(NS, 'stop'); e.setAttribute('offset', st[0]); e.setAttribute('stop-color', st[1]); lg.appendChild(e); });
+        root.querySelector('defs').appendChild(lg);
+      }
       // 线的起点圆点跟着线的起点走
       K.k1[3].y = vy[2][0] - 6; K.k2[3].y = vy[1][0] - 6; K.k3[3].y = vy[0][0] - 6;
-      for (var v2 = 0; v2 < NL; v2++) { $('rv' + v2).setAttribute('stroke', 'url(#' + gid + ')'); $('rv' + v2).setAttribute('pathLength', 1); $('rv' + v2).setAttribute('stroke-dasharray', 1); var d = 'M52 ' + vy[v2][0] + ' H' + xs[0]; for (var c2 = 0; c2 < nC - 1; c2++) { var ya0 = vy[v2][c2], yb0 = vy[v2][c2 + 1]; if (Math.abs(ya0 - yb0) < 0.5) { d += ' H' + xs[c2 + 1]; continue; } var sp = xs[c2 + 1] - xs[c2], aw = Math.min(52, sp * 0.8), xm = (xs[c2] + xs[c2 + 1]) / 2, x1 = xm - aw / 2; d += ' H' + x1 + ' C' + (x1 + aw / 2) + ' ' + ya0 + ' ' + (x1 + aw / 2) + ' ' + yb0 + ' ' + (x1 + aw) + ' ' + yb0 + ' H' + xs[c2 + 1]; } d += ' H248'; $('rv' + v2).setAttribute('d', d); }
+      for (var v2 = 0; v2 < NL; v2++) { $('rv' + v2).setAttribute('stroke', 'url(#' + gids[v2] + ')'); $('rv' + v2).setAttribute('pathLength', 1); $('rv' + v2).setAttribute('stroke-dasharray', 1); var d = 'M52 ' + vy[v2][0] + ' H' + xs[0]; for (var c2 = 0; c2 < nC - 1; c2++) { var ya0 = vy[v2][c2], yb0 = vy[v2][c2 + 1]; if (Math.abs(ya0 - yb0) < 0.5) { d += ' H' + xs[c2 + 1]; continue; } var sp = xs[c2 + 1] - xs[c2], aw = Math.min(52, sp * 0.8), xm = (xs[c2] + xs[c2 + 1]) / 2, x1 = xm - aw / 2; d += ' H' + x1 + ' C' + (x1 + aw / 2) + ' ' + ya0 + ' ' + (x1 + aw / 2) + ' ' + yb0 + ' ' + (x1 + aw) + ' ' + yb0 + ' H' + xs[c2 + 1]; } d += ' H248'; $('rv' + v2).setAttribute('d', d); }
     }
     // 当前的和弦（最近一次出现的那个），以及它和上一个之间的颜色渐变
     function evAt(t) { var e = -1; for (var k = 0; k < PL.events.length; k++) if (PL.events[k].t <= t + 0.02) e = k; return e; }
@@ -151,7 +157,7 @@ window.HXSplash = (function () {
       [1, 2].forEach(function (si) { K.l1[si].fill = '#8e8a80'; K.l2[si].fill = accNow; K.l3[si].fill = ltNow; K.gl1[si].fill = accNow; K.gl2[si].fill = ltNow; });
       K.gl1[1].x = 55 + 49 * 2; K.gl1[2].x = 55 + 49 * 2 + 21.5 - 17;
       if (RD) { // 线这一步里的三个点：位置就在这个和弦在三条线上的位置，颜色是这个和弦的颜色
-        var cx = xs[ev.j]; ['l1', 'l2', 'l3'].forEach(function (id, w) { var o = K[id][3]; o.x = cx - 13; o.y = vy[w][ev.j] - 13; o.w = 26; o.h = 26; o.rx = 13; o.fill = accNow; o.o = 1; });
+        var cx = xs[ev.j]; ['l1', 'l2', 'l3'].forEach(function (id, w) { var o = K[id][3]; o.x = cx - 13; o.y = vy[w][ev.j] - 13; o.w = 26; o.h = 26; o.rx = 13; o.fill = roleCol(w, ev.j); o.o = 1; });
         K.gl1[3] = { x: cx - 22, y: vy[2][ev.j] - 22, w: 44, h: 44, rx: 22, fill: accNow, o: 0.8 }; K.gl2[3] = { x: cx - 15, y: vy[0][ev.j] - 15, w: 30, h: 30, rx: 15, fill: accNow, o: 0.7 };
       }
     }
@@ -167,15 +173,15 @@ window.HXSplash = (function () {
       var kf = PL.kf, psn = kf[kf.length - 1][1]; for (var q = 1; q < kf.length; q++) if (t <= kf[q][0]) { var A0 = kf[q - 1], B0 = kf[q]; psn = B0[0] === A0[0] ? B0[1] : A0[1] + (B0[1] - A0[1]) * (t - A0[0]) / (B0[0] - A0[0]); break; }
       var alL = RD ? clampN(psn - 2, 0, 1) : 0, al = RD ? clampN((psn - 2.85) / 0.15, 0, 1) : 0;
       if (al > 0) ['w1', 'w2', 'w3', 'w4', 'l1', 'l2', 'l3', 'gl1', 'gl2', 'halo1', 'halo2'].forEach(function (id) { var n = $(id); n.setAttribute('opacity', parseFloat(n.getAttribute('opacity') || 0) * (1 - al)); });
-      for (var v = 0; v < 3; v++) { $('rv' + v).setAttribute('opacity', alL > 0 && v < NL ? 1 : 0); $('rv' + v).setAttribute('stroke-dashoffset', 1 - alL); $('rh' + v).setAttribute('opacity', 0); $('rt' + v).setAttribute('opacity', 0); }
+      for (var v = 0; v < 4; v++) { $('rv' + v).setAttribute('opacity', alL > 0 && v < NL ? 1 : 0); $('rv' + v).setAttribute('stroke-dashoffset', 1 - alL); $('rh' + v).setAttribute('opacity', 0); $('rt' + v).setAttribute('opacity', 0); }
       if (!RD || al <= 0) return;
       var nx = PL.events[e + 1], a = cj, b = cj, u = 0, pulse = ev.scene === 'line' ? Math.exp(-6 * Math.max(0, t - ev.t)) : 0;
       if (nx && nx.scene === 'line' && ev.scene === 'line') { b = nx.j; var ivE = nx.t - ev.t; u = clampN((t - (ev.t + 0.4 * ivE)) / (0.6 * ivE), 0, 1); }
       var eu = ease(u);
-      for (var w = 0; w < 3; w++) {
+      for (var w = 0; w < 4; w++) {
         var ya = vy[w][a], yb = vy[w][b], x = xs[a] + (xs[b] - xs[a]) * eu, y = ya;
         if (a !== b) { var spn = Math.abs(xs[b] - xs[a]), aw2 = Math.min(52, spn * 0.8), xmm = (xs[a] + xs[b]) / 2, k0 = clampN((x - (xmm - aw2 / 2)) / aw2, 0, 1); if (xs[b] < xs[a]) k0 = clampN(((xmm + aw2 / 2) - x) / aw2, 0, 1); y = ya + (yb - ya) * (k0 * k0 * (3 - 2 * k0)); }
-        if (w >= NL) continue; var hh = $('rh' + w), tt = $('rt' + w); hh.setAttribute('cx', x); hh.setAttribute('cy', y); hh.setAttribute('r', 34 * (1 + 0.5 * pulse)); hh.setAttribute('opacity', al * (0.8 + 0.2 * pulse)); tt.setAttribute('cx', x); tt.setAttribute('cy', y); tt.setAttribute('fill', mixHex(pre.acc[a], pre.acc[b], eu)); tt.setAttribute('opacity', al);
+        if (w >= NL) continue; var hh = $('rh' + w), tt = $('rt' + w); hh.setAttribute('cx', x); hh.setAttribute('cy', y); hh.setAttribute('r', 34 * (1 + 0.5 * pulse)); hh.setAttribute('opacity', al * (0.8 + 0.2 * pulse)); tt.setAttribute('cx', x); tt.setAttribute('cy', y); tt.setAttribute('fill', mixHex(roleCol(w, a), roleCol(w, b), eu)); tt.setAttribute('opacity', al * (LS === 'degree' && pre.roles[cj][w] === undefined ? 0.35 : 1));
       }
     }
     var t0 = performance.now(), raf = 0, stopped = false, endT = pre ? PL.end : 5.6, lastSeg = SEG[SEG.length - 1][1];
