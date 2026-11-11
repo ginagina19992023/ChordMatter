@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 162; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 163; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -4274,7 +4274,7 @@
   // ---------------- 开机动画制作器 ----------------
   // 把一串和弦（或单个音）按速度、间隔排成时间线：键盘上的键按和弦的颜色亮起、起涟漪，背景随和弦换色，同时发声
   const SplashMk = (() => {
-    const DEF = { seq: 'C G Am F', bpm: 84, beats: 2, gap: 0, style: 'block', order: 'dot,color,line', oct: 0 };
+    const DEF = { seq: 'C G Am F', bpm: 84, beats: 2, gap: 0, style: 'block', order: 'dot,color,line', oct: 0, lines: 'voices' };
     const cfg = () => Object.assign({}, DEF, S.splashCfg || {});
     const NOTE = /^([A-Ga-g])([#b]?)([1-5])$/, // 只把 C1–B5 当单个音；G7、C6 这种当和弦（G 属七、C 六和弦）
        PCQ = ['', 'm', '7', 'maj7', 'm7', 'dim7', 'sus4', 'aug', 'dim', 'm7b5', '', 'm'];
@@ -4331,6 +4331,7 @@
         <div class="mkrow"><b>和弦</b><input id="spseq" class="inp" value="${esc(c.seq)}" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="C Am7 G/B，单个音 C4（八度 1–5）"></div>
         ${row('预设', presets.map(([v, n]) => `<button class="chip sm" data-act="spmk-set" data-k="seq" data-v="${v}">${n}</button>`).join('') + '<select id="spsong" class="chip sm"><option value="">从曲目导入…</option>' + allSongs().filter(s => s.sections.length).map(s => `<option value="${s.id}">${esc(s.title)}</option>`).join('') + '</select>')}
         ${row('顺序', [['dot,color,line', '点→色→线'], ['dot,line,color', '点→线→色'], ['color,dot,line', '色→点→线'], ['color,line,dot', '色→线→点'], ['line,dot,color', '线→点→色'], ['line,color,dot', '线→色→点'], ['dot,color', '点→色'], ['color,line', '色→线'], ['dot,line', '点→线']].map(([v, n]) => chip('order', v, n)).join(''))}
+        ${row('线', [['voices', '三声部'], ['default', '像默认'], ['single', '单线']].map(([v, n]) => chip('lines', v, n)).join(''))}
         ${row('音高', [[-2, '−2 八度'], [-1, '−1 八度'], [0, '原位'], [1, '+1 八度'], [2, '+2 八度']].map(([v, n]) => chip('oct', v, n)).join(''))}
         <div class="mkrow"><b>速度 <small id="spbpmv">${c.bpm}</small></b><input id="spbpm" type="range" min="40" max="160" step="2" value="${c.bpm}"></div>
         ${row('每个', chip('beats', 1, '1 拍') + chip('beats', 2, '2 拍') + chip('beats', 4, '4 拍') + '<span class="mksep"></span>' + chip('gap', 0, '连着') + chip('gap', 0.5, '间隔半拍') + chip('gap', 1, '间隔 1 拍'))}
