@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 160; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 162; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -4289,9 +4289,9 @@
     // 动画需要的数据：每个和弦的名字、感觉色、三条声部线（最低 / 中间 / 最高音）、全部的音
     function withPre(c) {
       const it = parse(c.seq); if (!it.length) { const o = Object.assign({}, c); delete o.pre; return o; }
-      // 声部连接：每个和弦整体挪八度，让它离上一个和弦最近（不然高低差一个八度，三条线会被压到同一个高度，看起来像只有一个音）
-      let prevMean = null;
-      it.forEach(x => { const mean = x.midis.reduce((p, q) => p + q, 0) / x.midis.length; if (prevMean != null) { const k = Math.round((prevMean - mean) / 12); if (k) x.midis = x.midis.map(m => m + 12 * k); } prevMean = x.midis.reduce((p, q) => p + q, 0) / x.midis.length; });
+      // 声部连接：每个和弦整体挪八度，让它离第一个和弦最近（不然高低差一个八度，三条线会被压到同一个高度，看起来像只有一个音）
+      let refMean = null; // 以第一个和弦为准，其余的挪到离它最近的八度：线的高低起伏不会越走越偏
+      it.forEach(x => { const mean = x.midis.reduce((p, q) => p + q, 0) / x.midis.length; if (refMean == null) refMean = mean; else { const k = Math.round((refMean - mean) / 12); if (k) x.midis = x.midis.map(m => m + 12 * k); } });
       if (c.oct) it.forEach(x => { x.midis = x.midis.map(m => m + 12 * c.oct); }); // 整体升 / 降八度
       const v3 = ms => { const n = ms.length; return n >= 3 ? [ms[0], ms[Math.floor(n / 2)], ms[n - 1]] : n === 2 ? [ms[0], ms[1], ms[1]] : [ms[0], ms[0], ms[0]]; };
       return Object.assign({}, c, { pre: { labels: it.map(x => x.label), acc: it.map(x => x.h[5]), voices: it.map(x => v3(x.midis)), midis: it.map(x => x.midis) } });

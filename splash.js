@@ -133,7 +133,7 @@ window.HXSplash = (function () {
       var stops = [[0, pre.acc[0]]]; xs.forEach(function (x, j) { stops.push([(x - 52) / 196, pre.acc[j]]); }); stops.push([1, pre.acc[nC - 1]]);
       stops.forEach(function (st) { var e = document.createElementNS(NS, 'stop'); e.setAttribute('offset', st[0]); e.setAttribute('stop-color', st[1]); lg.appendChild(e); });
       root.querySelector('defs').appendChild(lg);
-      for (var v2 = 0; v2 < 3; v2++) { $('rv' + v2).setAttribute('stroke', 'url(#' + gid + ')'); $('rv' + v2).setAttribute('pathLength', 1); $('rv' + v2).setAttribute('stroke-dasharray', 1); var d = 'M52 ' + vy[v2][0] + ' H' + xs[0]; for (var c2 = 0; c2 < nC - 1; c2++) { var xm = (xs[c2] + xs[c2 + 1]) / 2; d += ' C' + xm + ' ' + vy[v2][c2] + ' ' + xm + ' ' + vy[v2][c2 + 1] + ' ' + xs[c2 + 1] + ' ' + vy[v2][c2 + 1]; } d += ' H248'; $('rv' + v2).setAttribute('d', d); }
+      for (var v2 = 0; v2 < 3; v2++) { $('rv' + v2).setAttribute('stroke', 'url(#' + gid + ')'); $('rv' + v2).setAttribute('pathLength', 1); $('rv' + v2).setAttribute('stroke-dasharray', 1); var d = 'M52 ' + vy[v2][0] + ' H' + xs[0]; for (var c2 = 0; c2 < nC - 1; c2++) { var ya0 = vy[v2][c2], yb0 = vy[v2][c2 + 1]; if (Math.abs(ya0 - yb0) < 0.5) { d += ' H' + xs[c2 + 1]; continue; } var sp = xs[c2 + 1] - xs[c2], aw = Math.min(52, sp * 0.8), xm = (xs[c2] + xs[c2 + 1]) / 2, x1 = xm - aw / 2; d += ' H' + x1 + ' C' + (x1 + aw / 2) + ' ' + ya0 + ' ' + (x1 + aw / 2) + ' ' + yb0 + ' ' + (x1 + aw) + ' ' + yb0 + ' H' + xs[c2 + 1]; } d += ' H248'; $('rv' + v2).setAttribute('d', d); }
     }
     // 当前的和弦（最近一次出现的那个），以及它和上一个之间的颜色渐变
     function evAt(t) { var e = -1; for (var k = 0; k < PL.events.length; k++) if (PL.events[k].t <= t + 0.02) e = k; return e; }
@@ -164,9 +164,10 @@ window.HXSplash = (function () {
       if (!RD || al <= 0) return;
       var nx = PL.events[e + 1], a = cj, b = cj, u = 0, pulse = ev.scene === 'line' ? Math.exp(-6 * Math.max(0, t - ev.t)) : 0;
       if (nx && nx.scene === 'line' && ev.scene === 'line') { b = nx.j; var ivE = nx.t - ev.t; u = clampN((t - (ev.t + 0.4 * ivE)) / (0.6 * ivE), 0, 1); }
-      var eu = ease(u), xm2 = (xs[a] + xs[b]) / 2;
+      var eu = ease(u);
       for (var w = 0; w < 3; w++) {
-        var ya = vy[w][a], yb = vy[w][b], m1 = 1 - eu, x = m1 * m1 * m1 * xs[a] + 3 * m1 * m1 * eu * xm2 + 3 * m1 * eu * eu * xm2 + eu * eu * eu * xs[b], y = m1 * m1 * m1 * ya + 3 * m1 * m1 * eu * ya + 3 * m1 * eu * eu * yb + eu * eu * eu * yb;
+        var ya = vy[w][a], yb = vy[w][b], x = xs[a] + (xs[b] - xs[a]) * eu, y = ya;
+        if (a !== b) { var spn = Math.abs(xs[b] - xs[a]), aw2 = Math.min(52, spn * 0.8), xmm = (xs[a] + xs[b]) / 2, k0 = clampN((x - (xmm - aw2 / 2)) / aw2, 0, 1); if (xs[b] < xs[a]) k0 = clampN(((xmm + aw2 / 2) - x) / aw2, 0, 1); y = ya + (yb - ya) * (k0 * k0 * (3 - 2 * k0)); }
         var hh = $('rh' + w), tt = $('rt' + w); hh.setAttribute('cx', x); hh.setAttribute('cy', y); hh.setAttribute('r', 34 * (1 + 0.5 * pulse)); hh.setAttribute('opacity', al * (0.8 + 0.2 * pulse)); tt.setAttribute('cx', x); tt.setAttribute('cy', y); tt.setAttribute('fill', mixHex(pre.acc[a], pre.acc[b], eu)); tt.setAttribute('opacity', al);
       }
     }
