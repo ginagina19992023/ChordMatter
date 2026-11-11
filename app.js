@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 158; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 159; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -4274,7 +4274,7 @@
   // ---------------- 开机动画制作器 ----------------
   // 把一串和弦（或单个音）按速度、间隔排成时间线：键盘上的键按和弦的颜色亮起、起涟漪，背景随和弦换色，同时发声
   const SplashMk = (() => {
-    const DEF = { seq: 'C G Am F', bpm: 84, beats: 2, gap: 0, style: 'block', order: 'dot,color,line' };
+    const DEF = { seq: 'C G Am F', bpm: 84, beats: 2, gap: 0, style: 'block', order: 'dot,color,line', oct: 0 };
     const cfg = () => Object.assign({}, DEF, S.splashCfg || {});
     const NOTE = /^([A-Ga-g])([#b]?)([1-5])$/, // 只把 C1–B5 当单个音；G7、C6 这种当和弦（G 属七、C 六和弦）
        PCQ = ['', 'm', '7', 'maj7', 'm7', 'dim7', 'sus4', 'aug', 'dim', 'm7b5', '', 'm'];
@@ -4292,6 +4292,7 @@
       // 声部连接：每个和弦整体挪八度，让它离上一个和弦最近（不然高低差一个八度，三条线会被压到同一个高度，看起来像只有一个音）
       let prevMean = null;
       it.forEach(x => { const mean = x.midis.reduce((p, q) => p + q, 0) / x.midis.length; if (prevMean != null) { const k = Math.round((prevMean - mean) / 12); if (k) x.midis = x.midis.map(m => m + 12 * k); } prevMean = x.midis.reduce((p, q) => p + q, 0) / x.midis.length; });
+      if (c.oct) it.forEach(x => { x.midis = x.midis.map(m => m + 12 * c.oct); }); // 整体升 / 降八度
       const v3 = ms => { const n = ms.length; return n >= 3 ? [ms[0], ms[Math.floor(n / 2)], ms[n - 1]] : n === 2 ? [ms[0], ms[1], ms[1]] : [ms[0], ms[0], ms[0]]; };
       return Object.assign({}, c, { pre: { labels: it.map(x => x.label), acc: it.map(x => x.h[5]), voices: it.map(x => v3(x.midis)), midis: it.map(x => x.midis) } });
     }
@@ -4334,6 +4335,7 @@
       <h3 class="h3">三种语言的顺序 <small>· 点 = 圆点指示要弹的键 · 色 = 键按和弦色亮起 · 线 = 升降线</small></h3>
       <div class="chips scroll">${[['dot,color,line', '点 → 色 → 线'], ['dot,line,color', '点 → 线 → 色'], ['color,dot,line', '色 → 点 → 线'], ['color,line,dot', '色 → 线 → 点'], ['line,dot,color', '线 → 点 → 色'], ['line,color,dot', '线 → 色 → 点'], ['dot,color', '只有 点 → 色'], ['color,line', '只有 色 → 线'], ['dot,line', '只有 点 → 线']].map(([v, n]) => chip('order', v, n)).join('')}</div>
       <p class="fine">任意两种之间的变换，都是沿着「点 — 色 — 圆点 — 线」这条链一步一步变形；和弦按顺序分给各个语言去演出。</p>
+      <h3 class="h3">整体音高</h3><div class="chips scroll">${chip('oct', -2, '降两个八度')}${chip('oct', -1, '降一个八度')}${chip('oct', 0, '原位')}${chip('oct', 1, '升一个八度')}${chip('oct', 2, '升两个八度')}</div>
       <h3 class="h3">速度 <small id="spbpmv">${c.bpm} 拍/分</small></h3>
       <input id="spbpm" type="range" min="40" max="160" step="2" value="${c.bpm}" style="width:100%">
       <h3 class="h3">每个和弦占几拍</h3><div class="chips">${chip('beats', 1, '1 拍')}${chip('beats', 2, '2 拍')}${chip('beats', 4, '4 拍')}</div>
