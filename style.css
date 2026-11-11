@@ -1511,3 +1511,22 @@ body.land .deskcal { top: 0; }
 
 #splash .spcustom .spcv { width: 100%; height: 100%; }
 .inp { width: 100%; box-sizing: border-box; padding: 11px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--ink); font-size: 16px; margin: 4px 0 8px; }
+/* 制作器：压缩到一屏 */
+.mktop { margin-bottom: 8px; gap: 8px; align-items: center; }
+.mktop h1 { font-size: 22px; margin: 0; display: inline; }
+.mktop .back { margin-right: 6px; }
+.mktop .btn.sm, .mktop .ghost.sm { padding: 8px 12px; font-size: 14px; white-space: nowrap; }
+.spstage { aspect-ratio: auto; height: min(34vh, 300px); margin: 0 0 8px; }
+.mk .mkrow { display: flex; align-items: center; gap: 8px; margin: 0 0 7px; min-height: 36px; }
+.mk .mkrow > b { flex: none; width: 3.2em; font-size: 12px; font-weight: 500; color: var(--mute); }
+.mk .mkrow .chips { flex: 1; min-width: 0; margin: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.mk .mkrow .chips::-webkit-scrollbar { display: none; }
+.mk .chip.sm { flex: none; padding: 6px 11px; font-size: 13px; white-space: nowrap; }
+.mk select.chip { max-width: 9.5em; }
+.mk .mkrow .inp { margin: 0; padding: 8px 10px; font-size: 15px; flex: 1; min-width: 0; }
+.mk input[type=range] { flex: 1; min-width: 0; }
+.mk .mksep { flex: none; width: 6px; }
+.mk .mkrow small { font-weight: 400; }
+.mkhelp { font-size: 12px; color: var(--mute); }
+.mkhelp summary { cursor: pointer; padding: 2px 0; }
+.spstage { border: 1px solid var(--line); box-sizing: border-box; }

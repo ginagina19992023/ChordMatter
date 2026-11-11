@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 159; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 160; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -4322,26 +4322,21 @@
     return { DEF, cfg, withPre, set: p => { S.splashCfg = withPre(Object.assign(cfg(), p)); save(); }, parse, preview, still, splash, stopPreview: () => { if (pv) pv.stop(); pv = null; } };
   })();
   function vSplashMk() {
-    const c = SplashMk.cfg(), chip = (k, v, n) => `<button class="chip${String(c[k]) === String(v) ? ' on' : ''}" data-act="spmk-set" data-k="${k}" data-v="${v}">${n}</button>`;
-    const presets = [['C G Am F', '1 5 6 4'], ['F G Em Am', '4 5 3 6'], ['Am F C G', '6 4 1 5'], ['Dm7 G7 Cmaj7', '2–5–1'], ['C E G C5 E5 G5', '琶音音符']];
-    view.innerHTML = `<header class="top"><div><a class="back" href="#set">←</a><small>设置 · 开机动画</small><h1>制作开机动画</h1></div></header>
+    const c = SplashMk.cfg(), chip = (k, v, n) => `<button class="chip sm${String(c[k]) === String(v) ? ' on' : ''}" data-act="spmk-set" data-k="${k}" data-v="${v}">${n}</button>`;
+    const presets = [['C G Am F', '1564'], ['F G Em Am', '4536'], ['Am F C G', '6415'], ['Dm7 G7 Cmaj7', '2–5–1'], ['C E G C5 E5 G5', '琶音']];
+    const row = (lab, inner) => `<div class="mkrow"><b>${lab}</b><div class="chips scroll">${inner}</div></div>`;
+    view.innerHTML = `<header class="top mktop"><div><a class="back" href="#set">←</a><h1>制作开机动画</h1></div><button class="btn sm" data-act="spmk-play">▶ 预览</button><button class="ghost sm" data-act="spmk-use">用作开机动画</button></header>
       <div class="spstage" id="spstage"></div>
-      <div class="row"><button class="btn" data-act="spmk-play">▶ 预览（有声音）</button><button class="ghost" data-act="spmk-use">用作我的开机动画</button></div>
-      <h3 class="h3">和弦 / 音</h3>
-      <input id="spseq" class="inp" value="${esc(c.seq)}" autocapitalize="off" autocomplete="off" spellcheck="false">
-      <p class="fine">用空格隔开：和弦写 C、Am7、G/B，单个音写 C4、E4（八度 1–5）；G7、C6 这种带数字的是和弦。最多 16 个。</p>
-      <div class="chips scroll">${presets.map(([v, n]) => `<button class="chip" data-act="spmk-set" data-k="seq" data-v="${v}">${n}</button>`).join('')}</div>
-      <select id="spsong" class="inp"><option value="">从曲目导入前 8 个和弦……</option>${allSongs().filter(s => s.sections.length).map(s => `<option value="${s.id}">${esc(s.title)}</option>`).join('')}</select>
-      <h3 class="h3">三种语言的顺序 <small>· 点 = 圆点指示要弹的键 · 色 = 键按和弦色亮起 · 线 = 升降线</small></h3>
-      <div class="chips scroll">${[['dot,color,line', '点 → 色 → 线'], ['dot,line,color', '点 → 线 → 色'], ['color,dot,line', '色 → 点 → 线'], ['color,line,dot', '色 → 线 → 点'], ['line,dot,color', '线 → 点 → 色'], ['line,color,dot', '线 → 色 → 点'], ['dot,color', '只有 点 → 色'], ['color,line', '只有 色 → 线'], ['dot,line', '只有 点 → 线']].map(([v, n]) => chip('order', v, n)).join('')}</div>
-      <p class="fine">任意两种之间的变换，都是沿着「点 — 色 — 圆点 — 线」这条链一步一步变形；和弦按顺序分给各个语言去演出。</p>
-      <h3 class="h3">整体音高</h3><div class="chips scroll">${chip('oct', -2, '降两个八度')}${chip('oct', -1, '降一个八度')}${chip('oct', 0, '原位')}${chip('oct', 1, '升一个八度')}${chip('oct', 2, '升两个八度')}</div>
-      <h3 class="h3">速度 <small id="spbpmv">${c.bpm} 拍/分</small></h3>
-      <input id="spbpm" type="range" min="40" max="160" step="2" value="${c.bpm}" style="width:100%">
-      <h3 class="h3">每个和弦占几拍</h3><div class="chips">${chip('beats', 1, '1 拍')}${chip('beats', 2, '2 拍')}${chip('beats', 4, '4 拍')}</div>
-      <h3 class="h3">和弦之间的间隔</h3><div class="chips">${chip('gap', 0, '连着')}${chip('gap', 0.5, '半拍')}${chip('gap', 1, '1 拍')}</div>
-      <h3 class="h3">弹法</h3><div class="chips">${chip('style', 'block', '同时按下')}${chip('style', 'arp', '琶音（一个一个）')}</div>
-      <p class="fine">做好后点「用作我的开机动画」，并在设置里选「我做的动画」。动画还是原来那一套：白色键盘和下面的橙点 → 键变成第一个和弦的颜色 → 变成圆点 → 圆点沿着三条线，一个和弦一个和弦地升降过去（线的高低就是各个音的高低）。声音和画面用同一条时间线。</p>`;
+      <div class="mk">
+        <div class="mkrow"><b>和弦</b><input id="spseq" class="inp" value="${esc(c.seq)}" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="C Am7 G/B，单个音 C4（八度 1–5）"></div>
+        ${row('预设', presets.map(([v, n]) => `<button class="chip sm" data-act="spmk-set" data-k="seq" data-v="${v}">${n}</button>`).join('') + '<select id="spsong" class="chip sm"><option value="">从曲目导入…</option>' + allSongs().filter(s => s.sections.length).map(s => `<option value="${s.id}">${esc(s.title)}</option>`).join('') + '</select>')}
+        ${row('顺序', [['dot,color,line', '点→色→线'], ['dot,line,color', '点→线→色'], ['color,dot,line', '色→点→线'], ['color,line,dot', '色→线→点'], ['line,dot,color', '线→点→色'], ['line,color,dot', '线→色→点'], ['dot,color', '点→色'], ['color,line', '色→线'], ['dot,line', '点→线']].map(([v, n]) => chip('order', v, n)).join(''))}
+        ${row('音高', [[-2, '−2 八度'], [-1, '−1 八度'], [0, '原位'], [1, '+1 八度'], [2, '+2 八度']].map(([v, n]) => chip('oct', v, n)).join(''))}
+        <div class="mkrow"><b>速度 <small id="spbpmv">${c.bpm}</small></b><input id="spbpm" type="range" min="40" max="160" step="2" value="${c.bpm}"></div>
+        ${row('每个', chip('beats', 1, '1 拍') + chip('beats', 2, '2 拍') + chip('beats', 4, '4 拍') + '<span class="mksep"></span>' + chip('gap', 0, '连着') + chip('gap', 0.5, '间隔半拍') + chip('gap', 1, '间隔 1 拍'))}
+        ${row('弹法', chip('style', 'block', '同时按下') + chip('style', 'arp', '琶音'))}
+        <details class="mkhelp"><summary>说明</summary><p class="fine">点 = 圆点指示要弹的键；色 = 键按和弦色亮起；线 = 用升降线呈现和弦。任意两种之间的变换，是沿「点 — 色 — 圆点 — 线」这条链一步一步变形。和弦按顺序分给各个语言去演出。写 G7、C6 这种带数字的是和弦。做好后点「用作开机动画」，并在设置里选「我做的动画」。</p></details>
+      </div>`;
     SplashMk.still($('#spstage'));
     $('#spseq').onchange = e => { SplashMk.set({ seq: e.target.value }); vSplashMk(); };
     $('#spbpm').oninput = e => { $('#spbpmv').textContent = e.target.value + ' 拍/分'; };
