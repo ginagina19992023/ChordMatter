@@ -124,8 +124,9 @@ window.HXSplash = (function () {
 
     var base = [204, 150, 96], clampN = function (v, a, b) { return Math.max(a, Math.min(b, v)); };
     var nC = pre ? pre.voices.length : 0, xs = [], vy = [[], [], []], RD = pre && nC > 0;
+    var YS = 6; if (pre) { var mxd = 1; pre.voices.forEach(function (vc) { vc.forEach(function (m, i) { mxd = Math.max(mxd, Math.abs(m - pre.voices[0][i])); }); }); YS = Math.min(6, 70 / mxd); }
     if (RD) {
-      for (var ci = 0; ci < nC; ci++) { xs.push(nC > 1 ? 92 + ci * (148 / (nC - 1)) : 150); for (var vv = 0; vv < 3; vv++) vy[vv].push(clampN(base[vv] - (pre.voices[ci][vv] - pre.voices[0][vv]) * 6, 62, 264)); }
+      for (var ci = 0; ci < nC; ci++) { xs.push(nC > 1 ? 92 + ci * (148 / (nC - 1)) : 150); for (var vv = 0; vv < 3; vv++) vy[vv].push(clampN(base[vv] - (pre.voices[ci][vv] - pre.voices[0][vv]) * YS, 62, 264)); }
       // 线的颜色：沿着线，每个和弦的位置是这个和弦的颜色，中间渐变；球走到哪，线在那里就是同一个颜色
       var NS = 'http://www.w3.org/2000/svg', gid = 'spg' + Math.floor(Math.random() * 1e6), lg = document.createElementNS(NS, 'linearGradient');
       lg.setAttribute('id', gid); lg.setAttribute('gradientUnits', 'userSpaceOnUse'); lg.setAttribute('x1', 52); lg.setAttribute('x2', 248); lg.setAttribute('y1', 0); lg.setAttribute('y2', 0);
@@ -156,7 +157,7 @@ window.HXSplash = (function () {
     function ride(t) {
       var lab = $('rlab'), e = Math.max(0, evAt(t)), ev = PL.events[e], cj = ev.j;
       lab.textContent = pre.labels[cj]; lab.setAttribute('fill', pre.acc[cj]); lab.setAttribute('opacity', clampN((t - PL.events[0].t + 0.1) / 0.4, 0, 1));
-      var psn = 0, kf = PL.kf; for (var q = 1; q < kf.length; q++) if (t <= kf[q][0]) { var A0 = kf[q - 1], B0 = kf[q]; psn = B0[0] === A0[0] ? B0[1] : A0[1] + (B0[1] - A0[1]) * (t - A0[0]) / (B0[0] - A0[0]); break; }
+      var kf = PL.kf, psn = kf[kf.length - 1][1]; for (var q = 1; q < kf.length; q++) if (t <= kf[q][0]) { var A0 = kf[q - 1], B0 = kf[q]; psn = B0[0] === A0[0] ? B0[1] : A0[1] + (B0[1] - A0[1]) * (t - A0[0]) / (B0[0] - A0[0]); break; }
       var alL = RD ? clampN(psn - 2, 0, 1) : 0, al = RD ? clampN((psn - 2.85) / 0.15, 0, 1) : 0;
       if (al > 0) ['w1', 'w2', 'w3', 'w4', 'l1', 'l2', 'l3', 'gl1', 'gl2', 'halo1', 'halo2'].forEach(function (id) { var n = $(id); n.setAttribute('opacity', parseFloat(n.getAttribute('opacity') || 0) * (1 - al)); });
       for (var v = 0; v < 3; v++) { $('rv' + v).setAttribute('opacity', alL > 0 ? 1 : 0); $('rv' + v).setAttribute('stroke-dashoffset', 1 - alL); $('rh' + v).setAttribute('opacity', 0); $('rt' + v).setAttribute('opacity', 0); }

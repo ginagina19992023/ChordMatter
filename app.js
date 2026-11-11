@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 155; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 157; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -4270,7 +4270,8 @@
   const SplashMk = (() => {
     const DEF = { seq: 'C G Am F', bpm: 84, beats: 2, gap: 0, style: 'block', order: 'dot,color,line' };
     const cfg = () => Object.assign({}, DEF, S.splashCfg || {});
-    const NOTE = /^([A-Ga-g])([#b]?)(-?\d)$/, PCQ = ['', 'm', '7', 'maj7', 'm7', 'dim7', 'sus4', 'aug', 'dim', 'm7b5', '', 'm'];
+    const NOTE = /^([A-Ga-g])([#b]?)([1-5])$/, // 只把 C1–B5 当单个音；G7、C6 这种当和弦（G 属七、C 六和弦）
+       PCQ = ['', 'm', '7', 'maj7', 'm7', 'dim7', 'sus4', 'aug', 'dim', 'm7b5', '', 'm'];
     function parse(seq) {
       return String(seq || '').split(/[\s,，、]+/).filter(Boolean).slice(0, 16).map(tk => {
         const m = NOTE.exec(tk);
@@ -4282,6 +4283,9 @@
     // 动画需要的数据：每个和弦的名字、感觉色、三条声部线（最低 / 中间 / 最高音）、全部的音
     function withPre(c) {
       const it = parse(c.seq); if (!it.length) { const o = Object.assign({}, c); delete o.pre; return o; }
+      // 声部连接：每个和弦整体挪八度，让它离上一个和弦最近（不然高低差一个八度，三条线会被压到同一个高度，看起来像只有一个音）
+      let prevMean = null;
+      it.forEach(x => { const mean = x.midis.reduce((p, q) => p + q, 0) / x.midis.length; if (prevMean != null) { const k = Math.round((prevMean - mean) / 12); if (k) x.midis = x.midis.map(m => m + 12 * k); } prevMean = x.midis.reduce((p, q) => p + q, 0) / x.midis.length; });
       const v3 = ms => { const n = ms.length; return n >= 3 ? [ms[0], ms[Math.floor(n / 2)], ms[n - 1]] : n === 2 ? [ms[0], ms[1], ms[1]] : [ms[0], ms[0], ms[0]]; };
       return Object.assign({}, c, { pre: { labels: it.map(x => x.label), acc: it.map(x => x.h[5]), voices: it.map(x => v3(x.midis)), midis: it.map(x => x.midis) } });
     }
@@ -4318,7 +4322,7 @@
       <div class="row"><button class="btn" data-act="spmk-play">▶ 预览（有声音）</button><button class="ghost" data-act="spmk-use">用作我的开机动画</button></div>
       <h3 class="h3">和弦 / 音</h3>
       <input id="spseq" class="inp" value="${esc(c.seq)}" autocapitalize="off" autocomplete="off" spellcheck="false">
-      <p class="fine">用空格隔开：和弦写 C、Am7、G/B，单个音写 C4、E4。最多 16 个。</p>
+      <p class="fine">用空格隔开：和弦写 C、Am7、G/B，单个音写 C4、E4（八度 1–5）；G7、C6 这种带数字的是和弦。最多 16 个。</p>
       <div class="chips scroll">${presets.map(([v, n]) => `<button class="chip" data-act="spmk-set" data-k="seq" data-v="${v}">${n}</button>`).join('')}</div>
       <select id="spsong" class="inp"><option value="">从曲目导入前 8 个和弦……</option>${allSongs().filter(s => s.sections.length).map(s => `<option value="${s.id}">${esc(s.title)}</option>`).join('')}</select>
       <h3 class="h3">三种语言的顺序 <small>· 点 = 圆点指示要弹的键 · 色 = 键按和弦色亮起 · 线 = 升降线</small></h3>
