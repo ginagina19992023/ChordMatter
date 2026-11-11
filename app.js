@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 157; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 158; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -686,15 +686,20 @@
   let Z = null;
   function vQuiz() {
     const unit = route[1] === 'today' ? null : route[1];
-    Z = { list: buildQuiz(unit), i: 0, right: 0, wrongs: 0, unit, answered: false, retry: new Set() };
+    // 做到一半退出、或者切到别的 App 再回来：接着做，不要重来
+    const sp = S.quizProg;
+    if (sp && sp.day === today() && sp.unit === (unit || '') && Array.isArray(sp.list) && sp.i < sp.list.length && !route[2]) {
+      Z = { list: sp.list, i: sp.i, right: sp.right, wrongs: sp.wrongs, unit, answered: false, retry: new Set(sp.retry || []) };
+    } else { Z = { list: buildQuiz(unit), i: 0, right: 0, wrongs: 0, unit, answered: false, retry: new Set() }; if (route[2] === 'new') try { history.replaceState(null, '', '#quiz-' + route[1]); } catch (e) {} }
     quizStep();
   }
   function quizStep() {
     if (Z.i >= Z.list.length) return quizEnd();
     const q = Z.list[Z.i];
     Z.answered = false;
+    try { S.quizProg = { day: today(), unit: Z.unit || '', list: Z.list, i: Z.i, right: Z.right, wrongs: Z.wrongs, retry: [...Z.retry] }; save(); } catch (e) {}
     const pct = (Z.i / Z.list.length) * 100;
-    view.innerHTML = `<div class="qbar"><a href="#today" class="x">×</a><span class="meter"><i style="width:${pct}%"></i></span><small>${Z.i + 1}/${Z.list.length}</small></div>
+    view.innerHTML = `<div class="qbar"><a href="#today" class="x">×</a><span class="meter"><i style="width:${pct}%"></i></span><small>${Z.i + 1}/${Z.list.length}</small>${Z.i > 0 ? '<a href="#quiz-' + (Z.unit || 'today') + '-new" class="qredo">重来</a>' : ''}</div>
       <section class="quiz">
         <h2>${q.q}</h2>
         ${q.staff ? `<div class="qst">${Staff.html({ bars: [[q.staff]], numerals: false, perRow: 1, hideName: true, exact: true })}</div>` : ''}
@@ -730,6 +735,7 @@
     if (ok && !q.melody && !q.pat) A.init(), q.play && q.play.length && A.chord(Array.isArray(q.play[q.play.length - 1]) ? q.play[q.play.length - 1] : q.play[0], 0, 0.01, 0.9);
   }
   function quizEnd() {
+    delete S.quizProg; save();
     const base = Z.list.length - Z.retry.size;
     if (!Z.unit) completeStep('quiz');
     else S.xp += 10, save();
