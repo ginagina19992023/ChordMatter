@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 182; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 183; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -2810,11 +2810,13 @@
       go(sections.length ? '#song-' + id : '#edit-' + id);
     });
   }
+  const SCORE_PRESET = { alwayson: ['ao1', 'ao2', 'ao3', 'ao4', 'ao5'].map(n => `scores/${n}.jpg`), cityofstars: ['scores/cos1.jpg'], cosrowan: ['cosr1', 'cosr2', 'cosr3'].map(n => `scores/${n}.jpg`) };
   async function mountMyScore(id) {
     const el = $('#myscore'); if (!el) return;
     let pages = await OCR.loadPages(id);
     if (!el.isConnected) return; // 读取期间已经离开这一页
     if ((!pages || !pages.length) && window.HX_PRESEED && HX_PRESEED[id]) pages = HX_PRESEED[id];
+    let preset = false; if ((!pages || !pages.length) && SCORE_PRESET[id]) { pages = SCORE_PRESET[id]; preset = true; } // 网站自带的原谱图（你之前发给我整理的）
     // 一次选多张图 / 多个 PDF：按选的顺序依次读取，接在已有的页后面
     const add = async (files, base) => {
       if (!files.length) return;
@@ -2830,10 +2832,10 @@
       el.querySelector('#addscore').addEventListener('change', e => add([...e.target.files], []));
       return;
     }
-    el.innerHTML = `<div class="myscore">${pages.map(p => `<img src="${p}" alt="原谱">`).join('')}</div><p class="fine">双指放大查看。下面和弦格子里的小数字就是这份谱的小节号。共 ${pages.length} 页。</p>
-      <div class="row"><label class="ghost sm" for="addscore2">再添加几页</label><button class="ghost sm" id="delscore">全部删掉重选</button></div><input type="file" id="addscore2" accept="image/*,application/pdf,.pdf" multiple hidden>`;
-    el.querySelector('#addscore2').addEventListener('change', e => add([...e.target.files], pages));
-    el.querySelector('#delscore').addEventListener('click', async () => { if (!confirm('把这首曲子已经添加的原谱全部删掉？（只删这台手机上的）')) return; await OCR.savePages(id, []); mountMyScore(id); });
+    el.innerHTML = `<div class="myscore">${pages.map(p => `<img src="${p}" alt="原谱">`).join('')}</div><p class="fine">双指放大查看。下面和弦格子里的小数字就是这份谱的小节号。共 ${pages.length} 页${preset ? '（这是之前帮你整理这首时用的原谱）' : ''}。</p>
+      <div class="row"><label class="ghost sm" for="addscore2">${preset ? '换成你自己的图' : '再添加几页'}</label>${preset ? '' : '<button class="ghost sm" id="delscore">全部删掉重选</button>'}</div><input type="file" id="addscore2" accept="image/*,application/pdf,.pdf" multiple hidden>`;
+    el.querySelector('#addscore2').addEventListener('change', e => add([...e.target.files], preset ? [] : pages));
+    const dl = el.querySelector('#delscore'); if (dl) dl.addEventListener('click', async () => { if (!confirm('把这首曲子已经添加的原谱全部删掉？（只删这台手机上的）')) return; await OCR.savePages(id, []); mountMyScore(id); });
   }
 
   // ---------------- 符号入门：一次一个符号 ----------------
