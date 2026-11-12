@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 200; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 201; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -4347,12 +4347,14 @@
         i.onchange = async () => {
           const f = i.files[0]; if (!f) return; toast('正在导入…');
           try {
-            const o = await SongPack.read(f), old = into && S.custom.find(c => c.id === into), id = old ? into : 'imp' + Date.now().toString(36);
-            const song = Object.assign({ tag: '我的', sections: [] }, o.song, old ? { title: old.title, sub: old.sub.replace(/ · 5 页$/, '') + ' · 已导入 MIDI' } : {}, { id, fullStored: o.kern ? 1 : 0 });
+            const o = await SongPack.read(f);
+            if (into && !o.kern) { toast('这个文件里没有音符（是曲目包，不是 MIDI）。请选 .mid 结尾的 MIDI 文件'); return; }
+            const old = into && S.custom.find(c => c.id === into), id = old ? into : 'imp' + Date.now().toString(36);
+            const song = Object.assign({ tag: '我的', sections: [] }, o.song, old ? { title: old.title, sub: old.sub.replace(/ · 5 页.*$/, '') + ' · 已导入 MIDI' } : {}, { id, fullStored: o.kern ? 1 : 0 });
             if (old) S.custom = S.custom.filter(c => c.id !== id);
             if (o.kern) { await IDB.put('kern-' + id, o.kern); window.FULL = window.FULL || {}; FULL[id] = { kern: o.kern, ova: o.ova }; }
             if (o.pages && o.pages.length) { try { await OCR.savePages(id, o.pages); } catch (e) {} }
-            S.custom = S.custom.concat(song); save(); toast('已导入「' + song.title + '」'); go('#song-' + id);
+            S.custom = S.custom.concat(song); save(); toast(o.kern ? '已导入「' + song.title + '」：有完整谱了' : '已导入「' + song.title + '」（只有原图，没有音符）'); go('#song-' + id);
           } catch (e) { toast('导入失败：' + ((e && e.message) || '文件读不了')); }
         };
         i.click(); break;
@@ -4553,6 +4555,7 @@
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
   })();
   window.addEventListener('hashchange', render);
+  (S.custom || []).forEach(c => { if (/已导入 MIDI/.test(c.sub || '') && !c.fullStored) c.sub = c.sub.replace(/ · 已导入 MIDI/, ''); });
   // 导入过的完整谱存在 IndexedDB（太大，不放 localStorage）：打开 App 时读回来
   (async () => { const ids = (S.custom || []).filter(c => c.fullStored && !(window.FULL && FULL[c.id])).map(c => c.id); if (!ids.length) return; window.FULL = window.FULL || {};
     for (const id of ids) { try { const k = await IDB.get('kern-' + id); if (k) FULL[id] = { kern: k }; } catch (e) {} }
