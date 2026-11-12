@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 193; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 194; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -1678,12 +1678,13 @@
     const st = sectionStarts(s);
     return `<div class="sheet">${s.sections.map((sec, i) => si >= 0 && i !== si ? '' : `<div class="stf">${si < 0 ? `<small>${esc(sec.name)}</small>` : ''}${Staff.html({ key: s.key, bars: parseBars(sec.bars), end: i === s.sections.length - 1 || si >= 0, time: i === 0 || si >= 0, start: st[i], hideName: !labOn(), numerals: labOn() })}</div>`).join('')}<p class="fine sheetnote">和声骨架：左手弹低音，右手弹和弦，不是原曲的音。</p></div>`;
   }
-  function songSheetRender(s, si = -1) {
+  let CURV = 'sheet';
+  function songSheetRender(s, si = -1, v = 'sheet') {
     const el = $('#songscore'); if (!el) return;
     const lab = {}; Object.keys(songBarMap(s)).forEach(n => (lab[n] = barLabel(s, +n)));
     const r = secRange(s, si);
     let sc, section = false;
-    if (hasFull(s.id)) sc = { kern: FullScore.build(FULL[s.id].kern, { mode: 'orig', barChords: songBarMap(s), kp, title: '', lyrics: (S.lyrics || {})[s.id], from: r ? r[0] : null, to: r ? r[1] : null }) };
+    if (hasFull(s.id)) sc = { kern: FullScore.build(FULL[s.id].kern, { mode: v === 'cmp' ? 'compare' : v === 'practice' ? 'practice' : 'orig', barChords: songBarMap(s), kp, title: '', lyrics: (S.lyrics || {})[s.id], from: r ? r[0] : null, to: r ? r[1] : null }) };
     else { sc = Object.assign({}, s.orig.score); if (r) { sc.measures = r[0] + '-' + r[1]; section = true; } else section = !sc.made && !!sc.measures; }
     Score.render(el, sc, { section, labels: lab, barAct: true }).then(() => {
       const want = route[2] ? route[2].split('.').map(Number) : [];
@@ -1722,15 +1723,16 @@
     if (route[2]) { const n0 = +route[2].split('.')[0]; const k = st.findIndex((x, i) => n0 >= x && n0 < x + parseBars(s.sections[i].bars).length); if (k >= 0) S.songSec[s.id] = k; S.songTab = 'sheet'; }
     const long = s.sections.flatMap(x => parseBars(x.bars)).length > 12;
     let si = S.songSec[s.id]; if (si == null) si = long && !hasFull(s.id) ? 0 : -1;
-    const tab = S.songTab || 'sheet', v = S.songView || 'sheet';
+    const tab = S.songTab || 'sheet', full = hasFull(s.id), vv = (S.songViewBy || {})[s.id] || (full ? 'cmp' : 'sheet'), v = !full && (vv === 'cmp' || vv === 'practice') ? 'sheet' : vv, scoreV = ['sheet', 'cmp', 'practice'].includes(v); CURV = v;
     RL.maxLv = hasFull(s.id) ? 3 : 2; RL.lvl3name = '两只手全部音符'; if (RL.lvl > RL.maxLv || (RL.lvl === 3 && rollPassed() < 2)) RL.lvl = 1;
     const tabs = `<div class="tabs">${[['sheet', '谱'], ['shape', '结构'], ['play', '练']].map(([k, n]) => `<button class="tab${tab === k ? ' on' : ''}" data-act="songtab" data-v="${k}">${n}</button>`).join('')}</div>`;
     const secChips = v === 'roll' || s.sections.length < 2 ? '' : `<div class="chips scroll secchips"><button class="chip${si < 0 ? ' on' : ''}" data-act="songsec" data-v="-1">全曲</button>${s.sections.map((x, i) => `<button class="chip${si === i ? ' on' : ''}" data-act="songsec" data-v="${i}">${esc(x.name.replace(/\s*[‖:].*$/, ''))}</button>`).join('')}</div>`;
     let body = '';
     if (tab === 'sheet') body = `
-      <div class="chips scroll"><button class="chip${v === 'sheet' ? ' on' : ''}" data-act="songview" data-v="sheet">谱 + 和弦</button><button class="chip${v === 'roll' ? ' on' : ''}" data-act="songview" data-v="roll">瀑布流</button><button class="chip${v === 'grid' ? ' on' : ''}" data-act="songview" data-v="grid">和弦格子</button>${hasFull(s.id) ? `<a class="chip linkchip" href="#cmp-${s.id}">原曲↔和弦 →</a>` : ''}<button class="pill info" data-act="info" data-k="how">ⓘ</button></div>
+      <div class="seg viewseg" role="group" aria-label="看法">${(full ? [['cmp', '三行对照'], ['sheet', '原曲'], ['practice', '练习版'], ['roll', '瀑布流'], ['grid', '和弦格子']] : [['sheet', '谱 + 和弦'], ['roll', '瀑布流'], ['grid', '和弦格子']]).map(([k, t]) => `<button class="${v === k ? 'on' : ''}" data-act="songview" data-v="${k}">${t}</button>`).join('')}</div>
+      <div class="row viewmore">${full ? `<a class="pill" href="#cmp-${s.id}">歌词 →</a>` : ''}<button class="pill info" data-act="info" data-k="how">ⓘ</button></div>
       ${secChips}
-      ${v === 'sheet' && (hasFull(s.id) || (s.orig && s.orig.score)) ? `<div class="row folrow"><button class="btn sm" data-act="folstart" data-song="${s.id}">🎹 跟谱弹 · 全手 · 自动翻页</button><span class="seg folhand" role="group" aria-label="哪只手">${[['B', '双手'], ['R', '右手'], ['L', '左手']].map(([k, t]) => `<button class="${(S.folHand || 'B') === k ? 'on' : ''}" data-act="folhand" data-v="${k}">${t}</button>`).join('')}</span></div>` : ''}
+      ${scoreV && (full || (s.orig && s.orig.score)) ? `<div class="row folrow"><button class="btn sm" data-act="folstart" data-song="${s.id}">🎹 跟谱弹（全屏）</button><span class="seg folhand" role="group" aria-label="哪只手">${[['B', '双手'], ['R', '右手'], ['L', '左手']].map(([k, t]) => `<button class="${(S.folHand || 'B') === k ? 'on' : ''}" data-act="folhand" data-v="${k}">${t}</button>`).join('')}</span></div>` : ''}
       ${route[2] ? `<p class="hitnote">从 <b>${D(route[3] || '')}</b> 和弦页过来：要找的是第 ${route[2].split('.').join('、')} 小节。</p>` : ''}
       ${v === 'grid' ? `${colorSeg()}<div class="seg gmode" role="group" aria-label="格子排法">${[['wrap', '折行'], ['scroll', '横滑']].map(([k, t]) => `<button class="${(S.gridMode || 'wrap') === k ? 'on' : ''}" data-act="gridmode" data-v="${k}">${t}</button>`).join('')}</div><div class="grid" id="grid" data-mode="${S.gridMode || 'wrap'}">${songGrid(s, si)}</div>${(() => { const first = view && si >= 0 ? songFlat({ sections: s.sections.slice(0, si) }).length : 0; if (KL.song !== s.id || KL.sec !== si) { KL.song = s.id; KL.sec = si; KL.i = first; } return klPanel(s); })()}<p class="explain" id="explain">点任意和弦：听声音，并看它是什么意思。</p>` : v === 'roll' ? rollEntry('song', hasFull(s.id) ? '整首按原谱落下：简单只弹和弦，中等加左手低音，困难是原曲两只手' : '整首落下：简单只弹和弦，中等加左手低音') : songSheet(s, si)}`;
     if (tab === 'sheet' && si >= 0) body += logicDetails(s, si);
@@ -1758,7 +1760,7 @@
       ${songTop(s)}${tabs}<section class="songmain">${body}</section>`;
     if (tab !== 'sheet') return;
     if (v === 'roll') {}
-    else if (v === 'sheet' && ((s.orig && s.orig.score) || hasFull(s.id))) songSheetRender(s, si);
+    else if (scoreV && ((s.orig && s.orig.score) || full)) songSheetRender(s, si, v);
     if (route[2] && v === 'grid') {
       const want = route[2].split('.').map(Number); let first = null;
       view.querySelectorAll('#grid .bar').forEach(el => { const n = +el.querySelector('.bn').textContent; if (want.includes(n)) { el.classList.add('hit'); first = first || el; } });
@@ -2682,7 +2684,7 @@
   function playBars(a, b) {
     const s = allSongs().find(x => x.id === route[1]);
     const end = b == null ? 1e9 : b;
-    if (document.querySelector('#songscore svg, #cmpscore svg, #score svg, #twoscore svg')) scorePlay(route[0] === 'cmp' && CMP.mode === 'compare' ? [0, 1] : null, [a, end]);
+    if (document.querySelector('#songscore svg, #cmpscore svg, #score svg, #twoscore svg')) scorePlay((route[0] === 'cmp' && CMP.mode === 'compare') || (route[0] === 'song' && CURV === 'cmp') ? [0, 1] : null, [a, end]);
     else if (s) playSkeleton(s, [a, end]);
     const bt = document.querySelector('.dock .play'); if (bt) { bt.textContent = '■ 停止'; bt.dataset.act = 'dockstop'; }
   }
@@ -2748,7 +2750,7 @@
   function dockPlay() {
     const sc = document.querySelector('#songscore svg, #cmpscore svg, #score svg');
     if (sc) {
-      const staffs = route[0] === 'cmp' && CMP.mode === 'compare' ? [0, 1] : null;
+      const staffs = (route[0] === 'cmp' && CMP.mode === 'compare') || (route[0] === 'song' && CURV === 'cmp') ? [0, 1] : null;
       scorePlay(staffs);
     } else if (route[0] === 'song') { const sg = allSongs().find(x => x.id === route[1]); playChords(sg, songRange(sg)); }
     else return toast('谱面还没加载好');
@@ -2864,66 +2866,63 @@
     });
   }
   const SCORE_PRESET = { alwayson: ['ao1', 'ao2', 'ao3', 'ao4', 'ao5'].map(n => `scores/${n}.jpg`), cityofstars: ['scores/cos1.jpg'], cosrowan: ['cosr1', 'cosr2', 'cosr3'].map(n => `scores/${n}.jpg`), k545: [1, 2, 3, 4].map(n => `scores/k545-${n}.jpg`) };
-  // ---------------- 跟谱弹：五线谱放在那里，你弹到哪里，谱就跟到哪里，自动翻页 ----------------
-  // 有钢琴：用麦克风听；没钢琴：在屏幕下面的键盘上点（任意八度都算）。一次「一下」= 同一时刻要按下的所有音
+  // ---------------- 跟谱弹：全屏。上面是原曲五线谱，弹到哪里谱跟到哪里，自动往下滚 ----------------
+  // 有钢琴：用麦克风听，弹对了往下走；没钢琴：在谱上任意位置点一下 = 「这一下我弹好了」。不放屏幕键盘（音域太窄，跳得远时反而看不清）
   let FOL = null;
-  function folStop() {
+  function folStop(rerender) {
     if (!FOL) return;
     if (FOL.mic && Listen.active()) Listen.stop();
-    document.querySelectorAll('.folnow, .folpast').forEach(g => g.classList.remove('folnow', 'folpast'));
-    const p = document.getElementById('folbar'); if (p) p.remove();
+    const o = document.getElementById('folfs'); if (o) o.remove();
     document.body.classList.remove('following'); FOL = null;
+    if (rerender) render();
   }
   function folStart(s) {
-    const sc = Score.get(), el = $('#songscore');
-    if (!sc || !el || sc.el !== el || !sc.notes.length) return toast('谱还没加载好，等一下再点');
     folStop();
-    const hand = S.folHand || 'B', groups = new Map();
-    sc.notes.forEach(n => { if (hand === 'R' && n.staff !== 0) return; if (hand === 'L' && n.staff === 0) return; const k = Math.round(n.t * 50); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(n); });
-    const steps = [...groups.keys()].sort((x, y) => x - y).map(k => { const ns = groups.get(k); return { ns, pcs: [...new Set(ns.map(n => ((n.pitch % 12) + 12) % 12))], m: ns[0].m, top: ns.reduce((p, q) => (q.pitch > p.pitch ? q : p)) }; });
-    if (!steps.length) return toast('这一段没有可以弹的音');
-    FOL = { s, steps, i: 0, miss: 0, tapped: new Map(), mic: place() === 'piano', el, t0: Date.now() };
-    document.body.classList.add('following');
-    const bar = document.createElement('div'); bar.id = 'folbar'; bar.className = 'folbar';
-    (document.getElementById('phone') || document.body).appendChild(bar);
-    folPanel(); folShow();
-    if (FOL.mic) folMic();
+    const si = (S.songSec || {})[s.id] != null ? S.songSec[s.id] : -1, r = secRange(s, si >= 0 ? si : -1);
+    const o = document.createElement('div'); o.id = 'folfs'; o.className = 'folfs';
+    o.innerHTML = `<div class="folhead"><div class="folt"><b>${esc(s.title)}</b><span id="folstat">正在准备谱面…</span></div><div class="folbtns"><button class="ghost sm" data-act="folmode">${place() === 'piano' ? '🎤 收音' : '👆 点谱'}</button><button class="ghost sm" data-act="folskip">跳过 →</button><button class="ghost sm" data-act="folstop">✕ 退出</button></div></div>
+      <div class="folscroll" id="folscroll"><div class="score" id="folscore"><p class="fine">正在加载谱面…</p></div></div><p class="folhint" id="folhint"></p>`;
+    document.body.appendChild(o); document.body.classList.add('following');
+    FOL = { s, steps: [], i: 0, miss: 0, mic: place() === 'piano', t0: Date.now(), ready: false };
+    let sc, section = false;
+    if (hasFull(s.id)) sc = { kern: FullScore.build(FULL[s.id].kern, { mode: 'orig', barChords: songBarMap(s), kp, title: '', from: r ? r[0] : null, to: r ? r[1] : null }) };
+    else { sc = Object.assign({}, s.orig.score); if (r) { sc.measures = r[0] + '-' + r[1]; section = true; } else section = !sc.made && !!sc.measures; }
+    const el = $('#folscore');
+    Score.render(el, sc, { section }).then(() => {
+      if (!FOL) return;
+      const g = Score.get(), hand = S.folHand || 'B', groups = new Map();
+      g.notes.forEach(n => { if (hand === 'R' && n.staff !== 0) return; if (hand === 'L' && n.staff === 0) return; const k = Math.round(n.t * 50); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(n); });
+      FOL.steps = [...groups.keys()].sort((x, y) => x - y).map(k => { const ns = groups.get(k); return { ns, pcs: [...new Set(ns.map(n => ((n.pitch % 12) + 12) % 12))], m: ns[0].m, top: ns.reduce((p, q) => (q.pitch > p.pitch ? q : p)) }; });
+      FOL.el = el; FOL.ready = true;
+      if (!FOL.steps.length) { $('#folstat').textContent = '这一段没有可以弹的音'; return; }
+      folHint(); folShow(); if (FOL.mic) folMic();
+    }).catch(() => { const st = $('#folstat'); if (st) st.textContent = '谱面加载失败：需要联网'; });
+    $('#folscroll').addEventListener('click', () => { if (FOL && FOL.ready && !FOL.mic) folAdvance(); });
   }
-  function folPanel() {
-    const bar = document.getElementById('folbar'); if (!bar || !FOL) return;
-    const keys = [0, 2, 4, 5, 7, 9, 11].map((pc, i) => `<button class="fk w" data-act="foltap" data-pc="${pc}" style="left:${i * 14.2857}%">${['C', 'D', 'E', 'F', 'G', 'A', 'B'][i]}</button>`).join('') + [[1, 1], [3, 2], [6, 4], [8, 5], [10, 6]].map(([pc, i]) => `<button class="fk b" data-act="foltap" data-pc="${pc}" style="left:${i * 14.2857 - 4.3}%"></button>`).join('');
-    bar.innerHTML = `<div class="folhead"><span id="folstat"></span><span class="folbtns"><button class="ghost sm" data-act="folmode">${FOL.mic ? '🎤 在听 · 换成点键' : '👆 点键 · 换成收音'}</button><button class="ghost sm" data-act="folskip">跳过 →</button><button class="ghost sm" data-act="folstop">退出</button></span></div>
-      ${FOL.mic ? '<p class="fine folhint">对着手机弹谱上亮起来的音（两只手一起）。弹对了，谱会自己往下走、自己翻页。</p>' : `<div class="folkb">${keys}</div><p class="fine folhint">点谱上亮起来的音（任意八度都算；同时要按的几个音，3 秒内点齐就行）。</p>`}`;
-  }
+  function folHint() { const h = $('#folhint'); if (h && FOL) h.textContent = FOL.mic ? '对着手机弹谱上亮起来的音，弹对了自己往下走。' : '弹好亮起来的音以后，点一下谱面任意位置，往下走一下。'; const b = document.querySelector('[data-act="folmode"]'); if (b && FOL) b.textContent = FOL.mic ? '🎤 收音' : '👆 点谱'; }
   function folShow() {
-    if (!FOL) return;
+    if (!FOL || !FOL.el) return;
     const { steps, i, el } = FOL;
     el.querySelectorAll('.folnow').forEach(g => { g.classList.remove('folnow'); g.classList.add('folpast'); });
     const st = steps[i]; if (!st) return;
     let first = null;
     st.ns.forEach(n => { const g = el.querySelector('[data-id="' + n.id + '"]') || el.querySelector('[id="' + n.id + '"]'); if (g) { g.classList.remove('folpast'); g.classList.add('folnow'); if (!first) first = g; } });
-    const stat = document.getElementById('folstat'); if (stat) stat.innerHTML = `第 <b>${st.m || '?'}</b> 小节 · ${i + 1}/${steps.length}${FOL.miss ? ` · 错 ${FOL.miss}` : ''}`;
-    if (first) { const r = first.getBoundingClientRect(), bar = document.getElementById('folbar'), bh = bar ? bar.offsetHeight : 200; if (r.top < 110 || r.bottom > innerHeight - bh - 20) first.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+    const stat = $('#folstat'); if (stat) stat.innerHTML = `第 <b>${st.m || '?'}</b> 小节 · ${i + 1}/${steps.length}${FOL.miss ? ` · 错 ${FOL.miss}` : ''}`;
+    const box = $('#folscroll');
+    if (first && box) { const r = first.getBoundingClientRect(), b = box.getBoundingClientRect(); if (r.top < b.top + b.height * 0.2 || r.bottom > b.top + b.height * 0.6) box.scrollTo({ top: box.scrollTop + r.top - b.top - b.height * 0.32, behavior: 'smooth' }); }
   }
   function folAdvance() {
-    if (!FOL) return; FOL.i++; FOL.tapped.clear();
-    if (FOL.i >= FOL.steps.length) { const sec = Math.round((Date.now() - FOL.t0) / 1000), miss = FOL.miss, n = FOL.steps.length; folStop(); toast(`弹完了！${n} 下，错了 ${miss} 次，用时 ${sec} 秒`); return; }
+    if (!FOL) return; FOL.i++;
+    if (FOL.i >= FOL.steps.length) { const sec = Math.round((Date.now() - FOL.t0) / 1000), miss = FOL.miss, n = FOL.steps.length; folStop(true); toast(`弹完了！${n} 下${miss ? `，没对上 ${miss} 次` : ''}，用时 ${sec} 秒`); return; }
     folShow();
-  }
-  function folTap(pc) {
-    if (!FOL) return; const st = FOL.steps[FOL.i]; if (!st) return;
-    try { A.init(); A.note(60 + pc, 0, 0.5, 0.5); } catch (e) {}
-    const now = Date.now(); FOL.tapped.set(pc, now); [...FOL.tapped].forEach(([p, t]) => { if (now - t > 3000) FOL.tapped.delete(p); });
-    if (!st.pcs.includes(pc)) { FOL.miss++; folShow(); const k = document.querySelector(`.folkb [data-pc="${pc}"]`); if (k) { k.classList.add('bad'); setTimeout(() => k.classList.remove('bad'), 300); } return; }
-    if (st.pcs.every(p => FOL.tapped.has(p))) folAdvance();
   }
   async function folMic() {
     try { A.init(); await Listen.start(A.ctx, ev => {
-      if (!FOL || ev.type !== 'onset') return; const st = FOL.steps[FOL.i]; if (!st) return;
+      if (!FOL || !FOL.ready || ev.type !== 'onset') return; const st = FOL.steps[FOL.i]; if (!st) return;
       const topPc = ((st.top.pitch % 12) + 12) % 12, sc = Listen.matchChord(ev.chroma, st.pcs);
       const ok = st.pcs.length === 1 ? Listen.bestNote(ev.chroma) === st.pcs[0] : (sc >= 0.6 || (Listen.bestNote(ev.chroma) === topPc && sc >= 0.45));
       if (ok) folAdvance();
-    }); } catch (e) { FOL && (FOL.mic = false); toast('用不了麦克风（' + ((e && (e.name || e.message)) || '未知') + '）· 改成在屏幕键盘上点'); folPanel(); folShow(); }
+    }); } catch (e) { if (FOL) { FOL.mic = false; folHint(); } toast('用不了麦克风（' + ((e && (e.name || e.message)) || '未知') + '）· 改成点谱往下走'); }
   }
   async function mountMyScore(id) {
     const el = $('#myscore'); if (!el) return;
@@ -4289,7 +4288,7 @@
       case 'explain': { if ($('#klpanel')) klShow(+el.dataset.i); playChord(el.dataset.s); const s = allSongs().find(x => x.id === route[1]); const ex = $('#explain'); if (ex) ex.innerHTML = barEvidence(s, +el.dataset.n, el.dataset.s) + chordExplain(el.dataset.s, s && s.key); document.querySelectorAll('.cell').forEach(c => c.classList.toggle('sel', c === el)); break; }
       case 'scmode': SC.section = el.dataset.v === '1'; render(); break;
       case 'sglh': SG.lh = el.dataset.v; render(); break;
-      case 'songview': S.songView = el.dataset.v; save(); render(); break;
+      case 'songview': S.songViewBy = S.songViewBy || {}; S.songViewBy[route[1]] = el.dataset.v; save(); render(); break;
       case 'songtab': S.songTab = el.dataset.v; save(); render(); break;
       case 'songsec': S.songSec = S.songSec || {}; S.songSec[route[1]] = +el.dataset.v; save(); render(); break;
       case 'barev': { const s = allSongs().find(x => x.id === route[1]); const r = el.getBoundingClientRect(); if (s) barPop(s, +el.dataset.n, r.left + r.width / 2, r.bottom); break; }
@@ -4332,11 +4331,9 @@
       case 'tninfo': { const box = el.closest('.tnbox') || el.parentElement; const t = box.querySelector('.tnnote, .tninfotxt'); if (t) t.toggleAttribute('hidden'); el.classList.toggle('on'); break; }
       case 'folstart': { const s = allSongs().find(x => x.id === el.dataset.song); if (s) folStart(s); break; }
       case 'folhand': S.folHand = el.dataset.v; save(); el.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === el)); break;
-      case 'foltap': folTap(+el.dataset.pc); break;
-      case 'folskip': if (FOL) folAdvance(); break;
-      case 'folstop': folStop(); break;
-      case 'folmode': if (FOL) { if (FOL.mic && Listen.active()) Listen.stop(); FOL.mic = !FOL.mic; folPanel(); folShow(); if (FOL.mic) folMic(); } break;
-      case 'myshow': { const box = el.closest('#myscore').querySelector('.myimgs'); box.hidden = !box.hidden; el.textContent = box.hidden ? '查看原图' : '收起原图'; break; }
+      case 'folskip': if (FOL && FOL.ready) folAdvance(); break;
+      case 'folstop': folStop(true); break;
+      case 'folmode': if (FOL) { if (FOL.mic && Listen.active()) Listen.stop(); FOL.mic = !FOL.mic; folHint(); if (FOL.mic) folMic(); } break;
       case 'splashsnd': S.splashSnd = el.dataset.v === '1'; save(); vSet(); break;
       case 'splashset': S.splash = el.dataset.v === '1'; save(); vSet(); break;
       case 'splashplay': { sessionStorage.removeItem('hx.splash'); location.href = location.pathname + location.search + location.hash; location.reload(); break; }
