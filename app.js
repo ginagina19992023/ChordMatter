@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 180; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 181; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -2488,13 +2488,25 @@
   const STAB_MAJ = [0, 0.95, 0.6, 0.9, 0.25, 0.5, 0.9, 0.2, 0.85, 0.45, 0.8, 0.85];
   const STAB_MIN = [0, 0.95, 0.6, 0.25, 0.8, 0.5, 0.9, 0.2, 0.45, 0.6, 0.5, 0.85];
   const DEG_MAJ = ['1', '♭2', '2', '♭3', '3', '4', '♯4', '5', '♭6', '6', '♭7', '7'], DEG_MIN = ['1', '♭2', '2', '3', '♯3', '4', '♯4', '5', '6', '♯6', '7', '♯7'];
+  function melodyFromKern(kern, ova, key, bpm) {
+    const ev = FullScore.events(kern, ova), byT = new Map();
+    ev.events.filter(e => e.hand === 'R').forEach(e => { const k = Math.round(e.t * 8); const o = byT.get(k); if (!o || e.midi > o.midi) byT.set(k, e); });
+    const notes = [...byT.values()].sort((x, y) => x.t - y.t);
+    return notes.length ? { notes, key, barStart: ev.barStart, lens: ev.lens, bpm } : null;
+  }
   function songMelody(s) {
     if (typeof FULL === 'undefined' || !FULL[s.id]) return null;
     const key = T.parseKey(s.key); if (!key) return null;
-    const ev = FullScore.events(FULL[s.id].kern, FULL[s.id].ova), byT = new Map();
-    ev.events.filter(e => e.hand === 'R').forEach(e => { const k = Math.round(e.t * 8); const o = byT.get(k); if (!o || e.midi > o.midi) byT.set(k, e); });
-    const notes = [...byT.values()].sort((x, y) => x.t - y.t);
-    return { notes, key, barStart: ev.barStart, lens: ev.lens, bpm: s.bpm || 80 };
+    return melodyFromKern(FULL[s.id].kern, FULL[s.id].ova, key, s.bpm || 80);
+  }
+  // 公有领域的原谱（kern 文件）：联网取回来，取旋律音（右手最高音）
+  const KERN_CACHE = {};
+  async function songMelodyRemote(s) {
+    const src = s.orig && s.orig.score && s.orig.score.src; if (!src || !/\.krn$/.test(src)) return null;
+    const key = T.parseKey(s.key); if (!key) return null;
+    if (!KERN_CACHE[src]) KERN_CACHE[src] = fetch(src).then(r => { if (!r.ok) throw new Error('http'); return r.text(); });
+    const kern = await KERN_CACHE[src], bpmM = /\*MM(\d+)/.exec(kern);
+    return melodyFromKern(kern, null, key, s.bpm || (bpmM ? +bpmM[1] : 90));
   }
   // 把旋律排成「每一拍一个值」：这一拍里响着的旋律音的平均张力
   function melodySeries(M, bars) {
@@ -2512,26 +2524,29 @@
     });
     return out;
   }
+  function tnSetsFromMelody(s, M) {
+    const mk = bars => melodySeries(M, bars).map(p => [p.d, p.t, `第 ${p.bar} 小节 · 旋律音「${p.d}」· ${p.t < 0.3 ? '稳' : p.t < 0.6 ? '有点拉力' : p.t < 0.85 ? '想往下走' : '很紧张 / 调外'}`, tnMix('#7cb8ff', '#ff9a62', p.t), 1, p.midi]);
+    const NOTE = '光点只会上下动：旋律停在越「稳」的音（主音、五音、三音）越靠近线，停在越想往下走的音（二、四、六、七级、调外音）越往下沉。';
+    const all = Object.keys(M.barStart).map(Number).sort((x, y) => x - y), sets = [];
+    const st = sectionStarts(s), secBars = s.sections.map((sec, si) => parseBars(sec.bars).map((_, k) => st[si] + k).filter(n => M.barStart[n] != null));
+    if (s.sections.length > 1 && s.sections.length <= 8) s.sections.forEach((sec, si) => { const c = mk(secBars[si]); if (c.length >= 4) sets.push({ name: sec.name.replace(/\s*[‖:].*$/, '').slice(0, 6), note: NOTE, chords: c }); });
+    if (!sets.length) { const c = mk(all.slice(0, 16)); if (c.length >= 4) sets.push({ name: '开头 16 小节（原速）', note: NOTE + ' 按曲子原本的速度走，可以打开声音一起听。', chords: c }); }
+    const full = mk(all); if (full.length >= 4 && all.length > 16) sets.push({ name: '全曲（快进）', note: '整首曲子快进着看，光点是旋律每一拍的平均张力。', chords: full, fast: 1 });
+    return sets;
+  }
+  function tnMount(host, s, M) {
+    const sets = tnSetsFromMelody(s, M); if (!sets.length) { host.innerHTML = '<p class="fine">这首曲子的旋律音太少，画不出张力。</p>'; return; }
+    host.innerHTML = tnBoxHtml(sets, (60 / M.bpm).toFixed(2)); const b = host.querySelector('.tnbox'); b.dataset.ready = 1; tnInit(b, 0);
+  }
   function tensionArc(s) {
+    const head = '<h3>张力 <small>· 按曲子本身（旋律）算，不是按和弦</small></h3>';
     const M = songMelody(s);
-    if (M) {
-      const st = sectionStarts(s), secBars = s.sections.map((sec, si) => parseBars(sec.bars).map((_, k) => st[si] + k)), all = [].concat(...secBars);
-      const mk = bars => { const ser = melodySeries(M, bars); return ser.map(p => [p.d, p.t, `第 ${p.bar} 小节 · 旋律音「${p.d}」· ${p.t < 0.3 ? '稳' : p.t < 0.6 ? '有点拉力' : p.t < 0.85 ? '想往下走' : '很紧张 / 调外'}`, tnMix('#7cb8ff', '#ff9a62', p.t), 1, p.midi]); };
-      const sets = [];
-      if (s.sections.length > 1 && s.sections.length <= 8) s.sections.forEach((sec, si) => { const c = mk(secBars[si]); if (c.length >= 4) sets.push({ name: sec.name.replace(/\s*[‖:].*$/, '').slice(0, 6), note: '光点只会上下动：旋律停在越「稳」的音（主音、五音、三音）越靠近线，停在越想往下走的音（二、四、六、七级、调外音）越往下沉。', chords: c }); });
-      if (!sets.length) { const c = mk(all.slice(0, 16)); if (c.length >= 4) sets.push({ name: '开头 16 小节（原速）', note: '光点只会上下动：旋律停在越「稳」的音（主音、五音、三音）越靠近线，停在越想往下走的音（二、四、六、七级、调外音）越往下沉。按曲子原本的速度走，可以打开声音一起听。', chords: c }); }
-      const full = mk(all); if (full.length >= 4) sets.push({ name: '全曲（快进）', note: '整首曲子快进着看，光点是旋律每一拍的平均张力。', chords: full, fast: 1 });
-      if (!sets.length) return '';
-      requestAnimationFrame(() => document.querySelectorAll('.tnbox:not([data-ready])').forEach(b => { b.dataset.ready = 1; tnInit(b, 0); }));
-      const spb = 60 / M.bpm;
-      return `<section class="arcbox"><h3>张力 <small>· 按旋律本身算，不是按和弦</small></h3>${tnBoxHtml(sets, spb.toFixed(2))}</section>`;
+    if (M) { requestAnimationFrame(() => { const h = document.getElementById('tnhost'); if (h) tnMount(h, s, M); }); return `<section class="arcbox">${head}<div id="tnhost"></div></section>`; }
+    if (s.orig && s.orig.score && /\.krn$/.test(s.orig.score.src || '')) {
+      requestAnimationFrame(() => { const h = document.getElementById('tnhost'); if (!h) return; songMelodyRemote(s).then(m => { if (document.getElementById('tnhost') === h) m ? tnMount(h, s, m) : (h.innerHTML = '<p class="fine">这首的旋律读取失败。</p>'); }).catch(() => { if (document.getElementById('tnhost') === h) h.innerHTML = '<p class="fine">需要联网读取这首的原谱，才能算旋律的张力。</p>'; }); });
+      return `<section class="arcbox">${head}<div id="tnhost"><p class="fine">正在读取原谱的旋律……</p></div></section>`;
     }
-    // 这首没有旋律音符的数据，只能退回按和弦算
-    const pts = songArcData(s); if (pts.length < 4) return '';
-    const fnName = p => ({ T: '在家附近', S: '离开中', D: '最紧张' }[chordFunc(p.sym, s.key)] || '调外和弦，绕得更远');
-    const chords = pts.map(p => [p.sym, p.t, `第 ${p.bar} 小节 · ${fnName(p)}`]);
-    requestAnimationFrame(() => document.querySelectorAll('.tnbox:not([data-ready])').forEach(b => { b.dataset.ready = 1; tnInit(b, 0); }));
-    return `<section class="arcbox"><h3>张力 <small>· 这首只有和弦数据，没有旋律音符，所以暂时按和弦算</small></h3>${tnBoxHtml([{ name: '全曲', note: '有了这首的完整谱（旋律音符）以后，这里会自动改成按旋律本身算。', chords }], 1.1)}</section>`;
+    return `<section class="arcbox">${head}<p class="fine">这首曲子目前没有旋律音符的数据（只有和弦），所以先不画张力，不会拿和弦来代替。给它加上完整谱，或者原谱的数据以后，这里会自动出现。</p></section>`;
   }
   function harmonyStrip(s) {
     const st = sectionStarts(s);
