@@ -1603,3 +1603,21 @@ body.land .deskcal { top: 0; }
 .hsbox > summary::before { content: '▸ '; color: var(--mute); }
 .hsbox[open] > summary::before { content: '▾ '; }
 .hsbox > summary small { font-weight: 400; color: var(--mute); font-size: 12px; }
+
+/* 跟谱弹 */
+.folrow { align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 8px; }
+.folhand button { padding: 5px 10px; font-size: 13px; }
+.score g.note.folnow, .score g.note.folnow * { fill: #f06a2c !important; stroke: #f06a2c !important; filter: drop-shadow(0 0 3px rgba(240, 106, 44, .7)); }
+.score g.note.folpast, .score g.note.folpast * { opacity: .45; }
+body.following .dock { display: none; }
+.folbar { position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 62px); z-index: 30; padding: 8px 12px 10px; background: color-mix(in srgb, var(--bg) 94%, transparent); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); border-top: 1px solid var(--line); box-shadow: 0 -8px 24px rgba(0, 0, 0, .12); }
+.folhead { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; font-size: 13px; }
+.folbtns { display: flex; gap: 6px; }
+.folbtns .ghost.sm { padding: 5px 9px; font-size: 12px; }
+.folkb { position: relative; height: 96px; margin: 8px 0 4px; }
+.fk { position: absolute; top: 0; border: 1px solid var(--line); padding: 0; }
+.fk.w { width: 14.2857%; height: 96px; background: #fff; color: #555; border-radius: 0 0 8px 8px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; font-size: 12px; }
+.fk.b { width: 8.6%; height: 58px; background: #1b1b1b; border-radius: 0 0 6px 6px; z-index: 2; }
+.fk:active { filter: brightness(.85); }
+.fk.bad { background: #ffb3a8 !important; }
+.folhint { margin: 2px 0 0; font-size: 12px; }

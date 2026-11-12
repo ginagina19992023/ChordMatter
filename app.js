@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 191; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 192; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -500,7 +500,7 @@
   function render() {
     stopAll();
     route = (location.hash.replace(/^#\/?/, '') || 'today').split(/[-\/]/).map(decodeURIComponent);
-    tnFloatSync();
+    tnFloatSync(); folStop();
     const r = route[0];
     document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.dataset.r === r || (r === 'song' && a.dataset.r === 'songs') || (r === 'unit' && a.dataset.r === 'path')));
     drillStop(); alStop(); stopAll(); Roll.stop(); SELB.on = false; { const ov = document.querySelector('.rollfs'); if (ov) { ov.remove(); document.body.classList.remove('immersive'); } } document.querySelectorAll('.giftov, .cpop, .tpop').forEach(x => x.remove());
@@ -1730,6 +1730,7 @@
     if (tab === 'sheet') body = `
       <div class="chips scroll"><button class="chip${v === 'sheet' ? ' on' : ''}" data-act="songview" data-v="sheet">谱 + 和弦</button><button class="chip${v === 'roll' ? ' on' : ''}" data-act="songview" data-v="roll">瀑布流</button><button class="chip${v === 'grid' ? ' on' : ''}" data-act="songview" data-v="grid">和弦格子</button>${hasFull(s.id) ? `<a class="chip linkchip" href="#cmp-${s.id}">原曲↔和弦 →</a>` : ''}<button class="pill info" data-act="info" data-k="how">ⓘ</button></div>
       ${secChips}
+      ${v === 'sheet' && (hasFull(s.id) || (s.orig && s.orig.score)) ? `<div class="row folrow"><button class="btn sm" data-act="folstart" data-song="${s.id}">🎹 跟谱弹 · 全手 · 自动翻页</button><span class="seg folhand" role="group" aria-label="哪只手">${[['B', '双手'], ['R', '右手'], ['L', '左手']].map(([k, t]) => `<button class="${(S.folHand || 'B') === k ? 'on' : ''}" data-act="folhand" data-v="${k}">${t}</button>`).join('')}</span></div>` : ''}
       ${route[2] ? `<p class="hitnote">从 <b>${D(route[3] || '')}</b> 和弦页过来：要找的是第 ${route[2].split('.').join('、')} 小节。</p>` : ''}
       ${v === 'grid' ? `${colorSeg()}<div class="seg gmode" role="group" aria-label="格子排法">${[['wrap', '折行'], ['scroll', '横滑']].map(([k, t]) => `<button class="${(S.gridMode || 'wrap') === k ? 'on' : ''}" data-act="gridmode" data-v="${k}">${t}</button>`).join('')}</div><div class="grid" id="grid" data-mode="${S.gridMode || 'wrap'}">${songGrid(s, si)}</div>${(() => { const first = view && si >= 0 ? songFlat({ sections: s.sections.slice(0, si) }).length : 0; if (KL.song !== s.id || KL.sec !== si) { KL.song = s.id; KL.sec = si; KL.i = first; } return klPanel(s); })()}<p class="explain" id="explain">点任意和弦：听声音，并看它是什么意思。</p>` : v === 'roll' ? rollEntry('song', hasFull(s.id) ? '整首按原谱落下：简单只弹和弦，中等加左手低音，困难是原曲两只手' : '整首落下：简单只弹和弦，中等加左手低音') : songSheet(s, si)}`;
     if (tab === 'sheet' && si >= 0) body += logicDetails(s, si);
@@ -2863,6 +2864,67 @@
     });
   }
   const SCORE_PRESET = { alwayson: ['ao1', 'ao2', 'ao3', 'ao4', 'ao5'].map(n => `scores/${n}.jpg`), cityofstars: ['scores/cos1.jpg'], cosrowan: ['cosr1', 'cosr2', 'cosr3'].map(n => `scores/${n}.jpg`), k545: [1, 2, 3, 4].map(n => `scores/k545-${n}.jpg`) };
+  // ---------------- 跟谱弹：五线谱放在那里，你弹到哪里，谱就跟到哪里，自动翻页 ----------------
+  // 有钢琴：用麦克风听；没钢琴：在屏幕下面的键盘上点（任意八度都算）。一次「一下」= 同一时刻要按下的所有音
+  let FOL = null;
+  function folStop() {
+    if (!FOL) return;
+    if (FOL.mic && Listen.active()) Listen.stop();
+    document.querySelectorAll('.folnow, .folpast').forEach(g => g.classList.remove('folnow', 'folpast'));
+    const p = document.getElementById('folbar'); if (p) p.remove();
+    document.body.classList.remove('following'); FOL = null;
+  }
+  function folStart(s) {
+    const sc = Score.get(), el = $('#songscore');
+    if (!sc || !el || sc.el !== el || !sc.notes.length) return toast('谱还没加载好，等一下再点');
+    folStop();
+    const hand = S.folHand || 'B', groups = new Map();
+    sc.notes.forEach(n => { if (hand === 'R' && n.staff !== 0) return; if (hand === 'L' && n.staff === 0) return; const k = Math.round(n.t * 50); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(n); });
+    const steps = [...groups.keys()].sort((x, y) => x - y).map(k => { const ns = groups.get(k); return { ns, pcs: [...new Set(ns.map(n => ((n.pitch % 12) + 12) % 12))], m: ns[0].m, top: ns.reduce((p, q) => (q.pitch > p.pitch ? q : p)) }; });
+    if (!steps.length) return toast('这一段没有可以弹的音');
+    FOL = { s, steps, i: 0, miss: 0, tapped: new Map(), mic: place() === 'piano', el, t0: Date.now() };
+    document.body.classList.add('following');
+    const bar = document.createElement('div'); bar.id = 'folbar'; bar.className = 'folbar';
+    (document.getElementById('phone') || document.body).appendChild(bar);
+    folPanel(); folShow();
+    if (FOL.mic) folMic();
+  }
+  function folPanel() {
+    const bar = document.getElementById('folbar'); if (!bar || !FOL) return;
+    const keys = [0, 2, 4, 5, 7, 9, 11].map((pc, i) => `<button class="fk w" data-act="foltap" data-pc="${pc}" style="left:${i * 14.2857}%">${['C', 'D', 'E', 'F', 'G', 'A', 'B'][i]}</button>`).join('') + [[1, 1], [3, 2], [6, 4], [8, 5], [10, 6]].map(([pc, i]) => `<button class="fk b" data-act="foltap" data-pc="${pc}" style="left:${i * 14.2857 - 4.3}%"></button>`).join('');
+    bar.innerHTML = `<div class="folhead"><span id="folstat"></span><span class="folbtns"><button class="ghost sm" data-act="folmode">${FOL.mic ? '🎤 在听 · 换成点键' : '👆 点键 · 换成收音'}</button><button class="ghost sm" data-act="folskip">跳过 →</button><button class="ghost sm" data-act="folstop">退出</button></span></div>
+      ${FOL.mic ? '<p class="fine folhint">对着手机弹谱上亮起来的音（两只手一起）。弹对了，谱会自己往下走、自己翻页。</p>' : `<div class="folkb">${keys}</div><p class="fine folhint">点谱上亮起来的音（任意八度都算；同时要按的几个音，3 秒内点齐就行）。</p>`}`;
+  }
+  function folShow() {
+    if (!FOL) return;
+    const { steps, i, el } = FOL;
+    el.querySelectorAll('.folnow').forEach(g => { g.classList.remove('folnow'); g.classList.add('folpast'); });
+    const st = steps[i]; if (!st) return;
+    let first = null;
+    st.ns.forEach(n => { const g = el.querySelector('[data-id="' + n.id + '"]') || el.querySelector('[id="' + n.id + '"]'); if (g) { g.classList.remove('folpast'); g.classList.add('folnow'); if (!first) first = g; } });
+    const stat = document.getElementById('folstat'); if (stat) stat.innerHTML = `第 <b>${st.m || '?'}</b> 小节 · ${i + 1}/${steps.length}${FOL.miss ? ` · 错 ${FOL.miss}` : ''}`;
+    if (first) { const r = first.getBoundingClientRect(), bar = document.getElementById('folbar'), bh = bar ? bar.offsetHeight : 200; if (r.top < 110 || r.bottom > innerHeight - bh - 20) first.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+  }
+  function folAdvance() {
+    if (!FOL) return; FOL.i++; FOL.tapped.clear();
+    if (FOL.i >= FOL.steps.length) { const sec = Math.round((Date.now() - FOL.t0) / 1000), miss = FOL.miss, n = FOL.steps.length; folStop(); toast(`弹完了！${n} 下，错了 ${miss} 次，用时 ${sec} 秒`); return; }
+    folShow();
+  }
+  function folTap(pc) {
+    if (!FOL) return; const st = FOL.steps[FOL.i]; if (!st) return;
+    try { A.init(); A.note(60 + pc, 0, 0.5, 0.5); } catch (e) {}
+    const now = Date.now(); FOL.tapped.set(pc, now); [...FOL.tapped].forEach(([p, t]) => { if (now - t > 3000) FOL.tapped.delete(p); });
+    if (!st.pcs.includes(pc)) { FOL.miss++; folShow(); const k = document.querySelector(`.folkb [data-pc="${pc}"]`); if (k) { k.classList.add('bad'); setTimeout(() => k.classList.remove('bad'), 300); } return; }
+    if (st.pcs.every(p => FOL.tapped.has(p))) folAdvance();
+  }
+  async function folMic() {
+    try { A.init(); await Listen.start(A.ctx, ev => {
+      if (!FOL || ev.type !== 'onset') return; const st = FOL.steps[FOL.i]; if (!st) return;
+      const topPc = ((st.top.pitch % 12) + 12) % 12, sc = Listen.matchChord(ev.chroma, st.pcs);
+      const ok = st.pcs.length === 1 ? Listen.bestNote(ev.chroma) === st.pcs[0] : (sc >= 0.6 || (Listen.bestNote(ev.chroma) === topPc && sc >= 0.45));
+      if (ok) folAdvance();
+    }); } catch (e) { FOL && (FOL.mic = false); toast('用不了麦克风（' + ((e && (e.name || e.message)) || '未知') + '）· 改成在屏幕键盘上点'); folPanel(); folShow(); }
+  }
   async function mountMyScore(id) {
     const el = $('#myscore'); if (!el) return;
     let pages = await OCR.loadPages(id);
@@ -4267,6 +4329,12 @@
       }
       case 'tnfloat': { const s = allSongs().find(x => x.id === el.dataset.song); if (!s) break; if (TNF.on && TNF.song === s.id) tnFloatClose(); else tnFloatOpen(s); break; }
       case 'tninfo': { const box = el.closest('.tnbox') || el.parentElement; const t = box.querySelector('.tnnote, .tninfotxt'); if (t) t.toggleAttribute('hidden'); el.classList.toggle('on'); break; }
+      case 'folstart': { const s = allSongs().find(x => x.id === el.dataset.song); if (s) folStart(s); break; }
+      case 'folhand': S.folHand = el.dataset.v; save(); el.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === el)); break;
+      case 'foltap': folTap(+el.dataset.pc); break;
+      case 'folskip': if (FOL) folAdvance(); break;
+      case 'folstop': folStop(); break;
+      case 'folmode': if (FOL) { if (FOL.mic && Listen.active()) Listen.stop(); FOL.mic = !FOL.mic; folPanel(); folShow(); if (FOL.mic) folMic(); } break;
       case 'splashsnd': S.splashSnd = el.dataset.v === '1'; save(); vSet(); break;
       case 'splashset': S.splash = el.dataset.v === '1'; save(); vSet(); break;
       case 'splashplay': { sessionStorage.removeItem('hx.splash'); location.href = location.pathname + location.search + location.hash; location.reload(); break; }
