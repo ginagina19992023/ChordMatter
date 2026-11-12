@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 184; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 185; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -1864,7 +1864,8 @@
       <h3 class="h3">云端同步</h3><div id="cloudbox" class="cloudbox"></div>
       ${(window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) ? '' : `<div class="installtip"><b>装到手机主屏幕</b><p class="fine">用 Safari 打开这个网址 → 点底部的分享按钮 <span class="kbd">⬆︎</span> → 「添加到主屏幕」。以后点图标直接打开，全屏、离线也能用。</p></div>`}
       <h3 class="h3">数据</h3><div id="storinfo" class="fine">正在检查存储状态…</div>
-      <p class="fine">版本 ${APPV} · 打开时会自动更新到最新版；看不到新功能就把 App 完全关掉再打开一次</p>
+      <p class="fine" id="verline">版本 ${APPV} · 打开时会自动更新到最新版；看不到新功能就点下面的「立即更新」</p>
+      <div class="row"><button class="ghost sm" data-act="forceupd">立即更新（不会删掉你的进度和原谱）</button></div>
       <div class="row"><button class="ghost" data-act="export">导出备份</button><button class="ghost" data-act="import">导入备份</button><button class="ghost" data-act="reset">清空</button></div>
       <p class="fine">进度保存在这台 iPhone 上（两份 + 每日快照）。建议「添加到主屏幕」使用，iOS 不会清理主屏幕 App 的数据。换手机或重装前点「导出备份」，可以存到「文件」或 iCloud。<br>iPhone 静音键打开时可能听不到声音，请关闭静音。</p>`;
     storInfo(); cloudPaint();
@@ -4225,6 +4226,17 @@
       case 'spmk-use': S.splashMode = 'custom'; S.splashCfg = SplashMk.withPre(SplashMk.cfg()); save(); toast('已设为开机动画。下次打开 App 就会放这一段'); break;
       case 'tnset': { const box = el.closest('.tnbox'); box.querySelectorAll('.chips .chip').forEach(c => c.classList.toggle('on', c === el)); stopAll(); tnInit(box, +el.dataset.v); break; }
       case 'tnsnd': { const box = el.closest('.tnbox'), on = box.dataset.snd !== '1'; box.dataset.snd = on ? '1' : '0'; el.textContent = on ? '🔊 有声音 · 点一下关掉' : '🔇 无声 · 点一下加上声音'; if (on) A.init(); else stopAll(); break; }
+      case 'forceupd': {
+        el.textContent = '正在检查最新版本……';
+        (async () => {
+          let live = null; try { const r = await fetch('app.js?v=' + Date.now(), { cache: 'no-store' }), m = /APPV = (\d+)/.exec(await r.text()); live = m && +m[1]; } catch (e) {}
+          try { const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r => r.unregister())); } catch (e) {}
+          try { const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } catch (e) {}
+          toast(live ? `最新是 v${live}，你现在是 v${APPV}，正在更新……` : '没连上网，先清掉旧缓存，再重新打开……');
+          setTimeout(() => location.reload(), 900);
+        })();
+        break;
+      }
       case 'splashsnd': S.splashSnd = el.dataset.v === '1'; save(); vSet(); break;
       case 'splashset': S.splash = el.dataset.v === '1'; save(); vSet(); break;
       case 'splashplay': { sessionStorage.removeItem('hx.splash'); location.href = location.pathname + location.search + location.hash; location.reload(); break; }
