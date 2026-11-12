@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 185; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 186; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -500,6 +500,7 @@
   function render() {
     stopAll();
     route = (location.hash.replace(/^#\/?/, '') || 'today').split(/[-\/]/).map(decodeURIComponent);
+    tnFloatSync();
     const r = route[0];
     document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.dataset.r === r || (r === 'song' && a.dataset.r === 'songs') || (r === 'unit' && a.dataset.r === 'path')));
     drillStop(); alStop(); stopAll(); Roll.stop(); SELB.on = false; { const ov = document.querySelector('.rollfs'); if (ov) { ov.remove(); document.body.classList.remove('immersive'); } } document.querySelectorAll('.giftov, .cpop, .tpop').forEach(x => x.remove());
@@ -1734,7 +1735,7 @@
     if (tab === 'sheet' && si >= 0) body += logicDetails(s, si);
     if (tab === 'shape') body = `
       ${harmonyStrip(s)}
-      ${tensionArc(s)}
+      <div class="row tnrow"><button class="chip${TNF.on && TNF.song === s.id ? ' on' : ''}" data-act="tnfloat" data-song="${s.id}">张力浮窗：${TNF.on && TNF.song === s.id ? '开' : '关'}</button><small class="fine">打开后挂在右边，可以拖动；切到「谱」「练」或退出这首歌会自动关掉</small></div>
       ${(() => { const lp = songLogicParts(s); return `<section class="logic"><p>${lp.keyLine}</p><details class="hlogic"><summary>低音线</summary><p>${lp.bass.join(' ')}</p></details><p class="fine">点每一段下面的「这一段的谱面逻辑」展开；点下划线的词看解释。</p></section>`; })()}
       ${s.note ? `<p class="fine">${esc(s.note)}</p>` : ''}`;
     if (tab === 'play') {
@@ -2566,15 +2567,35 @@
     const sets = tnSetsFromMelody(s, M); if (!sets.length) { host.innerHTML = '<p class="fine">这首曲子的旋律音太少，画不出张力。</p>'; return; }
     host.innerHTML = tnBoxHtml(sets, (60 / M.bpm).toFixed(2)); const b = host.querySelector('.tnbox'); b.dataset.ready = 1; tnInit(b, 0);
   }
-  function tensionArc(s) {
-    const head = '<h3>张力 <small>· 按曲子本身（旋律）算，不是按和弦</small></h3>';
+  // 往容器里填「张力」：按旋律本身算；没有旋律数据就明说，不用和弦代替
+  function tnFill(host, s) {
     const M = songMelody(s);
-    if (M) { requestAnimationFrame(() => { const h = document.getElementById('tnhost'); if (h) tnMount(h, s, M); }); return `<section class="arcbox">${head}<div id="tnhost"></div></section>`; }
+    if (M) { tnMount(host, s, M); return; }
     if (s.orig && s.orig.score && /\.krn$/.test(s.orig.score.src || '')) {
-      requestAnimationFrame(() => { const h = document.getElementById('tnhost'); if (!h) return; songMelodyRemote(s).then(m => { if (document.getElementById('tnhost') === h) m ? tnMount(h, s, m) : (h.innerHTML = '<p class="fine">这首的旋律读取失败。</p>'); }).catch(() => { if (document.getElementById('tnhost') === h) h.innerHTML = '<p class="fine">需要联网读取这首的原谱，才能算旋律的张力。</p>'; }); });
-      return `<section class="arcbox">${head}<div id="tnhost"><p class="fine">正在读取原谱的旋律……</p></div></section>`;
+      host.innerHTML = '<p class="fine">正在读取原谱的旋律……</p>';
+      songMelodyRemote(s).then(m => { if (host.isConnected) m ? tnMount(host, s, m) : (host.innerHTML = '<p class="fine">这首的旋律读取失败。</p>'); }).catch(() => { if (host.isConnected) host.innerHTML = '<p class="fine">需要联网读取这首的原谱，才能算旋律的张力。</p>'; });
+      return;
     }
-    return `<section class="arcbox">${head}<p class="fine">这首曲子目前没有旋律音符的数据（只有和弦），所以先不画张力，不会拿和弦来代替。给它加上完整谱，或者原谱的数据以后，这里会自动出现。</p></section>`;
+    host.innerHTML = '<p class="fine">这首曲子目前没有旋律音符的数据（只有和弦），所以先不画张力，不会拿和弦来代替。</p>';
+  }
+  // 张力浮窗：挂在「结构」页的右边，可以拖动；切到谱 / 练或退出这首歌就自动关掉
+  const TNF = { on: false, song: null, x: null, y: null };
+  function tnFloatClose() { const f = document.getElementById('tnfloat'); if (f) f.remove(); TNF.on = false; document.querySelectorAll('[data-act="tnfloat"]').forEach(b => { b.classList.remove('on'); b.textContent = '张力浮窗：关'; }); }
+  function tnFloatSync() { if (TNF.on && !(route[0] === 'song' && route[1] === TNF.song && (S.songTab || 'sheet') === 'shape')) tnFloatClose(); }
+  function tnFloatOpen(s) {
+    tnFloatClose(); TNF.on = true; TNF.song = s.id;
+    const f = document.createElement('div'); f.id = 'tnfloat'; f.className = 'tnfloat';
+    f.innerHTML = `<div class="tnfhead"><span>⠿ 张力 · 拖动我</span><button class="tnfx" aria-label="关闭">✕</button></div><div class="tnfbody"></div>`;
+    (document.getElementById('phone') || document.body).appendChild(f);
+    const W = f.offsetWidth || 220;
+    if (TNF.x == null) { f.style.right = '10px'; f.style.top = '34%'; } else { f.style.left = TNF.x + 'px'; f.style.top = TNF.y + 'px'; }
+    tnFill(f.querySelector('.tnfbody'), s);
+    f.querySelector('.tnfx').onclick = tnFloatClose;
+    const head = f.querySelector('.tnfhead'); let dx = 0, dy = 0, drag = false;
+    head.addEventListener('pointerdown', e => { if (e.target.closest('.tnfx')) return; drag = true; const r = f.getBoundingClientRect(); dx = e.clientX - r.left; dy = e.clientY - r.top; head.setPointerCapture(e.pointerId); e.preventDefault(); });
+    head.addEventListener('pointermove', e => { if (!drag) return; const x = Math.max(4, Math.min(innerWidth - f.offsetWidth - 4, e.clientX - dx)), y = Math.max(40, Math.min(innerHeight - f.offsetHeight - 70, e.clientY - dy)); f.style.right = 'auto'; f.style.left = x + 'px'; f.style.top = y + 'px'; TNF.x = x; TNF.y = y; });
+    const end = () => { drag = false; }; head.addEventListener('pointerup', end); head.addEventListener('pointercancel', end);
+    const b = document.querySelector('[data-act="tnfloat"]'); if (b) { b.classList.add('on'); b.textContent = '张力浮窗：开'; }
   }
   function harmonyStrip(s) {
     const st = sectionStarts(s), parts = songLogicParts(s);
@@ -4237,6 +4258,7 @@
         })();
         break;
       }
+      case 'tnfloat': { const s = allSongs().find(x => x.id === el.dataset.song); if (!s) break; if (TNF.on && TNF.song === s.id) tnFloatClose(); else tnFloatOpen(s); break; }
       case 'splashsnd': S.splashSnd = el.dataset.v === '1'; save(); vSet(); break;
       case 'splashset': S.splash = el.dataset.v === '1'; save(); vSet(); break;
       case 'splashplay': { sessionStorage.removeItem('hx.splash'); location.href = location.pathname + location.search + location.hash; location.reload(); break; }

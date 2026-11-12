@@ -1572,3 +1572,20 @@ body.land .deskcal { top: 0; }
 .hlogic p { margin: 4px 0 4px 14px; line-height: 1.55; }
 .logic > p:first-child { margin: 12px 0 4px; }
 .hlogic summary small { display: inline !important; margin: 0; }
+
+/* 张力浮窗 */
+.tnrow { align-items: center; gap: 10px; margin: 6px 0 12px; flex-wrap: wrap; }
+.tnrow .fine { flex: 1; min-width: 12em; margin: 0; }
+.tnfloat { position: fixed; z-index: 28; width: min(208px, 58vw); border: 1px solid var(--line); border-radius: 18px; background: color-mix(in srgb, var(--bg) 90%, transparent); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); box-shadow: 0 12px 34px rgba(0, 0, 0, .22); overflow: hidden; }
+.tnfhead { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px 6px 12px; font-size: 12px; color: var(--mute); cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.tnfx { border: 0; background: none; color: var(--mute); font-size: 15px; padding: 2px 6px; }
+.tnfbody { padding: 0 8px 8px; }
+.tnfloat .tnbox { margin: 0; padding: 0; border: 0; }
+.tnfloat .tnnote { display: none; }
+.tnfloat .tnsvg { max-width: 190px; }
+.tnfloat .chips { gap: 4px; }
+.tnfloat .chip.sm { padding: 4px 9px; font-size: 12px; }
+.tnfloat .tnname { font-size: 12px; min-height: 2.6em; margin: 0 0 4px; }
+.tnfloat .tnch { font-size: 12px; margin-bottom: 6px; }
+.tnfloat .row .ghost { font-size: 12px; padding: 5px 10px; }
+.tnfloat .fine { font-size: 12px; padding: 4px 6px; }
