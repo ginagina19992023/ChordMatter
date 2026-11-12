@@ -1535,17 +1535,22 @@ body.land .deskcal { top: 0; }
 .path li.skip .node { background: none; border-style: dashed; color: var(--mute); }
 .path li.skip b { color: var(--mute); }
 .skipnote { text-align: center; margin: 18px 0 0; }
-/* 知识点：张力演示（柔光，动图） */
+/* 知识点：张力演示（柔光，只有上下变化） */
 .tnbox { margin: 14px 0; padding: 12px; border: 1px solid var(--line); border-radius: 16px; }
 .tnnote { margin: 8px 2px 0; font-size: 13px; color: var(--mute); min-height: 2.6em; }
-.tnsvg { --tnc: #ffc857; display: block; width: 100%; height: auto; color: var(--ink); }
+.tnsvg { --tnc: #ffc857; display: block; width: 100%; max-width: 340px; margin: 0 auto; height: auto; color: var(--ink); }
 .tns { stop-color: var(--tnc); }
 .tnline { stroke: var(--line); stroke-width: 2; }
 .tnhomet { font-size: 10px; fill: var(--mute); }
-.tntrail { fill: none; stroke-width: 4; stroke-linecap: round; }
-.tnlab { font-size: 11px; fill: var(--mute); transition: fill .3s; }
-.tnlab.on { fill: var(--ink); font-weight: 600; }
+.tnhome { fill: none; stroke: var(--mute); stroke-width: 1.5; }
+.tnorb { color: var(--tnc); }
+.tnstr { stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-opacity: .25; }
+.tnstrb { stroke-width: 9; }
 .tnhalo { fill: url(#tng); }
 .tncore { fill: var(--tnc); }
-.tnname { min-height: 1.6em; text-align: center; font-size: 14px; color: var(--mute); margin: 4px 0 8px; }
+.tnname { min-height: 1.6em; text-align: center; font-size: 14px; color: var(--mute); margin: 4px 0 6px; }
+.tnch { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; align-items: center; margin-bottom: 10px; font-size: 13px; }
+.tnch i { font-style: normal; color: var(--line); }
+.tnc { padding: 2px 6px; border-radius: 8px; color: var(--mute); transition: all .3s; }
+.tnc.on { color: var(--ink); background: color-mix(in srgb, var(--tnc, #ffc857) 20%, transparent); font-weight: 600; }
 .tnbox .row { justify-content: center; }
