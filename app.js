@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 176; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 179; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -2484,15 +2484,54 @@
     s.sections.forEach((sec, si) => parseBars(sec.bars).forEach((bar, k) => bar.forEach(sym => { const t = chordTension(sym, s.key); if (t != null) out.push({ sym, t, bar: st[si] + k, sec: si, q: (T.parseChord(sym) || {}).q }); })));
     return out;
   }
+  // 按旋律本身算：每个旋律音在调里「稳不稳」。主音最稳，其次五音、三音，二、四、六音有拉力，导音（七）最想回主音，调外的音最远。示意用，不是测量值
+  const STAB_MAJ = [0, 0.95, 0.6, 0.9, 0.25, 0.5, 0.9, 0.2, 0.85, 0.45, 0.8, 0.85];
+  const STAB_MIN = [0, 0.95, 0.6, 0.25, 0.8, 0.5, 0.9, 0.2, 0.45, 0.6, 0.5, 0.85];
+  const DEG_MAJ = ['1', '♭2', '2', '♭3', '3', '4', '♯4', '5', '♭6', '6', '♭7', '7'], DEG_MIN = ['1', '♭2', '2', '3', '♯3', '4', '♯4', '5', '6', '♯6', '7', '♯7'];
+  function songMelody(s) {
+    if (typeof FULL === 'undefined' || !FULL[s.id]) return null;
+    const key = T.parseKey(s.key); if (!key) return null;
+    const ev = FullScore.events(FULL[s.id].kern, FULL[s.id].ova), byT = new Map();
+    ev.events.filter(e => e.hand === 'R').forEach(e => { const k = Math.round(e.t * 8); const o = byT.get(k); if (!o || e.midi > o.midi) byT.set(k, e); });
+    const notes = [...byT.values()].sort((x, y) => x.t - y.t);
+    return { notes, key, barStart: ev.barStart, lens: ev.lens, bpm: s.bpm || 80 };
+  }
+  // 把旋律排成「每一拍一个值」：这一拍里响着的旋律音的平均张力
+  function melodySeries(M, bars) {
+    const tab = M.key.minor ? STAB_MIN : STAB_MAJ, deg = M.key.minor ? DEG_MIN : DEG_MAJ, tonic = M.key.tonic.pc;
+    const bs = M.barStart, lens = M.lens, out = [];
+    bars.forEach(n => {
+      const b0 = bs[n]; if (b0 == null) return; const len = lens[n] || 4;
+      for (let b = 0; b < len; b += 1) {
+        const t0 = b0 + b, ns = M.notes.filter(x => x.t < t0 + 1 - 1e-6 && x.t + x.d > t0 + 1e-6);
+        if (!ns.length) { if (out.length) out.push(Object.assign({}, out[out.length - 1], { bar: n, rest: true })); continue; }
+        const vals = ns.map(x => { const iv = (((x.midi - tonic) % 12) + 12) % 12; return { v: tab[iv], d: deg[iv], midi: x.midi }; });
+        const top = vals[vals.length - 1], v = vals.reduce((p, q) => p + q.v, 0) / vals.length;
+        out.push({ t: v, d: top.d, midi: top.midi, bar: n });
+      }
+    });
+    return out;
+  }
   function tensionArc(s) {
+    const M = songMelody(s);
+    if (M) {
+      const st = sectionStarts(s), secBars = s.sections.map((sec, si) => parseBars(sec.bars).map((_, k) => st[si] + k)), all = [].concat(...secBars);
+      const mk = bars => { const ser = melodySeries(M, bars); return ser.map(p => [p.d, p.t, `第 ${p.bar} 小节 · 旋律音「${p.d}」· ${p.t < 0.3 ? '稳' : p.t < 0.6 ? '有点拉力' : p.t < 0.85 ? '想往下走' : '很紧张 / 调外'}`, tnMix('#7cb8ff', '#ff9a62', p.t), 1, p.midi]); };
+      const sets = [];
+      if (s.sections.length > 1 && s.sections.length <= 8) s.sections.forEach((sec, si) => { const c = mk(secBars[si]); if (c.length >= 4) sets.push({ name: sec.name.replace(/\s*[‖:].*$/, '').slice(0, 6), note: '光点只会上下动：旋律停在越「稳」的音（主音、五音、三音）越靠近线，停在越想往下走的音（二、四、六、七级、调外音）越往下沉。', chords: c }); });
+      if (!sets.length) { const c = mk(all.slice(0, 16)); if (c.length >= 4) sets.push({ name: '开头 16 小节（原速）', note: '光点只会上下动：旋律停在越「稳」的音（主音、五音、三音）越靠近线，停在越想往下走的音（二、四、六、七级、调外音）越往下沉。按曲子原本的速度走，可以打开声音一起听。', chords: c }); }
+      const full = mk(all); if (full.length >= 4) sets.push({ name: '全曲（快进）', note: '整首曲子快进着看，光点是旋律每一拍的平均张力。', chords: full, fast: 1 });
+      if (!sets.length) return '';
+      requestAnimationFrame(() => document.querySelectorAll('.tnbox:not([data-ready])').forEach(b => { b.dataset.ready = 1; tnInit(b, 0); }));
+      const spb = 60 / M.bpm;
+      return `<section class="arcbox"><h3>张力 <small>· 按旋律本身算，不是按和弦</small></h3>${tnBoxHtml(sets, spb.toFixed(2))}</section>`;
+    }
+    // 这首没有旋律音符的数据，只能退回按和弦算
     const pts = songArcData(s); if (pts.length < 4) return '';
     const fnName = p => ({ T: '在家附近', S: '离开中', D: '最紧张' }[chordFunc(p.sym, s.key)] || '调外和弦，绕得更远');
-    const toChords = arr => arr.map(p => [p.sym, p.t, `第 ${p.bar} 小节 · ${fnName(p)}`]);
-    const sets = [{ name: '全曲', note: '光点只会上下动：离「家」越远，越往下沉；回到家就弹回线上。', chords: toChords(pts) }];
-    if (s.sections.length > 1 && s.sections.length <= 8) s.sections.forEach((sec, si) => { const sub = pts.filter(p => p.sec === si); if (sub.length >= 2) sets.push({ name: sec.name.replace(/\s*[‖:].*$/, '').slice(0, 6), note: '这一段里，光点怎么离开、怎么回家。', chords: toChords(sub) }); });
-    const mx = pts.reduce((m, p, i) => (p.t > pts[m].t ? i : m), 0), back = pts.findIndex((p, i) => i > mx && p.t === 0), away = Math.round(pts.filter(p => p.t >= 0.4).length / pts.length * 100);
+    const chords = pts.map(p => [p.sym, p.t, `第 ${p.bar} 小节 · ${fnName(p)}`]);
     requestAnimationFrame(() => document.querySelectorAll('.tnbox:not([data-ready])').forEach(b => { b.dataset.ready = 1; tnInit(b, 0); }));
-    return `<section class="arcbox"><h3>张力 <small>· 这首曲子每个和弦离「家」有多远</small></h3>${tnBoxHtml(sets, 1.1, `<p class="arcsum">最远的和弦：<b>${D(pts[mx].sym)}</b>（第 ${pts[mx].bar} 小节）${back >= 0 ? ` · 之后回到「家」：第 <b>${pts[back].bar}</b> 小节` : ''} · 有 <b>${away}%</b> 的和弦在「家」之外</p>`)}</section>`;
+    return `<section class="arcbox"><h3>张力 <small>· 这首只有和弦数据，没有旋律音符，所以暂时按和弦算</small></h3>${tnBoxHtml([{ name: '全曲', note: '有了这首的完整谱（旋律音符）以后，这里会自动改成按旋律本身算。', chords }], 1.1)}</section>`;
   }
   function harmonyStrip(s) {
     const st = sectionStarts(s);
@@ -4054,11 +4093,11 @@
   function tnInit(box, si) {
     box.dataset.i = si || 0; const set = JSON.parse(box.dataset.sets)[box.dataset.i | 0], ch = set.chords, N = ch.length, svg = box.querySelector('.tnsvg');
     box.querySelector('.tnnote').textContent = set.note || '';
-    const chipsFor = idx => { const lo = N > 12 ? Math.max(0, Math.min(N - 6, idx - 2)) : 0, hi = N > 12 ? lo + 6 : N; return ch.slice(lo, hi).map(([s], k) => `<span class="tnc${lo + k === idx ? ' on' : ''}">${D(s)}</span>`).join('<i>→</i>'); };
+    const chipsFor = idx => { const lo = N > 12 ? Math.max(0, Math.min(N - 6, idx - 2)) : 0, hi = N > 12 ? lo + 6 : N; return ch.slice(lo, hi).map(([s], k) => `<span class="tnc${lo + k === idx ? ' on' : ''}">${ch[lo + k][4] ? s : D(s)}</span>`).join('<i>→</i>'); };
     box.querySelector('.tnch').innerHTML = chipsFor(0);
-    const cols = ch.map(c => cxHue((T.parseChord(c[0]) || {}).q)[5]), ys = ch.map(c => 34 + c[1] * 150);
+    const lab = c => (c[4] ? c[0] : D(c[0])), cols = ch.map(c => c[3] || cxHue((T.parseChord(c[0]) || {}).q)[5]), ys = ch.map(c => 34 + c[1] * 150);
     cancelAnimationFrame(box._raf); box._last = -1;
-    const T0 = performance.now(), PER = +box.dataset.per || 1.5, HOLD = 1.4, total = (N - 1) * PER + HOLD;
+    const T0 = performance.now(), PER = set.fast ? 0.16 : (+box.dataset.per || 1.5), HOLD = 1.4, total = (N - 1) * PER + HOLD;
     const halo = svg.querySelector('.tnhalo'), core = svg.querySelector('.tncore'), strs = svg.querySelectorAll('.tnstr');
     const loop = now => {
       if (!box.isConnected) return;
@@ -4067,7 +4106,7 @@
       const y = s >= N - 1 ? ys[N - 1] : ys[k] + (ys[k2] - ys[k]) * e, col = tnMix(cols[k], cols[k2], s >= N - 1 ? 1 : e), ten = (y - 34) / 150, idx = Math.min(N - 1, Math.floor(s + 1e-6));
       svg.style.setProperty('--tnc', col);
       halo.setAttribute('cy', y); halo.setAttribute('r', 38 + 24 * ten); core.setAttribute('cy', y); strs.forEach(l => { l.setAttribute('y2', y); l.style.strokeOpacity = 0.25 + 0.55 * ten; });
-      if (idx !== box._last) { box._last = idx; box.querySelector('.tnch').innerHTML = chipsFor(idx); box.querySelector('.tnname').textContent = D(ch[idx][0]) + ' · ' + ch[idx][2]; if (box.dataset.snd === '1' && !document.hidden) { try { A.init(); playChord(ch[idx][0]); } catch (er) {} } }
+      if (idx !== box._last) { box._last = idx; box.querySelector('.tnch').innerHTML = chipsFor(idx); box.querySelector('.tnname').textContent = lab(ch[idx]) + ' · ' + ch[idx][2]; if (box.dataset.snd === '1' && !set.fast && !document.hidden) { try { A.init(); if (ch[idx][5] != null) A.note(ch[idx][5], 0, Math.max(0.3, PER * 0.9), 0.6); else playChord(ch[idx][0]); } catch (er) {} } }
       if (t < 0.05) box._last = -1;
       box._raf = requestAnimationFrame(loop);
     };
