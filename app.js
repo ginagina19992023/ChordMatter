@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 167; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 168; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -641,6 +641,9 @@
       if (b.t === 'chord') return chordCard(b.s);
       if (b.t === 'prog') return progRow(b.k, b.c);
       if (b.t === 'video') return `<figure class="vclip${b.tall ? ' tall' : ''}"><video controls playsinline preload="metadata" poster="${b.poster}" src="${b.src}"${/media\/demo-[a-z]+\.mp4$/.test(b.src) ? ` data-light="${b.src}" data-lightp="${b.poster}" data-dark="${b.src.replace('.mp4', '-dark.mp4')}" data-darkp="${b.poster.replace('.jpg', '-dark.jpg')}"` : ''}>${b.vtt ? `<track kind="subtitles" srclang="zh" label="中文" src="${b.vtt}" default>` : ''}</video><figcaption><b>${b.title}</b><small>${b.credit}${b.url ? ` · <a href="${b.url}" target="_blank" rel="noopener">原视频 ↗</a>` : ''}</small></figcaption></figure>`;
+      if (b.t === 'tension') return `<div class="tnbox" data-sets="${esc(JSON.stringify(b.sets))}"><div class="chips">${b.sets.map((s, i) => `<button class="chip sm${i ? '' : ' on'}" data-act="tnset" data-v="${i}">${s.name}</button>`).join('')}</div>
+        <svg class="tnsvg" viewBox="0 0 300 200" aria-hidden="true"><line x1="20" y1="36" x2="280" y2="36" class="tnline"/><g class="tnblob"><line class="tnneck" x1="150" y1="36" x2="150" y2="36"/><circle class="tnanc" cx="150" cy="36" r="19"/><circle class="tnlow" cx="150" cy="36" r="19"/></g></svg>
+        <div class="tnname"></div><div class="tnch"></div><div class="row"><button class="btn sm" data-act="tnplay">▶ 播放这一串</button></div></div>`;
       if (b.t === 'table') return `<table>${b.rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</table>`;
       return '';
     }).join('');
@@ -4018,6 +4021,22 @@
   (document.getElementById('phone') || window).addEventListener('scroll', () => { if (document.querySelector('.tpop') && Date.now() - tpopAt > 500) tpopClose(); }, { passive: true });
 
   // ---------------- 知识点 ----------------
+  // 张力演示：圆点在一条线上（主和弦），离开家就被「拉长」，回到家又缩回去
+  function tnInit(box, si) {
+    box.dataset.i = si || 0; const set = JSON.parse(box.dataset.sets)[box.dataset.i | 0];
+    box.querySelector('.tnch').innerHTML = set.chords.map(([s], i) => `<button class="chip sm" data-act="tnpick" data-i="${i}">${D(s)}</button>`).join('');
+    box._tn = 0; tnShow(box, -1);
+  }
+  function tnShow(box, i) {
+    const set = JSON.parse(box.dataset.sets)[box.dataset.i | 0], c = i >= 0 ? set.chords[i] : null, to = c ? c[1] : 0, from = box._tn || 0, t0 = performance.now();
+    box.querySelectorAll('.tnch .chip').forEach((x, k) => x.classList.toggle('on', k === i));
+    box.querySelector('.tnname').textContent = c ? D(c[0]) + ' · ' + c[2] : '点「播放」或点下面的和弦';
+    const low = box.querySelector('.tnlow'), neck = box.querySelector('.tnneck');
+    cancelAnimationFrame(box._raf);
+    const step = now => { const u = Math.min(1, (now - t0) / 650), e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2, v = from + (to - from) * e, y = 36 + v * 130;
+      low.setAttribute('cy', y); neck.setAttribute('y2', y); neck.style.strokeWidth = 16 - 8 * v; box._tn = v; if (u < 1) box._raf = requestAnimationFrame(step); };
+    box._raf = requestAnimationFrame(step);
+  }
   function vKnow() {
     const id = route[1];
     const k = KNOW.find(x => x.id === id);
@@ -4033,6 +4052,7 @@
       ${videoBox(k.vid || k.t.replace(/[：:].*$/, '') + ' 乐理 讲解')}
       <div class="src"><small>来源</small>${k.src.map(([n, u]) => `<a href="${u}" target="_blank" rel="noopener">${esc(n)} ↗</a>`).join('')}</div>
       ${nx ? `<a class="link" href="#know-${nx.id}"><small>下一条</small><b>${nx.t}</b><span>→</span></a>` : ''}`;
+    document.querySelectorAll('.tnbox').forEach(b => tnInit(b, 0));
   }
 
   // ---------------- 事件 ----------------
@@ -4075,6 +4095,9 @@
       case 'spmk-set': { SplashMk.set({ [el.dataset.k]: isNaN(+el.dataset.v) || el.dataset.k === 'seq' || el.dataset.k === 'style' ? el.dataset.v : +el.dataset.v }); vSplashMk(); break; }
       case 'spmk-play': SplashMk.preview(); break;
       case 'spmk-use': S.splashMode = 'custom'; S.splashCfg = SplashMk.withPre(SplashMk.cfg()); save(); toast('已设为开机动画。下次打开 App 就会放这一段'); break;
+      case 'tnset': { const box = el.closest('.tnbox'); box.querySelectorAll('.chips .chip').forEach(c => c.classList.toggle('on', c === el)); tnInit(box, +el.dataset.v); break; }
+      case 'tnplay': { const box = el.closest('.tnbox'); stopAll(); A.init(); const set = JSON.parse(box.dataset.sets)[box.dataset.i | 0]; set.chords.forEach(([s], i) => later(() => { tnShow(box, i); playChord(s); }, i * 1200)); break; }
+      case 'tnpick': { const box = el.closest('.tnbox'); stopAll(); A.init(); const set = JSON.parse(box.dataset.sets)[box.dataset.i | 0], i = +el.dataset.i; tnShow(box, i); playChord(set.chords[i][0]); break; }
       case 'splashsnd': S.splashSnd = el.dataset.v === '1'; save(); vSet(); break;
       case 'splashset': S.splash = el.dataset.v === '1'; save(); vSet(); break;
       case 'splashplay': { sessionStorage.removeItem('hx.splash'); location.href = location.pathname + location.search + location.hash; location.reload(); break; }

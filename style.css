@@ -1535,3 +1535,12 @@ body.land .deskcal { top: 0; }
 .path li.skip .node { background: none; border-style: dashed; color: var(--mute); }
 .path li.skip b { color: var(--mute); }
 .skipnote { text-align: center; margin: 18px 0 0; }
+/* 知识点：张力演示 */
+.tnbox { margin: 14px 0; padding: 12px; border: 1px solid var(--line); border-radius: 16px; }
+.tnsvg { display: block; width: 100%; height: auto; color: var(--ink); }
+.tnline { stroke: currentColor; stroke-width: 2; opacity: .85; }
+.tnneck { stroke: currentColor; stroke-linecap: round; stroke-width: 16; }
+.tnanc, .tnlow { fill: currentColor; }
+.tnname { min-height: 1.6em; text-align: center; font-size: 14px; color: var(--mute); margin: 2px 0 8px; }
+.tnch { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 10px; }
+.tnbox .row { justify-content: center; }
