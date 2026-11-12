@@ -121,9 +121,19 @@ const UNITS = [
 // 注意：均为学习用的简化和声分析，请对照你手上的乐谱核对
 const SONGS = [
   {
-    id: 'k545', src: 'analyzed', orig: { score: { src: 'https://raw.githubusercontent.com/craigsapp/mozart-piano-sonatas/master/kern/sonata15-1.krn', measures: '1-4', credit: 'Craig Stuart Sapp 数字版，依据 1878 年《旧莫扎特全集》，CC BY-NC-SA 4.0' }, imslp: 'https://imslp.org/index.php?search=Mozart+K.545', apple: 'https://music.apple.com/cn/search?term=Mozart%20K.545%20Allegro' }, title: '莫扎特 C 大调奏鸣曲 K.545', sub: '第一乐章 · 开头', key: 'C', tag: '古典', bpm: 100,
-    sections: [{ name: '主题 1–4 小节', bars: 'C | G7/D C | F/C C | G7/B C' }],
-    note: '左手 Alberti 低音的和声骨架（简化）。请对照乐谱核对。',
+    id: 'k545', src: 'analyzed', orig: { score: { src: 'https://raw.githubusercontent.com/craigsapp/mozart-piano-sonatas/master/kern/sonata15-1.krn', measures: '1-73', credit: 'Craig Stuart Sapp 数字版，依据 1878 年《旧莫扎特全集》，CC BY-NC-SA 4.0；和弦来自 DCML 莫扎特钢琴奏鸣曲专家和声标注（CC BY-NC-SA 4.0）' }, imslp: 'https://imslp.org/index.php?search=Mozart+K.545', apple: 'https://music.apple.com/cn/search?term=Mozart%20K.545%20Allegro' }, title: '莫扎特 C 大调奏鸣曲 K.545', sub: '第一乐章 · 全曲 73 小节', key: 'C', tag: '古典', bpm: 100,
+    sections: [
+      { name: '呈示部·主题 1–4', bars: 'C | G7/D C | F/C C | G/B C' },
+      { name: '呈示部·过渡 5–12', bars: 'F | C/E | Dm7 | C | Dm/F | F F/A | G | G' },
+      { name: '呈示部·副题（G 大调）13–21', bars: 'D D7/C | G/B | D7/C D7/A | G/B | D7/C D7/A | G/B C | F#dim/A Bm | Em/G Am | D/F# G' },
+      { name: '呈示部·结束部（G 大调）22–28', bars: 'Am/C | Am/C | D | D7 | G | G | G' },
+      { name: '展开部（g 小调 → d 小调 → a 小调）29–41', bars: 'Gm | Gm | Gm | A | Dm | Dm | Dm | E/G# | Am/C Dm | G/B C | F/A Bdim | E/G# Am | Bb/D C7' },
+      { name: '再现部·主题（F 大调）42–45', bars: 'F | C7/G F | Bb/F F | C/E F' },
+      { name: '再现部·过渡 46–57', bars: 'Bb | F/A | Gm7 | F | F | C/E | Dm7 | C | Dm/F | F F/A | G | G' },
+      { name: '再现部·副题（C 大调）58–66', bars: 'G G7/F | C/E | G7/F G7/D | C/E | G7/F G7/D | C/E F | Bdim/D Em | Am/C Dm | G/B C' },
+      { name: '再现部·结束部 67–73', bars: 'Dm/F | F#dim7 | G | G7 | C | C | C' },
+    ],
+    note: '整个第一乐章 73 小节。和弦来自 DCML（洛桑联邦理工学院数字与认知音乐学实验室）对莫扎特钢琴奏鸣曲的专家和声标注，不是我按音猜的；每小节最多取两个和弦（第 1 拍、第 3 拍）。奏鸣曲式：呈示部（C 大调主题 → 转到 G 大调副题）、展开部（g、d、a 小调）、再现部（主题先在 F 大调出现，副题回到 C 大调）。',
   },
   {
     id: 'clementi', src: 'simplified', orig: { imslp: 'https://imslp.org/index.php?search=Clementi+Op.36', apple: 'https://music.apple.com/cn/search?term=Clementi%20Sonatina%20Op.36%20No.1' }, title: '克列门蒂 小奏鸣曲 Op.36 No.1', sub: '第一乐章 · 开头（简化）', key: 'C', tag: '古典', bpm: 96,

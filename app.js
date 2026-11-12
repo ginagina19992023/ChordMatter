@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 190; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 191; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -2560,7 +2560,7 @@
     const NOTE = '光点只会上下动：旋律停在越「稳」的音（主音、五音、三音）越靠近线，停在越想往下走的音（二、四、六、七级、调外音）越往下沉。';
     const all = Object.keys(M.barStart).map(Number).sort((x, y) => x - y), sets = [];
     const st = sectionStarts(s), secBars = s.sections.map((sec, si) => parseBars(sec.bars).map((_, k) => st[si] + k).filter(n => M.barStart[n] != null));
-    if (s.sections.length > 1 && s.sections.length <= 8) s.sections.forEach((sec, si) => { const c = mk(secBars[si]); if (c.length >= 4) sets.push({ name: sec.name.replace(/\s*[‖:].*$/, '').slice(0, 6), note: NOTE, chords: c, audio: audioFor(secBars[si]) }); });
+    if (s.sections.length > 1 && s.sections.length <= 12) s.sections.forEach((sec, si) => { const c = mk(secBars[si]); if (c.length >= 4) sets.push({ name: sec.name.replace(/\s*[‖:].*$/, '').slice(0, 6), note: NOTE, chords: c, audio: audioFor(secBars[si]) }); });
     if (!sets.length) { const c = mk(all.slice(0, 16)); if (c.length >= 4) sets.push({ name: '开头 16 小节（原速）', note: NOTE + ' 按曲子原本的速度走，打开声音就是按原曲（两只手）一起播。', chords: c, audio: audioFor(all.slice(0, 16)) }); }
     const full = mk(all); if (full.length >= 4 && all.length > 16) sets.push({ name: '全曲（快进）', note: '整首曲子快进着看，光点是旋律每一拍的平均张力。', chords: full, fast: 1 });
     return sets;
