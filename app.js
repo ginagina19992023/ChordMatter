@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 171; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 173; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -643,10 +643,11 @@
       if (b.t === 'video') return `<figure class="vclip${b.tall ? ' tall' : ''}"><video controls playsinline preload="metadata" poster="${b.poster}" src="${b.src}"${/media\/demo-[a-z]+\.mp4$/.test(b.src) ? ` data-light="${b.src}" data-lightp="${b.poster}" data-dark="${b.src.replace('.mp4', '-dark.mp4')}" data-darkp="${b.poster.replace('.jpg', '-dark.jpg')}"` : ''}>${b.vtt ? `<track kind="subtitles" srclang="zh" label="中文" src="${b.vtt}" default>` : ''}</video><figcaption><b>${b.title}</b><small>${b.credit}${b.url ? ` · <a href="${b.url}" target="_blank" rel="noopener">原视频 ↗</a>` : ''}</small></figcaption></figure>`;
       if (b.t === 'tension') return `<div class="tnbox" data-sets="${esc(JSON.stringify(b.sets))}"><div class="chips scroll">${b.sets.map((s, i) => `<button class="chip sm${i ? '' : ' on'}" data-act="tnset" data-v="${i}">${s.name}</button>`).join('')}</div>
         <p class="tnnote"></p>
-        <svg class="tnsvg" viewBox="0 0 300 200" aria-hidden="true"><defs><radialGradient id="tng"><stop offset="0" class="tns" stop-opacity=".6"/><stop offset=".5" class="tns" stop-opacity=".22"/><stop offset="1" class="tns" stop-opacity="0"/></radialGradient><filter id="tnb" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3.5"/></filter></defs>
-          <line x1="20" y1="36" x2="280" y2="36" class="tnline"/><text x="22" y="26" class="tnhomet">家（一级）</text>
-          <g class="tnorb"><line class="tnstr tnstrb" x1="150" y1="36" x2="150" y2="36" filter="url(#tnb)"/><line class="tnstr" x1="150" y1="36" x2="150" y2="36"/><circle class="tnhalo" cx="150" cy="36" r="46"/><circle class="tncore" cx="150" cy="36" r="15"/></g><circle class="tnhome" cx="150" cy="36" r="6"/></svg>
-        <div class="tnname"></div><div class="tnch"></div><div class="row"><button class="btn sm" data-act="tnplay">▶ 播放这一串</button></div></div>`;
+        <svg class="tnsvg" viewBox="0 0 300 215" aria-hidden="true"><defs><radialGradient id="tng"><stop offset="0" class="tns" stop-opacity=".6"/><stop offset=".5" class="tns" stop-opacity=".22"/><stop offset="1" class="tns" stop-opacity="0"/></radialGradient><filter id="tnb" x="-10%" y="-30%" width="120%" height="160%"><feGaussianBlur stdDeviation="4"/></filter><linearGradient id="tnlg" gradientUnits="userSpaceOnUse" x1="20" y1="0" x2="280" y2="0"></linearGradient><clipPath id="tncl"><rect class="tnclip" x="0" y="0" width="0" height="215"/></clipPath></defs>
+          <line x1="20" y1="170" x2="280" y2="170" class="tnline"/><text x="22" y="162" class="tnhomet">家（一级）</text>
+          <g clip-path="url(#tncl)"><path class="tntrail" filter="url(#tnb)" style="stroke-width:9;opacity:.55"/><path class="tntrail"/></g>
+          <g class="tnlabels"></g><circle class="tnhalo" cx="30" cy="170" r="46"/><circle class="tncore" cx="30" cy="170" r="10"/></svg>
+        <div class="tnname"></div><div class="row"><button class="ghost sm" data-act="tnsnd">🔇 无声 · 点一下加上声音</button></div></div>`;
       if (b.t === 'table') return `<table>${b.rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</table>`;
       return '';
     }).join('');
@@ -4025,23 +4026,38 @@
 
   // ---------------- 知识点 ----------------
   // 张力演示：圆点在一条线上（主和弦），离开家就被「拉长」，回到家又缩回去
+  const tnMix = (c1, c2, t) => { const p = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16)), x = p(c1), y = p(c2); return '#' + [0, 1, 2].map(i => { const v = Math.round(x[i] + (y[i] - x[i]) * t); return (v < 16 ? '0' : '') + v.toString(16); }).join(''); };
+  // 张力演示：一个发光的点沿着「张力曲线」走，时间从左到右，越高离「家」越远；走过的地方留下渐变的光迹。会一直循环播放
   function tnInit(box, si) {
-    box.dataset.i = si || 0; const set = JSON.parse(box.dataset.sets)[box.dataset.i | 0];
+    box.dataset.i = si || 0; const set = JSON.parse(box.dataset.sets)[box.dataset.i | 0], ch = set.chords, N = ch.length, svg = box.querySelector('.tnsvg');
     box.querySelector('.tnnote').textContent = set.note || '';
-    box.querySelector('.tnch').innerHTML = set.chords.map(([s], i) => `<button class="chip sm" data-act="tnpick" data-i="${i}">${D(s)}</button>`).join('');
-    box._tn = 0; tnShow(box, -1);
-  }
-  function tnShow(box, i) {
-    const set = JSON.parse(box.dataset.sets)[box.dataset.i | 0], c = i >= 0 ? set.chords[i] : null, to = c ? c[1] : 0, from = box._tn || 0, t0 = performance.now();
-    box.querySelectorAll('.tnch .chip').forEach((x, k) => x.classList.toggle('on', k === i));
-    box.querySelector('.tnname').textContent = c ? D(c[0]) + ' · ' + c[2] : '点「播放」或点下面的和弦';
-    const g = box.querySelector('.tnorb'), col = c ? (cxHue((T.parseChord(c[0]) || {}).q)[5]) : '#ffc857';
-    box.querySelector('.tnsvg').style.setProperty('--tnc', col);
-    const halo = box.querySelector('.tnhalo'), core = box.querySelector('.tncore'), strs = box.querySelectorAll('.tnstr');
-    cancelAnimationFrame(box._raf);
-    const step = now => { const u = Math.min(1, (now - t0) / 700), e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2, v = from + (to - from) * e, y = 36 + v * 130;
-      halo.setAttribute('cy', y); halo.setAttribute('r', 40 + 22 * v); core.setAttribute('cy', y); strs.forEach(l => { l.setAttribute('y2', y); l.style.strokeOpacity = 0.25 + 0.55 * v; }); box._tn = v; if (u < 1) box._raf = requestAnimationFrame(step); };
-    box._raf = requestAnimationFrame(step);
+    const xs = ch.map((c, i) => 30 + i * (240 / Math.max(1, N - 1))), ys = ch.map(c => 170 - c[1] * 120), cols = ch.map(c => cxHue((T.parseChord(c[0]) || {}).q)[5]);
+    let d = `M${xs[0]} ${ys[0]}`; for (let i = 0; i < N - 1; i++) { const xm = (xs[i] + xs[i + 1]) / 2; d += ` C${xm} ${ys[i]} ${xm} ${ys[i + 1]} ${xs[i + 1]} ${ys[i + 1]}`; }
+    box.querySelectorAll('.tntrail').forEach(p => p.setAttribute('d', d));
+    const NS = 'http://www.w3.org/2000/svg', lg = svg.querySelector('#tnlg'); lg.innerHTML = '';
+    cols.forEach((c, i) => { const st = document.createElementNS(NS, 'stop'); st.setAttribute('offset', ((xs[i] - 20) / 260).toFixed(3)); st.setAttribute('stop-color', c); lg.appendChild(st); });
+    box.querySelectorAll('.tntrail').forEach(p => p.setAttribute('stroke', 'url(#tnlg)'));
+    box.querySelector('.tnlabels').innerHTML = ch.map((c, i) => `<text x="${xs[i]}" y="192" text-anchor="middle" class="tnlab" data-i="${i}">${D(c[0])}</text>`).join('');
+    cancelAnimationFrame(box._raf); box._geo = { xs, ys, cols, N, ch, last: -1 };
+    const T0 = performance.now(), PER = 1.15, HOLD = 1.6, total = (N - 1) * PER + HOLD;
+    const loop = now => {
+      if (!box.isConnected) return;
+      const g = box._geo, t = Math.max(0, ((now - T0) / 1000)) % (total + 0.5), s = Math.max(0, Math.min(t / PER, N - 1)), k = Math.max(0, Math.min(N - 2, Math.floor(s + 1e-9))), fr = s - k;
+      const u = N < 2 ? 0 : Math.max(0, Math.min(1, (fr - 0.35) / 0.65)), e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+      const k2 = Math.min(N - 1, k + 1), xm = (g.xs[k] + g.xs[k2]) / 2, m1 = 1 - e;
+      let x, y; if (N < 2 || s >= N - 1) { x = g.xs[N - 1]; y = g.ys[N - 1]; } else { x = m1 * m1 * m1 * g.xs[k] + 3 * m1 * m1 * e * xm + 3 * m1 * e * e * xm + e * e * e * g.xs[k2]; y = m1 * m1 * m1 * g.ys[k] + 3 * m1 * m1 * e * g.ys[k] + 3 * m1 * e * e * g.ys[k2] + e * e * e * g.ys[k2]; }
+      const idx = Math.min(N - 1, Math.floor(s + 1e-6)), col = tnMix(g.cols[k], g.cols[k2], e), ten = (170 - y) / 120;
+      svg.style.setProperty('--tnc', col);
+      const halo = svg.querySelector('.tnhalo'), core = svg.querySelector('.tncore');
+      halo.setAttribute('cx', x); halo.setAttribute('cy', y); halo.setAttribute('r', 38 + 26 * ten); core.setAttribute('cx', x); core.setAttribute('cy', y);
+      svg.querySelector('.tnclip').setAttribute('width', Math.max(0, x - 5));
+      if (t > total) { svg.querySelector('.tnclip').setAttribute('width', 0); }
+      box.querySelectorAll('.tnlab').forEach((l, i) => l.classList.toggle('on', i === idx));
+      if (idx !== g.last) { g.last = idx; box.querySelector('.tnname').textContent = D(g.ch[idx][0]) + ' · ' + g.ch[idx][2]; if (box.dataset.snd === '1' && !document.hidden) { try { A.init(); playChord(g.ch[idx][0]); } catch (er) {} } }
+      if (t < 0.05) g.last = -1;
+      box._raf = requestAnimationFrame(loop);
+    };
+    box._raf = requestAnimationFrame(loop);
   }
   function vKnow() {
     const id = route[1];
@@ -4101,9 +4117,8 @@
       case 'spmk-set': { SplashMk.set({ [el.dataset.k]: isNaN(+el.dataset.v) || el.dataset.k === 'seq' || el.dataset.k === 'style' ? el.dataset.v : +el.dataset.v }); vSplashMk(); break; }
       case 'spmk-play': SplashMk.preview(); break;
       case 'spmk-use': S.splashMode = 'custom'; S.splashCfg = SplashMk.withPre(SplashMk.cfg()); save(); toast('已设为开机动画。下次打开 App 就会放这一段'); break;
-      case 'tnset': { const box = el.closest('.tnbox'); box.querySelectorAll('.chips .chip').forEach(c => c.classList.toggle('on', c === el)); tnInit(box, +el.dataset.v); break; }
-      case 'tnplay': { const box = el.closest('.tnbox'); stopAll(); A.init(); const set = JSON.parse(box.dataset.sets)[box.dataset.i | 0]; set.chords.forEach(([s], i) => later(() => { tnShow(box, i); playChord(s); }, i * 1200)); break; }
-      case 'tnpick': { const box = el.closest('.tnbox'); stopAll(); A.init(); const set = JSON.parse(box.dataset.sets)[box.dataset.i | 0], i = +el.dataset.i; tnShow(box, i); playChord(set.chords[i][0]); break; }
+      case 'tnset': { const box = el.closest('.tnbox'); box.querySelectorAll('.chips .chip').forEach(c => c.classList.toggle('on', c === el)); stopAll(); tnInit(box, +el.dataset.v); break; }
+      case 'tnsnd': { const box = el.closest('.tnbox'), on = box.dataset.snd !== '1'; box.dataset.snd = on ? '1' : '0'; el.textContent = on ? '🔊 有声音 · 点一下关掉' : '🔇 无声 · 点一下加上声音'; if (on) A.init(); else stopAll(); break; }
       case 'splashsnd': S.splashSnd = el.dataset.v === '1'; save(); vSet(); break;
       case 'splashset': S.splash = el.dataset.v === '1'; save(); vSet(); break;
       case 'splashplay': { sessionStorage.removeItem('hx.splash'); location.href = location.pathname + location.search + location.hash; location.reload(); break; }
