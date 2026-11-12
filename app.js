@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 166; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 167; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -484,7 +484,7 @@
     const qs = [];
     if (unitId) { for (let i = 0; i < 8; i++) qs.push(unitId); }
     else {
-      const cur = currentUnit(), done = UNITS.filter(u => unitState(u.id).done && u !== cur);
+      const cur = currentUnit(), done = UNITS.filter(u => unitState(u.id).done && u !== cur && !(unitState(u.id).skipped && !mastery(u.id))); // 跳过又没练过的单元，不拿来复习
       // 复习：掌握度低的单元权重更高
       const weighted = [];
       done.forEach(u => { const w = 1 + Math.round((100 - mastery(u.id)) / 20); for (let i = 0; i < w; i++) weighted.push(u.id); });
