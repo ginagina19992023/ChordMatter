@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 194; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 195; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -1110,7 +1110,7 @@
   const hasFull = id => !!(window.FULL && FULL[id]);
   function vCmp() {
     const s = allSongs().find(x => x.id === route[1]); if (!s) return go('#songs');
-    if (CMP.id !== s.id) { CMP.id = s.id; CMP.sec = 0; }
+    if (CMP.id !== s.id) { CMP.id = s.id; CMP.sec = -1; }
     const st = sectionStarts(s), secs = s.sections.map((x, i) => [x.name, st[i], st[i] + parseBars(x.bars).length - 1]);
     const head = `<header class="top"><div><a class="back" href="#song-${s.id}">←</a><small>${esc(s.title)}</small><h1>原曲 ↔ 和弦伴奏</h1></div></header>`;
     if (!hasFull(s.id)) { view.innerHTML = head + `<p class="no">这首的完整扒谱只放在你的私人版本（artifact）里：原谱有版权，不能放到公开网站。请在 artifact 里打开这一页。</p>`; return; }
@@ -1118,8 +1118,8 @@
     const lyr = (S.lyrics || {})[s.id] || '';
     view.innerHTML = head + `
       <div class="chips">${[['compare', '上下对比'], ['practice', '练习版：右手原曲 + 左手和弦'], ['orig', '原曲']].map(([k, n]) => `<button class="chip${M === k ? ' on' : ''}" data-act="cmpmode" data-v="${k}">${n}</button>`).join('')}</div>
-      <p class="fine cmpnote">${{ compare: '每一小节从上往下三行：<b>右手（原曲旋律）</b>、<b>原曲左手</b>、<b>和弦左手</b>。第二行和第三行弹的是同一个和弦：原曲把它拆开弹，和弦版把它一下按住。对着看，就知道原曲的左手是从哪个和弦变出来的。', practice: '<b>右手照原曲弹旋律，左手换成和弦</b>：每小节开头按下上面标的和弦，按住到下一个和弦。先慢速，弹熟了再换回原曲左手。', orig: '按你上传的谱逐音扒下来的原曲（两只手）。每小节上方标了和弦。' }[M]}</p>
-      <div class="chips">${secs.map(([n], i) => `<button class="chip${i === CMP.sec ? ' on' : ''}" data-act="cmpsec" data-v="${i}">${esc(n)}</button>`).join('')}<button class="chip${CMP.sec < 0 ? ' on' : ''}" data-act="cmpsec" data-v="-1">全曲</button></div>
+      <div class="row cmpinfo"><small class="fine">这一看法是什么意思</small><button class="tni inline" data-act="tninfo" aria-label="说明">ⓘ</button>      <p class="fine tninfotxt cmpnote" hidden>${{ compare: '每一小节从上往下三行：<b>右手（原曲旋律）</b>、<b>原曲左手</b>、<b>和弦左手</b>。第二行和第三行弹的是同一个和弦：原曲把它拆开弹，和弦版把它一下按住。对着看，就知道原曲的左手是从哪个和弦变出来的。', practice: '<b>右手照原曲弹旋律，左手换成和弦</b>：每小节开头按下上面标的和弦，按住到下一个和弦。先慢速，弹熟了再换回原曲左手。', orig: '按你上传的谱逐音扒下来的原曲（两只手）。每小节上方标了和弦。' }[M]}</p></div>
+      <label class="secsel"><span>段落</span><select data-chg="cmpsec"><option value="-1"${CMP.sec < 0 ? ' selected' : ''}>全曲</option>${secs.map(([n], i) => `<option value="${i}"${i === CMP.sec ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
       <div class="row">${M !== 'practice' ? '<button class="btn" data-act="cmpplay" data-v="orig">▶ 听原曲</button>' : ''}${M !== 'orig' ? `<button class="${M === 'practice' ? 'btn' : 'ghost'}" data-act="cmpplay" data-v="practice">▶ 听练习版</button>` : ''}<button class="ghost sm" data-act="screte" data-v="-0.1">慢</button><button class="ghost sm" data-act="screte" data-v="0.1">快</button></div>
       <div class="score" id="cmpscore"><p class="fine">正在生成谱面…</p></div>
       <a class="link" href="#mem-${s.id}"><small>边弹边判断</small><b>打开收音，一个和弦一个和弦弹</b><span>→</span></a>
@@ -1726,7 +1726,7 @@
     const tab = S.songTab || 'sheet', full = hasFull(s.id), vv = (S.songViewBy || {})[s.id] || (full ? 'cmp' : 'sheet'), v = !full && (vv === 'cmp' || vv === 'practice') ? 'sheet' : vv, scoreV = ['sheet', 'cmp', 'practice'].includes(v); CURV = v;
     RL.maxLv = hasFull(s.id) ? 3 : 2; RL.lvl3name = '两只手全部音符'; if (RL.lvl > RL.maxLv || (RL.lvl === 3 && rollPassed() < 2)) RL.lvl = 1;
     const tabs = `<div class="tabs">${[['sheet', '谱'], ['shape', '结构'], ['play', '练']].map(([k, n]) => `<button class="tab${tab === k ? ' on' : ''}" data-act="songtab" data-v="${k}">${n}</button>`).join('')}</div>`;
-    const secChips = v === 'roll' || s.sections.length < 2 ? '' : `<div class="chips scroll secchips"><button class="chip${si < 0 ? ' on' : ''}" data-act="songsec" data-v="-1">全曲</button>${s.sections.map((x, i) => `<button class="chip${si === i ? ' on' : ''}" data-act="songsec" data-v="${i}">${esc(x.name.replace(/\s*[‖:].*$/, ''))}</button>`).join('')}</div>`;
+    const secChips = v === 'roll' || s.sections.length < 2 ? '' : `<label class="secsel"><span>段落</span><select data-chg="songsec"><option value="-1"${si < 0 ? ' selected' : ''}>全曲</option>${s.sections.map((x, i) => `<option value="${i}"${si === i ? ' selected' : ''}>${esc(x.name.replace(/\s*[‖:].*$/, ''))}</option>`).join('')}</select></label>`;
     let body = '';
     if (tab === 'sheet') body = `
       <div class="seg viewseg" role="group" aria-label="看法">${(full ? [['cmp', '三行对照'], ['sheet', '原曲'], ['practice', '练习版'], ['roll', '瀑布流'], ['grid', '和弦格子']] : [['sheet', '谱 + 和弦'], ['roll', '瀑布流'], ['grid', '和弦格子']]).map(([k, t]) => `<button class="${v === k ? 'on' : ''}" data-act="songview" data-v="${k}">${t}</button>`).join('')}</div>
@@ -4630,6 +4630,11 @@
     start();
     setTimeout(() => { if (A.ctx && A.ctx.state !== 'running') { A.cut(); blocked(); } }, 250);
   })();
+  document.addEventListener('change', e => {
+    const el = e.target.closest && e.target.closest('[data-chg]'); if (!el) return;
+    if (el.dataset.chg === 'cmpsec') { CMP.sec = +el.value; render(); }
+    if (el.dataset.chg === 'songsec') { S.songSec = S.songSec || {}; S.songSec[route[1]] = +el.value; save(); render(); }
+  });
   document.addEventListener('staffplay', e => { A.init(); const ms = e.detail || []; if (ms.length === 1) A.note(ms[0], 0, 1.4, 0.7); else A.chord(ms, 0, 0.02, 1.4); });
   document.addEventListener('calpick', e => { calDetail(e.detail); });
   render();
