@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 175; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 176; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -641,12 +641,7 @@
       if (b.t === 'chord') return chordCard(b.s);
       if (b.t === 'prog') return progRow(b.k, b.c);
       if (b.t === 'video') return `<figure class="vclip${b.tall ? ' tall' : ''}"><video controls playsinline preload="metadata" poster="${b.poster}" src="${b.src}"${/media\/demo-[a-z]+\.mp4$/.test(b.src) ? ` data-light="${b.src}" data-lightp="${b.poster}" data-dark="${b.src.replace('.mp4', '-dark.mp4')}" data-darkp="${b.poster.replace('.jpg', '-dark.jpg')}"` : ''}>${b.vtt ? `<track kind="subtitles" srclang="zh" label="中文" src="${b.vtt}" default>` : ''}</video><figcaption><b>${b.title}</b><small>${b.credit}${b.url ? ` · <a href="${b.url}" target="_blank" rel="noopener">原视频 ↗</a>` : ''}</small></figcaption></figure>`;
-      if (b.t === 'tension') return `<div class="tnbox" data-sets="${esc(JSON.stringify(b.sets))}"><div class="chips scroll">${b.sets.map((s, i) => `<button class="chip sm${i ? '' : ' on'}" data-act="tnset" data-v="${i}">${s.name}</button>`).join('')}</div>
-        <p class="tnnote"></p>
-        <svg class="tnsvg" viewBox="0 0 300 230" aria-hidden="true"><defs><radialGradient id="tng"><stop offset="0" class="tns" stop-opacity=".6"/><stop offset=".5" class="tns" stop-opacity=".22"/><stop offset="1" class="tns" stop-opacity="0"/></radialGradient><filter id="tnb" x="-60%" y="-10%" width="220%" height="120%"><feGaussianBlur stdDeviation="5"/></filter></defs>
-          <line x1="20" y1="34" x2="280" y2="34" class="tnline"/><text x="24" y="24" class="tnhomet">家（一级）</text>
-          <g class="tnorb"><line class="tnstr tnstrb" x1="150" y1="34" x2="150" y2="34" filter="url(#tnb)"/><line class="tnstr" x1="150" y1="34" x2="150" y2="34"/><circle class="tnhalo" cx="150" cy="34" r="46"/><circle class="tncore" cx="150" cy="34" r="14"/></g><circle class="tnhome" cx="150" cy="34" r="6"/></svg>
-        <div class="tnname"></div><div class="tnch"></div><div class="row"><button class="ghost sm" data-act="tnsnd">🔇 无声 · 点一下加上声音</button></div></div>`;
+      if (b.t === 'tension') return tnBoxHtml(b.sets);
       if (b.t === 'table') return `<table>${b.rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</table>`;
       return '';
     }).join('');
@@ -2491,28 +2486,13 @@
   }
   function tensionArc(s) {
     const pts = songArcData(s); if (pts.length < 4) return '';
-    const n = pts.length, X = i => 14 + i * (292 / (n - 1)), Y = p => 22 + p * 100;
-    let d = `M${X(0)} ${Y(pts[0].t)}`; for (let i = 0; i < n - 1; i++) { const xm = (X(i) + X(i + 1)) / 2; d += ` C${xm} ${Y(pts[i].t)} ${xm} ${Y(pts[i + 1].t)} ${X(i + 1)} ${Y(pts[i + 1].t)}`; }
-    const step = Math.max(1, Math.floor(n / 40)), stops = pts.map((p, i) => i % step === 0 || i === n - 1 ? `<stop offset="${(i / (n - 1)).toFixed(3)}" stop-color="${cxHue(p.q)[5]}"/>` : '').join('');
-    const mx = pts.reduce((m, p, i) => (p.t > pts[m].t ? i : m), 0), back = pts.findIndex((p, i) => i > mx && p.t === 0), away = Math.round(pts.filter(p => p.t >= 0.4).length / n * 100);
-    const secs = s.sections.length <= 8 && s.sections.length > 1 ? (() => { let c = 0; return s.sections.map((sec, si) => { const x = X(pts.findIndex(p => p.sec === si)); return `<line x1="${x}" y1="22" x2="${x}" y2="136" class="arcsec"/><text x="${x + 2}" y="146" class="arclab">${esc(sec.name.replace(/\s*[‖:].*$/, '').slice(0, 5))}</text>`; }).join(''); })() : '';
-    return `<section class="arcbox" data-song="${s.id}"><h3>张力弧线 <small>· 每个和弦离「家」有多远，越往下越远</small></h3>
-      <svg class="arcsvg" viewBox="0 0 320 152"><defs><linearGradient id="arclg" gradientUnits="userSpaceOnUse" x1="14" y1="0" x2="306" y2="0">${stops}</linearGradient><radialGradient id="arcg"><stop offset="0" class="tns" stop-opacity=".6"/><stop offset=".5" class="tns" stop-opacity=".22"/><stop offset="1" class="tns" stop-opacity="0"/></radialGradient><filter id="arcb" x="-5%" y="-30%" width="110%" height="160%"><feGaussianBlur stdDeviation="4"/></filter></defs>
-        <line x1="14" y1="22" x2="306" y2="22" class="tnline"/><text x="16" y="14" class="tnhomet">家（一级）</text>${secs}
-        <path d="${d}" class="arcpath" filter="url(#arcb)" style="stroke-width:9;opacity:.5"/><path d="${d}" class="arcpath"/>
-        <circle id="arcpk" cx="${X(mx)}" cy="${Y(pts[mx].t)}" r="4" class="arcpk"/><circle class="arcglow" id="arch" cx="${X(0)}" cy="${Y(pts[0].t)}" r="26"/><circle class="arccore" id="arcc" cx="${X(0)}" cy="${Y(pts[0].t)}" r="7"/></svg>
-      <p class="arcsum">最远的和弦：<b>${D(pts[mx].sym)}</b>（第 ${pts[mx].bar} 小节）${back >= 0 ? ` · 之后回到「家」：第 <b>${pts[back].bar}</b> 小节` : ''} · 有 <b>${away}%</b> 的和弦在「家」之外</p>
-      <p class="arcnow" id="arcnow">点曲线上任意位置听那个和弦，或者点「看一遍」</p>
-      <div class="row"><button class="ghost sm" data-act="arcplay" data-song="${s.id}">▶ 看一遍这首的张力</button></div></section>`;
-  }
-  function arcMove(s, i, play) {
-    const pts = songArcData(s), n = pts.length; if (!pts[i]) return;
-    const X = i2 => 14 + i2 * (292 / (n - 1)), Y = p => 22 + p * 100, svg = document.querySelector('.arcsvg'); if (!svg) return;
-    const c = cxHue(pts[i].q)[5]; svg.style.setProperty('--tnc', c);
-    ['arch', 'arcc'].forEach(id => { const e = document.getElementById(id); e.setAttribute('cx', X(i)); e.setAttribute('cy', Y(pts[i].t)); });
-    document.getElementById('arch').setAttribute('r', 22 + 16 * pts[i].t);
-    const nowEl = document.getElementById('arcnow'); if (nowEl) nowEl.innerHTML = `第 ${pts[i].bar} 小节 · <b>${D(pts[i].sym)}</b> · ${chordFunc(pts[i].sym, s.key) === 'T' ? '在家附近' : chordFunc(pts[i].sym, s.key) === 'S' ? '离开中' : chordFunc(pts[i].sym, s.key) === 'D' ? '最紧张' : '调外和弦，绕得更远'}`;
-    if (play) { A.init(); playChord(pts[i].sym); }
+    const fnName = p => ({ T: '在家附近', S: '离开中', D: '最紧张' }[chordFunc(p.sym, s.key)] || '调外和弦，绕得更远');
+    const toChords = arr => arr.map(p => [p.sym, p.t, `第 ${p.bar} 小节 · ${fnName(p)}`]);
+    const sets = [{ name: '全曲', note: '光点只会上下动：离「家」越远，越往下沉；回到家就弹回线上。', chords: toChords(pts) }];
+    if (s.sections.length > 1 && s.sections.length <= 8) s.sections.forEach((sec, si) => { const sub = pts.filter(p => p.sec === si); if (sub.length >= 2) sets.push({ name: sec.name.replace(/\s*[‖:].*$/, '').slice(0, 6), note: '这一段里，光点怎么离开、怎么回家。', chords: toChords(sub) }); });
+    const mx = pts.reduce((m, p, i) => (p.t > pts[m].t ? i : m), 0), back = pts.findIndex((p, i) => i > mx && p.t === 0), away = Math.round(pts.filter(p => p.t >= 0.4).length / pts.length * 100);
+    requestAnimationFrame(() => document.querySelectorAll('.tnbox:not([data-ready])').forEach(b => { b.dataset.ready = 1; tnInit(b, 0); }));
+    return `<section class="arcbox"><h3>张力 <small>· 这首曲子每个和弦离「家」有多远</small></h3>${tnBoxHtml(sets, 1.1, `<p class="arcsum">最远的和弦：<b>${D(pts[mx].sym)}</b>（第 ${pts[mx].bar} 小节）${back >= 0 ? ` · 之后回到「家」：第 <b>${pts[back].bar}</b> 小节` : ''} · 有 <b>${away}%</b> 的和弦在「家」之外</p>`)}</section>`;
   }
   function harmonyStrip(s) {
     const st = sectionStarts(s);
@@ -4064,14 +4044,21 @@
   // ---------------- 知识点 ----------------
   // 张力演示：圆点在一条线上（主和弦），离开家就被「拉长」，回到家又缩回去
   const tnMix = (c1, c2, t) => { const p = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16)), x = p(c1), y = p(c2); return '#' + [0, 1, 2].map(i => { const v = Math.round(x[i] + (y[i] - x[i]) * t); return (v < 16 ? '0' : '') + v.toString(16); }).join(''); };
+  const tnBoxHtml = (sets, per, extra = '') => `<div class="tnbox" data-sets="${esc(JSON.stringify(sets))}"${per ? ` data-per="${per}"` : ''}><div class="chips scroll">${sets.map((s, i) => `<button class="chip sm${i ? '' : ' on'}" data-act="tnset" data-v="${i}">${s.name}</button>`).join('')}</div>
+        <p class="tnnote"></p>
+        <svg class="tnsvg" viewBox="0 0 300 230" aria-hidden="true"><defs><radialGradient id="tng"><stop offset="0" class="tns" stop-opacity=".6"/><stop offset=".5" class="tns" stop-opacity=".22"/><stop offset="1" class="tns" stop-opacity="0"/></radialGradient><filter id="tnb" x="-60%" y="-10%" width="220%" height="120%"><feGaussianBlur stdDeviation="5"/></filter></defs>
+          <line x1="20" y1="34" x2="280" y2="34" class="tnline"/><text x="24" y="24" class="tnhomet">家（一级）</text>
+          <g class="tnorb"><line class="tnstr tnstrb" x1="150" y1="34" x2="150" y2="34" filter="url(#tnb)"/><line class="tnstr" x1="150" y1="34" x2="150" y2="34"/><circle class="tnhalo" cx="150" cy="34" r="46"/><circle class="tncore" cx="150" cy="34" r="14"/></g><circle class="tnhome" cx="150" cy="34" r="6"/></svg>
+        <div class="tnname"></div><div class="tnch"></div>${extra}<div class="row"><button class="ghost sm" data-act="tnsnd">🔇 无声 · 点一下加上声音</button></div></div>`;
   // 张力演示：只有上下变化。「家」是最上面那条线，光点离家越远，就被拉得越往下；回到家就缩回线上。会一直循环
   function tnInit(box, si) {
     box.dataset.i = si || 0; const set = JSON.parse(box.dataset.sets)[box.dataset.i | 0], ch = set.chords, N = ch.length, svg = box.querySelector('.tnsvg');
     box.querySelector('.tnnote').textContent = set.note || '';
-    box.querySelector('.tnch').innerHTML = ch.map(([s]) => `<span class="tnc">${D(s)}</span>`).join('<i>→</i>');
+    const chipsFor = idx => { const lo = N > 12 ? Math.max(0, Math.min(N - 6, idx - 2)) : 0, hi = N > 12 ? lo + 6 : N; return ch.slice(lo, hi).map(([s], k) => `<span class="tnc${lo + k === idx ? ' on' : ''}">${D(s)}</span>`).join('<i>→</i>'); };
+    box.querySelector('.tnch').innerHTML = chipsFor(0);
     const cols = ch.map(c => cxHue((T.parseChord(c[0]) || {}).q)[5]), ys = ch.map(c => 34 + c[1] * 150);
     cancelAnimationFrame(box._raf); box._last = -1;
-    const T0 = performance.now(), PER = 1.5, HOLD = 1.4, total = (N - 1) * PER + HOLD;
+    const T0 = performance.now(), PER = +box.dataset.per || 1.5, HOLD = 1.4, total = (N - 1) * PER + HOLD;
     const halo = svg.querySelector('.tnhalo'), core = svg.querySelector('.tncore'), strs = svg.querySelectorAll('.tnstr');
     const loop = now => {
       if (!box.isConnected) return;
@@ -4080,8 +4067,7 @@
       const y = s >= N - 1 ? ys[N - 1] : ys[k] + (ys[k2] - ys[k]) * e, col = tnMix(cols[k], cols[k2], s >= N - 1 ? 1 : e), ten = (y - 34) / 150, idx = Math.min(N - 1, Math.floor(s + 1e-6));
       svg.style.setProperty('--tnc', col);
       halo.setAttribute('cy', y); halo.setAttribute('r', 38 + 24 * ten); core.setAttribute('cy', y); strs.forEach(l => { l.setAttribute('y2', y); l.style.strokeOpacity = 0.25 + 0.55 * ten; });
-      box.querySelectorAll('.tnc').forEach((c, i) => c.classList.toggle('on', i === idx));
-      if (idx !== box._last) { box._last = idx; box.querySelector('.tnname').textContent = D(ch[idx][0]) + ' · ' + ch[idx][2]; if (box.dataset.snd === '1' && !document.hidden) { try { A.init(); playChord(ch[idx][0]); } catch (er) {} } }
+      if (idx !== box._last) { box._last = idx; box.querySelector('.tnch').innerHTML = chipsFor(idx); box.querySelector('.tnname').textContent = D(ch[idx][0]) + ' · ' + ch[idx][2]; if (box.dataset.snd === '1' && !document.hidden) { try { A.init(); playChord(ch[idx][0]); } catch (er) {} } }
       if (t < 0.05) box._last = -1;
       box._raf = requestAnimationFrame(loop);
     };
@@ -4203,7 +4189,6 @@
         rollGo(); break; }
       case 'rlstop': stopAll(); Roll.stop(); drillStop(); break;
       case 'rlrate': RL.rate = Math.max(0.4, Math.min(1.6, +(RL.rate + +el.dataset.v).toFixed(2))); $('#rlrate').textContent = Math.round(RL.rate * 100) + '%'; break;
-      case 'arcplay': { const s = allSongs().find(x => x.id === el.dataset.song); if (!s) break; stopAll(); const pts = songArcData(s), dt = Math.max(260, Math.min(700, 26000 / pts.length)); pts.forEach((p, i) => later(() => arcMove(s, i, true), i * dt)); break; }
       case 'hstrip': { const s = allSongs().find(x => x.id === route[1]); const r = el.getBoundingClientRect(); if (s) barPop(s, +el.dataset.n, r.left + r.width / 2, r.bottom); break; }
       case 'hgo': { const s = allSongs().find(x => x.id === route[1]); const n = +el.dataset.n, st = sectionStarts(s); const k = st.findIndex((x, i) => n >= x && n < x + parseBars(s.sections[i].bars).length); S.songSec = S.songSec || {}; S.songSec[s.id] = k; S.songTab = 'sheet'; save(); render(); break; }
       case 'sgview': SG.view = el.dataset.v; render(); break;
@@ -4444,12 +4429,6 @@
     start();
     setTimeout(() => { if (A.ctx && A.ctx.state !== 'running') { A.cut(); blocked(); } }, 250);
   })();
-  document.addEventListener('click', e => {
-    const svg = e.target.closest && e.target.closest('.arcsvg'); if (!svg) return;
-    const box = svg.closest('.arcbox'), s = allSongs().find(x => x.id === box.dataset.song); if (!s) return;
-    const r = svg.getBoundingClientRect(), n = songArcData(s).length, x = (e.clientX - r.left) / r.width * 320, i = Math.max(0, Math.min(n - 1, Math.round((x - 14) / (292 / (n - 1)))));
-    stopAll(); arcMove(s, i, true);
-  });
   document.addEventListener('staffplay', e => { A.init(); const ms = e.detail || []; if (ms.length === 1) A.note(ms[0], 0, 1.4, 0.7); else A.chord(ms, 0, 0.02, 1.4); });
   document.addEventListener('calpick', e => { calDetail(e.detail); });
   render();
