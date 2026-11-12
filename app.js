@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 192; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 193; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -2946,8 +2946,9 @@
       el.querySelector('#addscore').addEventListener('change', e => add([...e.target.files], []));
       return;
     }
-    el.innerHTML = `<div class="myscore">${pages.map(p => `<img src="${p}" alt="原谱">`).join('')}</div><p class="fine">双指放大查看。下面和弦格子里的小数字就是这份谱的小节号。共 ${pages.length} 页${preset ? '（这是之前帮你整理这首时用的原谱）' : ''}。</p>
-      <div class="row"><label class="ghost sm" for="addscore2">${preset ? '换成你自己的图' : '再添加几页'}</label>${preset ? '' : '<button class="ghost sm" id="delscore">全部删掉重选</button>'}</div><input type="file" id="addscore2" accept="image/*,application/pdf,.pdf" multiple hidden>`;
+    // 原图默认收起：已经整理好的谱在下面，原图只在需要对照时点开看
+    el.innerHTML = `<div class="myrow"><span>原图 · 共 ${pages.length} 页${preset ? '（之前帮你整理这首时用的）' : ''}</span><button class="ghost sm" data-act="myshow">查看原图</button></div><div class="myimgs" hidden><div class="myscore">${pages.map(p => `<img src="${p}" alt="原谱" loading="lazy">`).join('')}</div><p class="fine">双指放大查看。和弦格子里的小数字就是这份谱的小节号。</p>
+      <div class="row"><label class="ghost sm" for="addscore2">${preset ? '换成你自己的图' : '再添加几页'}</label>${preset ? '' : '<button class="ghost sm" id="delscore">全部删掉重选</button>'}</div><input type="file" id="addscore2" accept="image/*,application/pdf,.pdf" multiple hidden></div>`;
     el.querySelector('#addscore2').addEventListener('change', e => add([...e.target.files], preset ? [] : pages));
     const dl = el.querySelector('#delscore'); if (dl) dl.addEventListener('click', async () => { if (!confirm('把这首曲子已经添加的原谱全部删掉？（只删这台手机上的）')) return; await OCR.savePages(id, []); mountMyScore(id); });
   }
@@ -4335,6 +4336,7 @@
       case 'folskip': if (FOL) folAdvance(); break;
       case 'folstop': folStop(); break;
       case 'folmode': if (FOL) { if (FOL.mic && Listen.active()) Listen.stop(); FOL.mic = !FOL.mic; folPanel(); folShow(); if (FOL.mic) folMic(); } break;
+      case 'myshow': { const box = el.closest('#myscore').querySelector('.myimgs'); box.hidden = !box.hidden; el.textContent = box.hidden ? '查看原图' : '收起原图'; break; }
       case 'splashsnd': S.splashSnd = el.dataset.v === '1'; save(); vSet(); break;
       case 'splashset': S.splash = el.dataset.v === '1'; save(); vSet(); break;
       case 'splashplay': { sessionStorage.removeItem('hx.splash'); location.href = location.pathname + location.search + location.hash; location.reload(); break; }
