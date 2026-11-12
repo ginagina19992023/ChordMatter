@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 189; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 190; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -2862,7 +2862,7 @@
       go(sections.length ? '#song-' + id : '#edit-' + id);
     });
   }
-  const SCORE_PRESET = { alwayson: ['ao1', 'ao2', 'ao3', 'ao4', 'ao5'].map(n => `scores/${n}.jpg`), cityofstars: ['scores/cos1.jpg'], cosrowan: ['cosr1', 'cosr2', 'cosr3'].map(n => `scores/${n}.jpg`) };
+  const SCORE_PRESET = { alwayson: ['ao1', 'ao2', 'ao3', 'ao4', 'ao5'].map(n => `scores/${n}.jpg`), cityofstars: ['scores/cos1.jpg'], cosrowan: ['cosr1', 'cosr2', 'cosr3'].map(n => `scores/${n}.jpg`), k545: [1, 2, 3, 4].map(n => `scores/k545-${n}.jpg`) };
   async function mountMyScore(id) {
     const el = $('#myscore'); if (!el) return;
     let pages = await OCR.loadPages(id);
