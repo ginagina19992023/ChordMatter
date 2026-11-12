@@ -7,7 +7,7 @@ const server = http.createServer((q, r) => { const f = path.join(ROOT, decodeURI
 server.listen(8781, async () => {
   const b = await chromium.launch(), c = await b.newContext({ viewport: { width: 390, height: 844 } }), p = await c.newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message));
-  await c.addInitScript(() => { if (!sessionStorage.getItem('t')) { sessionStorage.setItem('t', '1'); localStorage.setItem('hexian.v1', JSON.stringify({ v: 3, savedAt: Date.now() + 1e9, songView: 'grid', songTab: 'sheet' })); } });
+  await c.addInitScript(() => { if (!sessionStorage.getItem('t')) { sessionStorage.setItem('t', '1'); localStorage.setItem('hexian.v1', JSON.stringify({ v: 3, savedAt: Date.now() + 1e9, songView: 'grid', songViewBy: { alwayson: 'grid' }, songTab: 'sheet' })); } });
   const checks = [
     ['#songs', '.scard', 5, '曲目卡片'],
     ['#acc', '.acard', 4, '伴奏卡片'],
