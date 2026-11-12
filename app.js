@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 183; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 184; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -1531,6 +1531,32 @@
       <div class="pills" style="margin-top:14px"><a class="pill" href="#unit-u13">即兴伴奏入门：三步配和弦</a><a class="pill" href="#combo">组合和弦</a><a class="pill" href="#songs">想弹整首曲子？去「曲目」</a></div>
       <p class="fine">卡片上：第一句旋律（简谱）、这首用到的和弦（颜色 = 稳 / 走 / 紧）、你上次选的伴奏型。</p>`;
   }
+  // 谱面逻辑：按段拆开，每一段的说明跟着这一段的和弦走（点开才看），不再是一大段文字堆在最下面
+  function songLogicParts(s) {
+    const key = T.parseKey(s.key);
+    const secs = s.sections.map(sec => { const bars = parseBars(sec.bars); const flat = bars.flat(); return { name: sec.name, bars, flat, an: flat.map(x => T.analyze(x, key)) }; });
+    const keyLine = `<b>调性</b> ${key.zh}，主和弦 ${D(key.tonic.name + (key.minor ? 'm' : ''))}（${key.minor ? '简谱里是 6 la 起的小调' : '简谱 1 = ' + D(key.tonic.name)}）`;
+    const out = secs.map((sc, i) => {
+      const lines = [], cad = sc.an.length > 1 ? T.cadence(sc.an[sc.an.length - 2], sc.an[sc.an.length - 1]) : null;
+      const fx = sc.an.map(a => (a && a.func) ? (S.pro ? a.func : FW[a.func]) : '·').join(' ');
+      let rep = '';
+      for (let j = 0; j < i; j++) { const p = secs[j].flat; let n = 0; while (n < p.length && n < sc.flat.length && p[n] === sc.flat[n]) n++; if (n >= 3) rep = `前 ${n} 个和弦与「${esc(secs[j].name)}」相同`; }
+      const tp = key.minor ? [] : T.findTemplates(sc.an);
+      lines.push(`功能顺序：${fx}`);
+      if (cad) lines.push(`结尾：<u>${cad}</u>`);
+      if (rep) lines.push(rep);
+      if (tp.length) lines.push(`含 <u>${tp.map(t => t.name).join('、')}</u>`);
+      const special = sc.an.filter(a => a && a.kind !== 'dia');
+      if (special.length) lines.push(`特别和弦：${uniq(special.map(a => `${D(a.c.sym)} = ${a.numeral}（${a.note}）`)).join('；')}`);
+      const half = sc.bars.length >= 4 && sc.bars.length % 2 === 0 ? sc.bars.length / 2 : 0;
+      if (half && sc.bars[0].join() === sc.bars[half].join() && sc.bars.slice(0, half).flat().join(' ') !== sc.bars.slice(half).flat().join(' ')) lines.push('结构：前后两半开头相同，只有结尾不同（一问一答）');
+      const sum = [cad ? `结尾 ${cad}` : '', tp.length ? tp.map(t => t.name).join('、') : '', rep ? '重复前面' : ''].filter(Boolean).join(' · ') || '展开看';
+      return { sum, lines };
+    });
+    const bass = secs.flatMap(sc => sc.an.map(a => a ? D(a.c.bass ? a.c.bass.name : a.c.root.name) : '?'));
+    return { keyLine, secs: out, bass };
+  }
+  const logicDetails = (s, si, parts) => { const p = (parts || songLogicParts(s)).secs[si]; return p ? `<details class="hlogic"><summary>这一段的谱面逻辑 <small>· ${p.sum}</small></summary>${p.lines.map(l => `<p>${l}</p>`).join('')}</details>` : ''; };
   function songLogic(s) {
     const key = T.parseKey(s.key);
     const out = [];
@@ -1705,10 +1731,11 @@
       ${secChips}
       ${route[2] ? `<p class="hitnote">从 <b>${D(route[3] || '')}</b> 和弦页过来：要找的是第 ${route[2].split('.').join('、')} 小节。</p>` : ''}
       ${v === 'grid' ? `${colorSeg()}<div class="seg gmode" role="group" aria-label="格子排法">${[['wrap', '折行'], ['scroll', '横滑']].map(([k, t]) => `<button class="${(S.gridMode || 'wrap') === k ? 'on' : ''}" data-act="gridmode" data-v="${k}">${t}</button>`).join('')}</div><div class="grid" id="grid" data-mode="${S.gridMode || 'wrap'}">${songGrid(s, si)}</div>${(() => { const first = view && si >= 0 ? songFlat({ sections: s.sections.slice(0, si) }).length : 0; if (KL.song !== s.id || KL.sec !== si) { KL.song = s.id; KL.sec = si; KL.i = first; } return klPanel(s); })()}<p class="explain" id="explain">点任意和弦：听声音，并看它是什么意思。</p>` : v === 'roll' ? rollEntry('song', hasFull(s.id) ? '整首按原谱落下：简单只弹和弦，中等加左手低音，困难是原曲两只手' : '整首落下：简单只弹和弦，中等加左手低音') : songSheet(s, si)}`;
+    if (tab === 'sheet' && si >= 0) body += logicDetails(s, si);
     if (tab === 'shape') body = `
       ${harmonyStrip(s)}
       ${tensionArc(s)}
-      <section class="logic"><h3>谱面逻辑 <small>· 点下划线的词看解释</small></h3>${songLogic(s).map(l => `<p>${l}</p>`).join('')}</section>
+      ${(() => { const lp = songLogicParts(s); return `<section class="logic"><p>${lp.keyLine}</p><details class="hlogic"><summary>低音线</summary><p>${lp.bass.join(' ')}</p></details><p class="fine">点每一段下面的「这一段的谱面逻辑」展开；点下划线的词看解释。</p></section>`; })()}
       ${s.note ? `<p class="fine">${esc(s.note)}</p>` : ''}`;
     if (tab === 'play') {
       const combos = COMBOS.map(cb => ({ cb, f: cbFind(cb).find(x => x.s.id === s.id) })).filter(x => x.f);
@@ -2549,8 +2576,8 @@
     return `<section class="arcbox">${head}<p class="fine">这首曲子目前没有旋律音符的数据（只有和弦），所以先不画张力，不会拿和弦来代替。给它加上完整谱，或者原谱的数据以后，这里会自动出现。</p></section>`;
   }
   function harmonyStrip(s) {
-    const st = sectionStarts(s);
-    return `<div class="hstrip">${colorSeg()}${s.sections.map((sec, i) => `<div class="hsec"><small>${esc(sec.name)}</small><div class="hrow">${parseBars(sec.bars).map((bar, k) => `<div class="hbar" data-act="hstrip" data-n="${st[i] + k}">${bar.map(x => (colorMode() === 'chord' ? `<i class="q" style="${hueVars(cxHue((T.parseChord(x) || {}).q))}" title="${esc(D(x))}">${D(x)}</i>` : `<i class="f${chordFunc(x, s.key)}" title="${esc(D(x))}">${D(x)}</i>`)).join('')}</div>`).join('')}</div></div>`).join('')}<p class="fine">和声色带：${colorMode() === 'chord' ? '颜色 = 和弦的性质（大三金黄、小三蓝、属七橙……，和「和弦」页一样）' : '<span class="fT">■ 稳</span> <span class="fS">■ 走</span> <span class="fD">■ 紧</span>'} · 一格一小节，点一格看那一小节</p></div>`;
+    const st = sectionStarts(s), parts = songLogicParts(s);
+    return `<div class="hstrip">${colorSeg()}${s.sections.map((sec, i) => `<div class="hsec"><small>${esc(sec.name)}</small><div class="hrow">${parseBars(sec.bars).map((bar, k) => `<div class="hbar" data-act="hstrip" data-n="${st[i] + k}">${bar.map(x => (colorMode() === 'chord' ? `<i class="q" style="${hueVars(cxHue((T.parseChord(x) || {}).q))}" title="${esc(D(x))}">${D(x)}</i>` : `<i class="f${chordFunc(x, s.key)}" title="${esc(D(x))}">${D(x)}</i>`)).join('')}</div>`).join('')}</div>${logicDetails(s, i, parts)}</div>`).join('')}<p class="fine">和声色带：${colorMode() === 'chord' ? '颜色 = 和弦的性质（大三金黄、小三蓝、属七橙……，和「和弦」页一样）' : '<span class="fT">■ 稳</span> <span class="fS">■ 走</span> <span class="fD">■ 紧</span>'} · 一格一小节，点一格看那一小节</p></div>`;
   }
   function rollPanel(id) {
     const maxLv = RL.maxLv || 2, passed = rollPassed();

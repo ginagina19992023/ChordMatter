@@ -1561,3 +1561,14 @@ body.land .deskcal { top: 0; }
 .arcbox h3 small { font-weight: 400; color: var(--mute); font-size: 12px; }
 .arcbox .tnbox { margin: 0; padding: 0; border: 0; }
 .arcsum { margin: 6px 2px 8px; font-size: 13px; color: var(--mute); text-align: center; }
+
+/* 谱面逻辑：跟着每一段，点开才看 */
+.hlogic { margin: 6px 0 10px; font-size: 13px; }
+.hlogic summary { cursor: pointer; color: var(--mute); padding: 4px 0; list-style: none; }
+.hlogic summary::-webkit-details-marker { display: none; }
+.hlogic summary::before { content: '▸ '; }
+.hlogic[open] summary::before { content: '▾ '; }
+.hlogic summary small { color: var(--mute); }
+.hlogic p { margin: 4px 0 4px 14px; line-height: 1.55; }
+.logic > p:first-child { margin: 12px 0 4px; }
+.hlogic summary small { display: inline !important; margin: 0; }
