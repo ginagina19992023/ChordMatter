@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 179; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 180; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -2800,16 +2800,25 @@
     let pages = await OCR.loadPages(id);
     if (!el.isConnected) return; // 读取期间已经离开这一页
     if ((!pages || !pages.length) && window.HX_PRESEED && HX_PRESEED[id]) pages = HX_PRESEED[id];
+    // 一次选多张图 / 多个 PDF：按选的顺序依次读取，接在已有的页后面
+    const add = async (files, base) => {
+      if (!files.length) return;
+      el.innerHTML = `<p class="fine">正在读取 ${files.length} 个文件…</p>`;
+      try {
+        const out = base.slice();
+        for (const f of files) { const cs = await OCR.toCanvases(f); cs.forEach(c => out.push(c.toDataURL('image/jpeg', 0.8))); }
+        await OCR.savePages(id, out); mountMyScore(id);
+      } catch (err) { el.innerHTML = '<p class="no">没能读取其中的文件，可以再试一次</p>'; }
+    };
     if (!pages || !pages.length) {
-      el.innerHTML = `<label class="drop small" for="addscore"><b>添加你手上的原谱</b><small>截图、照片或 PDF · 只存在这台手机上 · 下面每格的小节号对着它看</small></label><input type="file" id="addscore" accept="image/*,application/pdf,.pdf" hidden>`;
-      el.querySelector('#addscore').addEventListener('change', async e => {
-        const f = e.target.files[0]; if (!f) return;
-        el.innerHTML = '<p class="fine">正在读取…</p>';
-        try { const cs = await OCR.toCanvases(f); await OCR.savePages(id, cs.map(c => c.toDataURL('image/jpeg', 0.8))); mountMyScore(id); } catch (err) { el.innerHTML = '<p class="no">没能读取这个文件</p>'; }
-      });
+      el.innerHTML = `<label class="drop small" for="addscore"><b>添加你手上的原谱</b><small>截图、照片或 PDF，可以一次选很多张 · 只存在这台手机上 · 下面每格的小节号对着它看</small></label><input type="file" id="addscore" accept="image/*,application/pdf,.pdf" multiple hidden>`;
+      el.querySelector('#addscore').addEventListener('change', e => add([...e.target.files], []));
       return;
     }
-    el.innerHTML = `<div class="myscore">${pages.map(p => `<img src="${p}" alt="原谱">`).join('')}</div><p class="fine">双指放大查看。下面和弦格子里的小数字就是这份谱的小节号。</p>`;
+    el.innerHTML = `<div class="myscore">${pages.map(p => `<img src="${p}" alt="原谱">`).join('')}</div><p class="fine">双指放大查看。下面和弦格子里的小数字就是这份谱的小节号。共 ${pages.length} 页。</p>
+      <div class="row"><label class="ghost sm" for="addscore2">再添加几页</label><button class="ghost sm" id="delscore">全部删掉重选</button></div><input type="file" id="addscore2" accept="image/*,application/pdf,.pdf" multiple hidden>`;
+    el.querySelector('#addscore2').addEventListener('change', e => add([...e.target.files], pages));
+    el.querySelector('#delscore').addEventListener('click', async () => { if (!confirm('把这首曲子已经添加的原谱全部删掉？（只删这台手机上的）')) return; await OCR.savePages(id, []); mountMyScore(id); });
   }
 
   // ---------------- 符号入门：一次一个符号 ----------------
