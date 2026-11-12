@@ -207,7 +207,7 @@ dd { margin: 0; }
 .stats div + div { border-left: 1px solid var(--line); }
 .stats b { display: block; font-size: 24px; font-weight: 500; }
 
-#toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 132px); transform: translate(-50%, 20px); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: 14px; opacity: 0; pointer-events: none; transition: all .25s; white-space: nowrap; z-index: 9; }
+#toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 132px); transform: translate(-50%, 20px); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 18px; font-size: 14px; opacity: 0; pointer-events: none; transition: all .25s; max-width: 86vw; text-align: center; white-space: normal; z-index: 9; }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 
 /* staff */
@@ -1530,3 +1530,8 @@ body.land .deskcal { top: 0; }
 .mkhelp { font-size: 12px; color: var(--mute); }
 .mkhelp summary { cursor: pointer; padding: 2px 0; }
 .spstage { border: 1px solid var(--line); box-sizing: border-box; }
+
+/* 跳过的课：和「学会」区分开 */
+.path li.skip .node { background: none; border-style: dashed; color: var(--mute); }
+.path li.skip b { color: var(--mute); }
+.skipnote { text-align: center; margin: 18px 0 0; }

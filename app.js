@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 165; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 166; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -496,7 +496,7 @@
   // ---------------- 视图 ----------------
   const view = $('#view');
   let route = [];
-  function go(h) { location.hash = h; }
+  function go(h) { if (location.hash === h) { render(); return; } location.hash = h; } // 目标就是当前页时，hashchange 不会触发，要直接重画
   function render() {
     stopAll();
     route = (location.hash.replace(/^#\/?/, '') || 'today').split(/[-\/]/).map(decodeURIComponent);
@@ -593,11 +593,11 @@
 
   // 路径页的入口卡片：像一叠卡片折在一起，上次点过的在最上面；下拉或点「展开」才摊开
   function pathDeck() {
-    const pct = (arr) => arr.filter(x => symDone(x.id)).length / arr.length * 100;
+    const pct = (arr) => arr.filter(x => symLearned(x.id)).length / arr.length * 100, skp = arr => { const n = arr.filter(x => symSkipped(x.id)).length; return n ? ` · 跳过 ${n}` : ''; };
     const cards = [
-      { id: 'sym', href: '#sym', k: `先学这个 · ${SYMS.filter(x => symDone(x.id)).length}/${SYMS.length}`, t: '符号入门：一次学一个符号', m: pct(SYMS), d: 'C、♯、m、7、/、级数、罗马数字……逐个看演示、在键盘上试' },
-      { id: 'inv', href: '#inv', k: `${symAllDone() ? '接着学' : '学完符号入门后'} · ${INVS.filter(x => symDone(x.id)).length}/${INVS.length}`, t: '转位十课：先找最低音，不背形状', m: pct(INVS), d: '最低音 → 根三五 → 原位 / 一转 / 二转 → 五线谱 → 写法 → 指法' },
-      { id: 'logic', href: '#logic', k: `第三门 · ${LOGICS.filter(x => symDone(x.id)).length}/${LOGICS.length}`, t: '读懂谱面逻辑：稳、走、紧、结尾、2–5–1……', m: pct(LOGICS), d: '曲目页里看到的每个词，各有一课' },
+      { id: 'sym', href: '#sym', k: `先学这个 · ${SYMS.filter(x => symLearned(x.id)).length}/${SYMS.length}${skp(SYMS)}`, t: '符号入门：一次学一个符号', m: pct(SYMS), d: 'C、♯、m、7、/、级数、罗马数字……逐个看演示、在键盘上试' },
+      { id: 'inv', href: '#inv', k: `${symAllDone() ? '接着学' : '学完符号入门后'} · ${INVS.filter(x => symLearned(x.id)).length}/${INVS.length}${skp(INVS)}`, t: '转位十课：先找最低音，不背形状', m: pct(INVS), d: '最低音 → 根三五 → 原位 / 一转 / 二转 → 五线谱 → 写法 → 指法' },
+      { id: 'logic', href: '#logic', k: `第三门 · ${LOGICS.filter(x => symLearned(x.id)).length}/${LOGICS.length}${skp(LOGICS)}`, t: '读懂谱面逻辑：稳、走、紧、结尾、2–5–1……', m: pct(LOGICS), d: '曲目页里看到的每个词，各有一课' },
       { id: 'sight', href: '#sight', k: `视奏 · 今天 ${(S.log || []).filter(e => e.t === 'sightp' && e.d === today()).length} 条`, t: `视奏：${S.sightGrade || 5} 级小曲，预读 30 秒后一口气弹`, d: '每次一首没见过的 8 小节双手小曲 · 收音按小节评音准和节奏' },
       { id: 'combo', href: '#combo', k: '一串一串记', t: '组合和弦：4536、1564、2–5–1……', d: '把常用的一串和弦当成一个词记 · 抠掉一个换成「稳 / 走 / 紧」' },
       { id: 'know', href: '#know', k: '看不懂符号？', t: '知识点：从「C、G7 是什么」到「一级二级三级」', d: '随时查，不用按顺序' },
@@ -2755,7 +2755,9 @@
   const courseOf = card => (INVS.includes(card) ? 'inv' : LOGICS.includes(card) ? 'logic' : 'sym');
   const ALLCARDS = SYMS.concat(INVS, LOGICS);
   const nextAny = () => { for (const ck of COURSE_ORDER) { const c = COURSES[ck].cards.find(x => !(S.sym && S.sym[x.id])); if (c) return c; } return null; };
-  const symDone = id => !!(S.sym && S.sym[id]);
+  const symDone = id => !!(S.sym && S.sym[id]); // 学过或跳过：用来决定「下一课是哪一课」
+  const symSkipped = id => !!(S.sym && S.sym[id] === 'skip');
+  const symLearned = id => symDone(id) && !symSkipped(id); // 真正学会：用在进度、复习里。跳过的不算
   const symNext = (ck = 'sym') => COURSES[ck].cards.find(x => !symDone(x.id));
   const symAllDone = () => !symNext('sym');
   const invAllDone = () => !symNext('inv');
@@ -2764,10 +2766,10 @@
   function vSymIndex(ck = 'sym') {
     const C = COURSES[ck], cards = C.cards, nx = symNext(ck);
     const intro = { sym: '一次只学一个符号：看演示 → 在键盘上试 3 次 → 学会。每学新符号前，会顺手复习一个学过的。', inv: '每课只讲一个点。所有题都用同一个方法：先找最低音，再看它是根、三还是五。不背五线谱的形状。', logic: '曲目页「谱面逻辑」里的每个词（功能、稳、走、紧、结尾、2–5–1、4536、低音线）各有一课。在谱面逻辑里点任何一个词，也会跳到这里。' }[ck];
-    view.innerHTML = `<header class="top"><div><a class="back" href="#path">←</a><small>${cards.filter(x => symDone(x.id)).length}/${cards.length} 已学会</small><h1>${C.title}</h1></div></header>
+    view.innerHTML = `<header class="top"><div><a class="back" href="#path">←</a><small>${cards.filter(x => symLearned(x.id)).length}/${cards.length} 已学会${cards.some(x => symSkipped(x.id)) ? ' · 跳过 ' + cards.filter(x => symSkipped(x.id)).length : ''}</small><h1>${C.title}</h1></div></header>
       <p class="fine">${intro}</p>
       ${nx ? `<div class="cta flow"><a class="btn" href="#sym-${nx.id}">学下一个：${nx.big} · ${nx.title} →</a></div>` : `<p class="donemsg">${C.title}全部学会了。下面任何一课都可以点开再看。</p>`}
-      <ol class="path symlist">${cards.map((x, i) => { const st = symDone(x.id) ? 'done' : x === nx ? 'cur' : 'lock'; return `<li class="${st}"><a href="${st === 'lock' ? '#sym' : '#sym-' + x.id}"><span class="node">${st === 'done' ? '✓' : i + 1}</span><span><b><span class="symchip">${x.big}</span> ${x.title}</b><small>${st === 'lock' ? '学完前一个后解锁' : x.say.slice(0, 26) + '…'}</small>${st === 'done' ? symTag(x) : ''}</span></a></li>`; }).join('')}</ol>
+      <ol class="path symlist">${cards.map((x, i) => { const st = symSkipped(x.id) ? 'skip' : symDone(x.id) ? 'done' : x === nx ? 'cur' : 'lock'; return `<li class="${st}"><a href="${st === 'lock' ? '#sym' : '#sym-' + x.id}"><span class="node">${st === 'done' ? '✓' : st === 'skip' ? '↷' : i + 1}</span><span><b><span class="symchip">${x.big}</span> ${x.title}</b><small>${st === 'lock' ? '学完前一个后解锁' : x.say.slice(0, 26) + '…'}</small>${st === 'done' || st === 'skip' ? symTag(x) : ''}</span></a></li>`; }).join('')}</ol>
       ${cards.some(x => symSt(x) === 1) ? `<a class="unitbar todo" href="#pk"><small>上琴补弹</small><b>${cards.filter(x => symSt(x) === 1).length} 课已学 · 未上琴</b><small>有钢琴时，在琴上把这几课的题弹一遍</small></a>` : ''}`;
   }
   function symDemo(card) {
@@ -2796,7 +2798,7 @@
     const card = id === 'next' ? nextAny() : ALLCARDS.find(x => x.id === id);
     if (!card) return go('#sym');
     const fromToday = route[2] === 'today';
-    const learned = ALLCARDS.filter(x => symDone(x.id) && x !== card);
+    const learned = ALLCARDS.filter(x => symLearned(x.id) && x !== card);
     const reps = [];
     if (learned.length) { const rc = rand(learned); reps.push(Object.assign(rc.task(Math.floor(Math.random() * 3)), { review: rc })); }
     for (let i = 0; i < 3; i++) reps.push(card.task(i));
@@ -2812,7 +2814,7 @@
         <button class="ghost sm" data-act="symdemo">▶ 再看一遍演示</button>
         ${CARD_VIDEO[card.id] ? renderBlocks([Object.assign({ t: 'video', tall: 1, credit: '本应用录制的演示（原创）' }, CARD_VIDEO[card.id])]) : ''}
         <div id="symtask"></div>
-        ${symDone(card.id) ? '' : `<button class="skipbtn" data-act="symskip" data-id="${card.id}">这一课我已经会了，跳过 →</button>`}
+        ${symSkipped(card.id) ? '<p class="fine skipnote">你之前跳过了这一课。做完上面的 3 题，就记为「学会」。</p>' : symDone(card.id) ? '' : `<button class="skipbtn" data-act="symskip" data-id="${card.id}">这一课我已经会了，跳过 →</button>`}
       </section>`;
     later(() => symDemo(card), 300);
     symRep();
@@ -4147,12 +4149,12 @@
       case 'symskip': {
         const id = el.dataset.id; S.sym = S.sym || {}; S.sym[id] = 'skip'; S.skip = S.skip || {}; S.skip[id] = today(); logEv('skip', { id }); save();
         const c = ALLCARDS.find(x => x.id === id), nx = symNext(courseOf(c)) || nextAny();
-        toast('已跳过「' + c.title + '」· 记为「跳过」，不算学会，随时可以回来学');
+        toast('已跳过 · 不算学会，随时可以回来补');
         go(SY && SY.fromToday ? stepHref('learn') : nx ? '#sym-' + nx.id : '#' + courseOf(c)); break;
       }
       case 'unitskip': {
         const u = unitState(el.dataset.u); u.done = true; u.skipped = today(); logEv('skip', { id: el.dataset.u }); save();
-        toast('已跳过这个单元 · 下一单元已解锁；它仍会出现在每日复习里'); go('#path'); break;
+        toast('已跳过这个单元 · 下一单元已解锁'); go('#path'); break;
       }
       case 'brq': BR.q = el.dataset.v; go('#browse'); render(); break;
       case 'place': S.place = el.dataset.v; save(); render(); break;
