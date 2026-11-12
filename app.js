@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 181; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 182; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -2754,23 +2754,23 @@
     view.innerHTML = `<header class="top"><div><a class="back" href="#songs">←</a><small>截图 / 照片 / PDF</small><h1>识谱</h1></div></header>
       <div class="scanmode"><span class="seg"><button class="${mode === 'ai' ? 'on' : ''}" data-act="scanmode" data-v="ai">AI 识谱</button><button class="${mode !== 'ai' ? 'on' : ''}" data-act="scanmode" data-v="local">本机识别</button></span></div>
       ${aiBox}
-      <label class="drop${mode === 'ai' && !ready ? ' off' : ''}" for="scanfile"><b>选择谱子</b><small>${mode === 'ai' ? '支持 PNG、JPG、PDF（最多 6 页）。印了和弦记号的谱照抄；纯五线谱由 Claude 读音判断和弦，会标出来' : '支持 PNG、JPG、PDF（最多 6 页）。文件只在这台手机上处理，不会上传'}</small></label>
-      <input type="file" id="scanfile" accept="image/*,application/pdf,.pdf" hidden${mode === 'ai' && !ready ? ' disabled' : ''}>
+      <label class="drop${mode === 'ai' && !ready ? ' off' : ''}" for="scanfile"><b>选择谱子</b><small>${mode === 'ai' ? '支持 PNG、JPG、PDF，可以一次选很多张（最多 10 页）。印了和弦记号的谱照抄；纯五线谱由 Claude 读音判断和弦，会标出来' : '支持 PNG、JPG、PDF，可以一次选很多张（最多 10 页）。文件只在这台手机上处理，不会上传'}</small></label>
+      <input type="file" id="scanfile" accept="image/*,application/pdf,.pdf" multiple hidden${mode === 'ai' && !ready ? ' disabled' : ''}>
       <div id="scanprog"></div><div id="scanout"></div>
       ${mode === 'ai' ? `<p class="fine"><b>说实话：</b>AI 读印出来的和弦记号很准；读纯五线谱判断和弦是「理解后的判断」，转位、经过音可能和你想的不一样，结果当起点，对照原谱改。</p>`
         : `<p class="fine"><b>说实话：</b>手机截图里的小号和弦字（尤其是 Gm⁷ 这种带上标的）经常认错，结果只能当起点。更准的办法：用「AI 识谱」，或在 iPhone「照片」里长按谱子 →「实况文本」选中和弦字母 → 拷贝，粘贴到识别结果的文本框里修改。</p>
       <p class="fine">能认出的是谱子上<b>印出来的和弦记号</b>（流行谱、弹唱谱上方的 C、Am、G7/B 这些）。纯五线谱的音符本机认不了，请用「AI 识谱」。</p>`}`;
     $('#scanfile').addEventListener('change', async e => {
-      const f = e.target.files[0]; if (!f) return;
+      const fl = [...e.target.files]; if (!fl.length) return; const f = fl[0], src = fl.length > 1 ? fl : f;
       const prog = $('#scanprog'); $('#scanout').innerHTML = '';
       const show = (msg, p) => { prog.innerHTML = `<p class="fine">${msg}</p><span class="meter"><i style="width:${Math.round(p * 100)}%"></i></span>`; };
       const title = f.name.replace(/\.[^.]+$/, '');
       try {
         if (mode === 'ai') {
-          const r = await OCR.aiRecognize(f, show, inArt ? { claude: true } : { api: aiCfg().key });
+          const r = await OCR.aiRecognize(src, show, inArt ? { claude: true } : { api: aiCfg().key });
           SCAN = Object.assign(r, { title: r.title || title, lines: r.sections.map(x => x.bars) });
         } else {
-          const r = await OCR.recognize(f, show);
+          const r = await OCR.recognize(src, show);
           SCAN = Object.assign(r, { title });
         }
         prog.innerHTML = '';

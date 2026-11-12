@@ -12,6 +12,7 @@ const OCR = (() => {
 
   // 文件 → 画布（每页一张）
   async function toCanvases(file, maxPages = 6) {
+    if (Array.isArray(file)) { const out = []; for (const f of file) { if (out.length >= 10) break; out.push(...await toCanvases(f, 10 - out.length)); } return out; } // 一次选了很多张图 / 多个 PDF：依次读，合在一起（最多 10 页）
     if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
       await script(PDFJS);
       pdfjsLib.GlobalWorkerOptions.workerSrc = PDFW;
