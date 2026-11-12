@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 198; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 200; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -1717,6 +1717,11 @@
   function vSong() {
     const s = allSongs().find(x => x.id === route[1]);
     if (!s) return go('#songs');
+    if (!s.sections.length && s.key && !hasFull(s.id)) { // 只有原谱图、还没有和弦或谱子（比如导入的曲目包）：先能看原图
+      view.innerHTML = `<header class="top"><div><a class="back" href="#songs">←</a><small>${esc(s.sub || '')}</small><h1>${esc(s.title)}</h1></div><a class="stat" href="#edit-${s.id}"><b>✎</b><small>编辑</small></a></header>
+        ${songTop(s)}<p class="fine">${esc(s.note || '这首还没有和弦和谱子。')}</p><div class="row"><button class="ghost" data-act="packimport" data-into="${s.id}">导入这首的 MIDI</button><a class="ghost" href="#edit-${s.id}">手动填和弦</a></div>`;
+      S.myOpen = true; mountMyScore(s.id); return;
+    }
     if (!s.sections.length || !s.key) return go('#edit-' + s.id);
     const lv = songLv(s.id), st = sectionStarts(s);
     S.songSec = S.songSec || {};
@@ -4338,12 +4343,13 @@
       case 'folstop': folStop(true); break;
       case 'folmode': if (FOL) { if (FOL.mic && Listen.active()) Listen.stop(); FOL.mic = !FOL.mic; folHint(); if (FOL.mic) folMic(); } break;
       case 'packimport': {
-        const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,.mid,.midi,application/json,audio/midi,audio/x-midi';
+        const into = el.dataset.into, i = document.createElement('input'); i.type = 'file'; i.accept = '.json,.mid,.midi,application/json,audio/midi,audio/x-midi';
         i.onchange = async () => {
           const f = i.files[0]; if (!f) return; toast('正在导入…');
           try {
-            const o = await SongPack.read(f), id = 'imp' + Date.now().toString(36);
-            const song = Object.assign({ tag: '我的', sections: [] }, o.song, { id, fullStored: o.kern ? 1 : 0 });
+            const o = await SongPack.read(f), old = into && S.custom.find(c => c.id === into), id = old ? into : 'imp' + Date.now().toString(36);
+            const song = Object.assign({ tag: '我的', sections: [] }, o.song, old ? { title: old.title, sub: old.sub.replace(/ · 5 页$/, '') + ' · 已导入 MIDI' } : {}, { id, fullStored: o.kern ? 1 : 0 });
+            if (old) S.custom = S.custom.filter(c => c.id !== id);
             if (o.kern) { await IDB.put('kern-' + id, o.kern); window.FULL = window.FULL || {}; FULL[id] = { kern: o.kern, ova: o.ova }; }
             if (o.pages && o.pages.length) { try { await OCR.savePages(id, o.pages); } catch (e) {} }
             S.custom = S.custom.concat(song); save(); toast('已导入「' + song.title + '」'); go('#song-' + id);
