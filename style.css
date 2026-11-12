@@ -1535,12 +1535,20 @@ body.land .deskcal { top: 0; }
 .path li.skip .node { background: none; border-style: dashed; color: var(--mute); }
 .path li.skip b { color: var(--mute); }
 .skipnote { text-align: center; margin: 18px 0 0; }
-/* 知识点：张力演示 */
+/* 知识点：张力演示（柔光） */
 .tnbox { margin: 14px 0; padding: 12px; border: 1px solid var(--line); border-radius: 16px; }
+.tnnote { margin: 8px 2px 0; font-size: 13px; color: var(--mute); min-height: 2.6em; }
 .tnsvg { display: block; width: 100%; height: auto; color: var(--ink); }
-.tnline { stroke: currentColor; stroke-width: 2; opacity: .85; }
-.tnneck { stroke: currentColor; stroke-linecap: round; stroke-width: 16; }
-.tnanc, .tnlow { fill: currentColor; }
+.tnline { stroke: var(--line); stroke-width: 2; }
+.tnhomet { font-size: 10px; fill: var(--mute); }
+.tnhome { fill: none; stroke: var(--mute); stroke-width: 1.5; }
+.tnsvg { --tnc: #ffc857; }
+.tns { stop-color: var(--tnc); }
+.tnorb { color: var(--tnc); }
+.tnstr { stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-opacity: .25; }
+.tnstrb { stroke-width: 9; }
+.tnhalo { fill: url(#tng); }
+.tncore { fill: currentColor; }
 .tnname { min-height: 1.6em; text-align: center; font-size: 14px; color: var(--mute); margin: 2px 0 8px; }
 .tnch { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 10px; }
 .tnbox .row { justify-content: center; }
