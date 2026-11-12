@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 186; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 187; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -2521,7 +2521,7 @@
     const ev = FullScore.events(kern, ova), byT = new Map();
     ev.events.filter(e => e.hand === 'R').forEach(e => { const k = Math.round(e.t * 8); const o = byT.get(k); if (!o || e.midi > o.midi) byT.set(k, e); });
     const notes = [...byT.values()].sort((x, y) => x.t - y.t);
-    return notes.length ? { notes, key, barStart: ev.barStart, lens: ev.lens, bpm } : null;
+    return notes.length ? { notes, events: ev.events, key, barStart: ev.barStart, lens: ev.lens, bpm } : null;
   }
   function songMelody(s) {
     if (typeof FULL === 'undefined' || !FULL[s.id]) return null;
@@ -2554,12 +2554,14 @@
     return out;
   }
   function tnSetsFromMelody(s, M) {
+    const spbA = 60 / M.bpm;
+    const audioFor = bars => { const b0 = M.barStart[bars[0]], bl = bars[bars.length - 1], b1 = M.barStart[bl] + (M.lens[bl] || 4); if (b0 == null) return null; return M.events.filter(e => e.t >= b0 - 1e-6 && e.t < b1 - 1e-6).map(e => [e.midi, (e.t - b0) * spbA, Math.min(3, e.d * spbA * 0.95 + 0.15), e.hand === 'L' ? 0.5 : 0.62]); };
     const mk = bars => melodySeries(M, bars).map(p => [p.d, p.t, `第 ${p.bar} 小节 · 旋律音「${p.d}」· ${p.t < 0.3 ? '稳' : p.t < 0.6 ? '有点拉力' : p.t < 0.85 ? '想往下走' : '很紧张 / 调外'}`, tnMix('#7cb8ff', '#ff9a62', p.t), 1, p.midi]);
     const NOTE = '光点只会上下动：旋律停在越「稳」的音（主音、五音、三音）越靠近线，停在越想往下走的音（二、四、六、七级、调外音）越往下沉。';
     const all = Object.keys(M.barStart).map(Number).sort((x, y) => x - y), sets = [];
     const st = sectionStarts(s), secBars = s.sections.map((sec, si) => parseBars(sec.bars).map((_, k) => st[si] + k).filter(n => M.barStart[n] != null));
-    if (s.sections.length > 1 && s.sections.length <= 8) s.sections.forEach((sec, si) => { const c = mk(secBars[si]); if (c.length >= 4) sets.push({ name: sec.name.replace(/\s*[‖:].*$/, '').slice(0, 6), note: NOTE, chords: c }); });
-    if (!sets.length) { const c = mk(all.slice(0, 16)); if (c.length >= 4) sets.push({ name: '开头 16 小节（原速）', note: NOTE + ' 按曲子原本的速度走，可以打开声音一起听。', chords: c }); }
+    if (s.sections.length > 1 && s.sections.length <= 8) s.sections.forEach((sec, si) => { const c = mk(secBars[si]); if (c.length >= 4) sets.push({ name: sec.name.replace(/\s*[‖:].*$/, '').slice(0, 6), note: NOTE, chords: c, audio: audioFor(secBars[si]) }); });
+    if (!sets.length) { const c = mk(all.slice(0, 16)); if (c.length >= 4) sets.push({ name: '开头 16 小节（原速）', note: NOTE + ' 按曲子原本的速度走，打开声音就是按原曲（两只手）一起播。', chords: c, audio: audioFor(all.slice(0, 16)) }); }
     const full = mk(all); if (full.length >= 4 && all.length > 16) sets.push({ name: '全曲（快进）', note: '整首曲子快进着看，光点是旋律每一拍的平均张力。', chords: full, fast: 1 });
     return sets;
   }
@@ -4181,7 +4183,11 @@
       const y = s >= N - 1 ? ys[N - 1] : ys[k] + (ys[k2] - ys[k]) * e, col = tnMix(cols[k], cols[k2], s >= N - 1 ? 1 : e), ten = (y - 34) / 150, idx = Math.min(N - 1, Math.floor(s + 1e-6));
       svg.style.setProperty('--tnc', col);
       halo.setAttribute('cy', y); halo.setAttribute('r', 38 + 24 * ten); core.setAttribute('cy', y); strs.forEach(l => { l.setAttribute('y2', y); l.style.strokeOpacity = 0.25 + 0.55 * ten; });
-      if (idx !== box._last) { box._last = idx; box.querySelector('.tnch').innerHTML = chipsFor(idx); box.querySelector('.tnname').textContent = lab(ch[idx]) + ' · ' + ch[idx][2]; if (box.dataset.snd === '1' && !set.fast && !document.hidden) { try { A.init(); if (ch[idx][5] != null) A.note(ch[idx][5], 0, Math.max(0.3, PER * 0.9), 0.6); else playChord(ch[idx][0]); } catch (er) {} } }
+      if (set.audio && !set.fast) { // 声音 = 按原曲播放（两只手、原来的节奏），光点跟着它走
+        const loopId = Math.floor(Math.max(0, now - T0) / 1000 / (total + 0.4));
+        if (box.dataset.snd === '1' && !document.hidden) { if (box._schedKey !== loopId) { box._schedKey = loopId; try { A.init(); A.schedule(set.audio.map(n => [n[0], n[1] - t, n[2], n[3]]).filter(n => n[1] + n[2] > 0)); } catch (er) {} } } else box._schedKey = null;
+      }
+      if (idx !== box._last) { box._last = idx; box.querySelector('.tnch').innerHTML = chipsFor(idx); box.querySelector('.tnname').textContent = lab(ch[idx]) + ' · ' + ch[idx][2]; if (box.dataset.snd === '1' && !set.fast && !set.audio && !document.hidden) { try { A.init(); if (ch[idx][5] != null) A.note(ch[idx][5], 0, Math.max(0.3, PER * 0.9), 0.6); else playChord(ch[idx][0]); } catch (er) {} } }
       if (t < 0.05) box._last = -1;
       box._raf = requestAnimationFrame(loop);
     };
