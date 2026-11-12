@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 196; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 198; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -1500,7 +1500,7 @@
     const prog = s => { const l = (S.songs[s.id] || {}).level || 0, a = (S.songs[s.id] || {}).away || 0; return `<span class="lv">${[0, 1, 2, 3].map(i => `<i class="${i < l ? 'on' : i < a ? 'half' : ''}"></i>`).join('')}</span>`; };
     const card = s => `<a class="scard" href="#song-${s.id}"><span class="stype">${typeOf(s)}</span><b>${esc(s.title)}</b><small>${esc(s.sub || '')}</small>${miniStrip(s)}<span class="smeta">${s.key ? kz(s.key) : '未设调'} · ${srcLabel(s)}</span><span class="sfoot">${prog(s)}<button class="tagbtn" data-act="tagedit" data-id="${s.id}">标签</button></span></a>`;
     const row = s => `<li><a href="#song-${s.id}"><span><b>${esc(s.title)}</b><small>${typeOf(s)} · ${s.key ? kz(s.key) : '未设调'} · ${srcLabel(s)}</small>${miniStrip(s)}</span><span class="lv2">${prog(s)}<button class="tagbtn" data-act="tagedit" data-id="${s.id}">标签</button></span></a></li>`;
-    view.innerHTML = `<header class="top"><div><small>弹一首曲子：看谱 → 认和弦 → 弹下来</small><h1>曲目</h1></div><a class="stat" href="#scorelist"><b>☰</b><small>找谱</small></a><a class="stat" href="#scan"><b>⌗</b><small>识谱</small></a><a class="stat" href="#edit-new"><b>＋</b><small>手动</small></a></header><div class="seg2"><a class="on" href="#songs">曲目</a><a class="" href="#acc">伴奏</a></div>
+    view.innerHTML = `<header class="top"><div><small>弹一首曲子：看谱 → 认和弦 → 弹下来</small><h1>曲目</h1></div><a class="stat" href="#scorelist"><b>☰</b><small>找谱</small></a><a class="stat" href="#scan"><b>⌗</b><small>识谱</small></a><a class="stat" href="#edit-new"><b>＋</b><small>手动</small></a><button class="stat" data-act="packimport"><b>⇩</b><small>导入</small></button></header><div class="seg2"><a class="on" href="#songs">曲目</a><a class="" href="#acc">伴奏</a></div>
       <div class="listbar"><div class="chips scroll">${['全部'].concat(types, allTags).map(t => `<button class="chip${f === t ? ' on' : ''}" data-act="sfilter" data-v="${esc(t)}">${t}${t === '全部' ? '' : ` <small>${songs.filter(s => tagsOf(s).includes(t)).length}</small>`}</button>`).join('')}</div>${viewToggle('songs')}</div>
       ${lv === 'card' ? `<div class="cards">${shown.map(card).join('')}</div>` : `<ul class="list slist">${shown.map(row).join('')}</ul>`}
       ${drafts.length ? `<ul class="list">${drafts.map(d => `<li class="draft"><a href="#edit-new-${SONG_DRAFTS.indexOf(d)}"><span><b>${esc(d.title)}</b><small>${esc(d.sub)}</small></span><span class="arr">＋</span></a></li>`).join('')}</ul>` : ''}
@@ -1847,6 +1847,9 @@
       <a class="link" href="#splashmk"><small>开机动画制作器</small><b>选和弦、速度、间隔，做一段自己的开机动画</b><span>→</span></a>
       <p class="fine">开机音乐：三个键依次点亮时是 C–E–G（大三和弦的根音、三音、五音），变成滑条、曲线时走一个 ii–V–I（Dm7 → G7 → Cadd9）。iPhone 有时不允许 App 一打开就出声，那种情况下会安静地放完动画。</p>
       <div class="chips"><button class="chip${S.splashSnd !== false ? ' on' : ''}" data-act="splashsnd" data-v="1">音乐 开</button><button class="chip${S.splashSnd === false ? ' on' : ''}" data-act="splashsnd" data-v="0">音乐 关</button></div>
+      <h3 class="h3">导入完整谱</h3>
+      <p class="fine">导入 ChordMatter 曲目包（.json）或 MIDI 文件（.mid）：会变成曲库里的一首，有原曲对照、跟谱弹、张力。只存在这台手机上。</p>
+      <div class="row"><button class="ghost" data-act="packimport">选择文件导入</button></div>
       <h3 class="h3">记录和数据</h3>
       <a class="link" href="#me"><small>记录</small><b>练琴日历、进度、备份、云端同步</b><span>→</span></a>
       <a class="link" href="#cards"><small>卡册</small><b>曲谱卡</b><span>→</span></a>
@@ -4334,6 +4337,20 @@
       case 'folskip': if (FOL && FOL.ready) folAdvance(); break;
       case 'folstop': folStop(true); break;
       case 'folmode': if (FOL) { if (FOL.mic && Listen.active()) Listen.stop(); FOL.mic = !FOL.mic; folHint(); if (FOL.mic) folMic(); } break;
+      case 'packimport': {
+        const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,.mid,.midi,application/json,audio/midi,audio/x-midi';
+        i.onchange = async () => {
+          const f = i.files[0]; if (!f) return; toast('正在导入…');
+          try {
+            const o = await SongPack.read(f), id = 'imp' + Date.now().toString(36);
+            const song = Object.assign({ tag: '我的', sections: [] }, o.song, { id, fullStored: o.kern ? 1 : 0 });
+            if (o.kern) { await IDB.put('kern-' + id, o.kern); window.FULL = window.FULL || {}; FULL[id] = { kern: o.kern, ova: o.ova }; }
+            if (o.pages && o.pages.length) { try { await OCR.savePages(id, o.pages); } catch (e) {} }
+            S.custom = S.custom.concat(song); save(); toast('已导入「' + song.title + '」'); go('#song-' + id);
+          } catch (e) { toast('导入失败：' + ((e && e.message) || '文件读不了')); }
+        };
+        i.click(); break;
+      }
       case 'splashsnd': S.splashSnd = el.dataset.v === '1'; save(); vSet(); break;
       case 'splashset': S.splash = el.dataset.v === '1'; save(); vSet(); break;
       case 'splashplay': { sessionStorage.removeItem('hx.splash'); location.href = location.pathname + location.search + location.hash; location.reload(); break; }
@@ -4530,6 +4547,10 @@
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
   })();
   window.addEventListener('hashchange', render);
+  // 导入过的完整谱存在 IndexedDB（太大，不放 localStorage）：打开 App 时读回来
+  (async () => { const ids = (S.custom || []).filter(c => c.fullStored && !(window.FULL && FULL[c.id])).map(c => c.id); if (!ids.length) return; window.FULL = window.FULL || {};
+    for (const id of ids) { try { const k = await IDB.get('kern-' + id); if (k) FULL[id] = { kern: k }; } catch (e) {} }
+    if (route[0] === 'song' || route[0] === 'cmp') render(); })();
   if (darkMQ.addEventListener) darkMQ.addEventListener('change', () => { cxGlobalDark(); render(); });
   document.addEventListener('pointerdown', e => { window.__lastClick = [e.clientX, e.clientY]; }, true);
   // ---------------- 开机动画制作器 ----------------
