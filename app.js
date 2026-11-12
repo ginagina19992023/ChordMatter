@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 174; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 175; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -1712,6 +1712,7 @@
       ${v === 'grid' ? `${colorSeg()}<div class="seg gmode" role="group" aria-label="格子排法">${[['wrap', '折行'], ['scroll', '横滑']].map(([k, t]) => `<button class="${(S.gridMode || 'wrap') === k ? 'on' : ''}" data-act="gridmode" data-v="${k}">${t}</button>`).join('')}</div><div class="grid" id="grid" data-mode="${S.gridMode || 'wrap'}">${songGrid(s, si)}</div>${(() => { const first = view && si >= 0 ? songFlat({ sections: s.sections.slice(0, si) }).length : 0; if (KL.song !== s.id || KL.sec !== si) { KL.song = s.id; KL.sec = si; KL.i = first; } return klPanel(s); })()}<p class="explain" id="explain">点任意和弦：听声音，并看它是什么意思。</p>` : v === 'roll' ? rollEntry('song', hasFull(s.id) ? '整首按原谱落下：简单只弹和弦，中等加左手低音，困难是原曲两只手' : '整首落下：简单只弹和弦，中等加左手低音') : songSheet(s, si)}`;
     if (tab === 'shape') body = `
       ${harmonyStrip(s)}
+      ${tensionArc(s)}
       <section class="logic"><h3>谱面逻辑 <small>· 点下划线的词看解释</small></h3>${songLogic(s).map(l => `<p>${l}</p>`).join('')}</section>
       ${s.note ? `<p class="fine">${esc(s.note)}</p>` : ''}`;
     if (tab === 'play') {
@@ -2475,6 +2476,43 @@
       sl.forEach(x => chords.push({ t: x.start, d: x.d, sym: x.sym, label: chordLabel(x.sym, song.key), func: chordFunc(x.sym, song.key) }));
     });
     return { events, chords, beats: song.beats, barNo: b => 1 + Math.floor(b / song.beats) };
+  }
+  // ---------------- 这首曲子的张力弧线 ----------------
+  // 每个和弦离「家」有多远：稳 = 0，走 ≈ 0.45，紧 ≈ 0.9（带七音 1.0）；副属和弦 / 借用和弦（调外）更远。示意用，不是测量值
+  function chordTension(sym, key) {
+    const a = T.analyze(sym, key); if (!a) return null;
+    if (a.kind === 'dia') { if (a.func === 'T') return a.dl === 0 ? 0 : 0.2; if (a.func === 'S') return 0.45; return /7/.test(a.c.q) ? 1 : 0.9; }
+    return a.kind === 'sec' ? 0.78 : 0.88;
+  }
+  function songArcData(s) {
+    const st = sectionStarts(s), out = [];
+    s.sections.forEach((sec, si) => parseBars(sec.bars).forEach((bar, k) => bar.forEach(sym => { const t = chordTension(sym, s.key); if (t != null) out.push({ sym, t, bar: st[si] + k, sec: si, q: (T.parseChord(sym) || {}).q }); })));
+    return out;
+  }
+  function tensionArc(s) {
+    const pts = songArcData(s); if (pts.length < 4) return '';
+    const n = pts.length, X = i => 14 + i * (292 / (n - 1)), Y = p => 22 + p * 100;
+    let d = `M${X(0)} ${Y(pts[0].t)}`; for (let i = 0; i < n - 1; i++) { const xm = (X(i) + X(i + 1)) / 2; d += ` C${xm} ${Y(pts[i].t)} ${xm} ${Y(pts[i + 1].t)} ${X(i + 1)} ${Y(pts[i + 1].t)}`; }
+    const step = Math.max(1, Math.floor(n / 40)), stops = pts.map((p, i) => i % step === 0 || i === n - 1 ? `<stop offset="${(i / (n - 1)).toFixed(3)}" stop-color="${cxHue(p.q)[5]}"/>` : '').join('');
+    const mx = pts.reduce((m, p, i) => (p.t > pts[m].t ? i : m), 0), back = pts.findIndex((p, i) => i > mx && p.t === 0), away = Math.round(pts.filter(p => p.t >= 0.4).length / n * 100);
+    const secs = s.sections.length <= 8 && s.sections.length > 1 ? (() => { let c = 0; return s.sections.map((sec, si) => { const x = X(pts.findIndex(p => p.sec === si)); return `<line x1="${x}" y1="22" x2="${x}" y2="136" class="arcsec"/><text x="${x + 2}" y="146" class="arclab">${esc(sec.name.replace(/\s*[‖:].*$/, '').slice(0, 5))}</text>`; }).join(''); })() : '';
+    return `<section class="arcbox" data-song="${s.id}"><h3>张力弧线 <small>· 每个和弦离「家」有多远，越往下越远</small></h3>
+      <svg class="arcsvg" viewBox="0 0 320 152"><defs><linearGradient id="arclg" gradientUnits="userSpaceOnUse" x1="14" y1="0" x2="306" y2="0">${stops}</linearGradient><radialGradient id="arcg"><stop offset="0" class="tns" stop-opacity=".6"/><stop offset=".5" class="tns" stop-opacity=".22"/><stop offset="1" class="tns" stop-opacity="0"/></radialGradient><filter id="arcb" x="-5%" y="-30%" width="110%" height="160%"><feGaussianBlur stdDeviation="4"/></filter></defs>
+        <line x1="14" y1="22" x2="306" y2="22" class="tnline"/><text x="16" y="14" class="tnhomet">家（一级）</text>${secs}
+        <path d="${d}" class="arcpath" filter="url(#arcb)" style="stroke-width:9;opacity:.5"/><path d="${d}" class="arcpath"/>
+        <circle id="arcpk" cx="${X(mx)}" cy="${Y(pts[mx].t)}" r="4" class="arcpk"/><circle class="arcglow" id="arch" cx="${X(0)}" cy="${Y(pts[0].t)}" r="26"/><circle class="arccore" id="arcc" cx="${X(0)}" cy="${Y(pts[0].t)}" r="7"/></svg>
+      <p class="arcsum">最远的和弦：<b>${D(pts[mx].sym)}</b>（第 ${pts[mx].bar} 小节）${back >= 0 ? ` · 之后回到「家」：第 <b>${pts[back].bar}</b> 小节` : ''} · 有 <b>${away}%</b> 的和弦在「家」之外</p>
+      <p class="arcnow" id="arcnow">点曲线上任意位置听那个和弦，或者点「看一遍」</p>
+      <div class="row"><button class="ghost sm" data-act="arcplay" data-song="${s.id}">▶ 看一遍这首的张力</button></div></section>`;
+  }
+  function arcMove(s, i, play) {
+    const pts = songArcData(s), n = pts.length; if (!pts[i]) return;
+    const X = i2 => 14 + i2 * (292 / (n - 1)), Y = p => 22 + p * 100, svg = document.querySelector('.arcsvg'); if (!svg) return;
+    const c = cxHue(pts[i].q)[5]; svg.style.setProperty('--tnc', c);
+    ['arch', 'arcc'].forEach(id => { const e = document.getElementById(id); e.setAttribute('cx', X(i)); e.setAttribute('cy', Y(pts[i].t)); });
+    document.getElementById('arch').setAttribute('r', 22 + 16 * pts[i].t);
+    const nowEl = document.getElementById('arcnow'); if (nowEl) nowEl.innerHTML = `第 ${pts[i].bar} 小节 · <b>${D(pts[i].sym)}</b> · ${chordFunc(pts[i].sym, s.key) === 'T' ? '在家附近' : chordFunc(pts[i].sym, s.key) === 'S' ? '离开中' : chordFunc(pts[i].sym, s.key) === 'D' ? '最紧张' : '调外和弦，绕得更远'}`;
+    if (play) { A.init(); playChord(pts[i].sym); }
   }
   function harmonyStrip(s) {
     const st = sectionStarts(s);
@@ -4165,6 +4203,7 @@
         rollGo(); break; }
       case 'rlstop': stopAll(); Roll.stop(); drillStop(); break;
       case 'rlrate': RL.rate = Math.max(0.4, Math.min(1.6, +(RL.rate + +el.dataset.v).toFixed(2))); $('#rlrate').textContent = Math.round(RL.rate * 100) + '%'; break;
+      case 'arcplay': { const s = allSongs().find(x => x.id === el.dataset.song); if (!s) break; stopAll(); const pts = songArcData(s), dt = Math.max(260, Math.min(700, 26000 / pts.length)); pts.forEach((p, i) => later(() => arcMove(s, i, true), i * dt)); break; }
       case 'hstrip': { const s = allSongs().find(x => x.id === route[1]); const r = el.getBoundingClientRect(); if (s) barPop(s, +el.dataset.n, r.left + r.width / 2, r.bottom); break; }
       case 'hgo': { const s = allSongs().find(x => x.id === route[1]); const n = +el.dataset.n, st = sectionStarts(s); const k = st.findIndex((x, i) => n >= x && n < x + parseBars(s.sections[i].bars).length); S.songSec = S.songSec || {}; S.songSec[s.id] = k; S.songTab = 'sheet'; save(); render(); break; }
       case 'sgview': SG.view = el.dataset.v; render(); break;
@@ -4405,6 +4444,12 @@
     start();
     setTimeout(() => { if (A.ctx && A.ctx.state !== 'running') { A.cut(); blocked(); } }, 250);
   })();
+  document.addEventListener('click', e => {
+    const svg = e.target.closest && e.target.closest('.arcsvg'); if (!svg) return;
+    const box = svg.closest('.arcbox'), s = allSongs().find(x => x.id === box.dataset.song); if (!s) return;
+    const r = svg.getBoundingClientRect(), n = songArcData(s).length, x = (e.clientX - r.left) / r.width * 320, i = Math.max(0, Math.min(n - 1, Math.round((x - 14) / (292 / (n - 1)))));
+    stopAll(); arcMove(s, i, true);
+  });
   document.addEventListener('staffplay', e => { A.init(); const ms = e.detail || []; if (ms.length === 1) A.note(ms[0], 0, 1.4, 0.7); else A.chord(ms, 0, 0.02, 1.4); });
   document.addEventListener('calpick', e => { calDetail(e.detail); });
   render();
