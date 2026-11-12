@@ -1581,7 +1581,6 @@ body.land .deskcal { top: 0; }
 .tnfx { border: 0; background: none; color: var(--mute); font-size: 15px; padding: 2px 6px; }
 .tnfbody { padding: 0 8px 8px; }
 .tnfloat .tnbox { margin: 0; padding: 0; border: 0; }
-.tnfloat .tnnote { display: none; }
 .tnfloat .tnsvg { max-width: 190px; }
 .tnfloat .chips { gap: 4px; }
 .tnfloat .chip.sm { padding: 4px 9px; font-size: 12px; }
@@ -1589,3 +1588,18 @@ body.land .deskcal { top: 0; }
 .tnfloat .tnch { font-size: 12px; margin-bottom: 6px; }
 .tnfloat .row .ghost { font-size: 12px; padding: 5px 10px; }
 .tnfloat .fine { font-size: 12px; padding: 4px 6px; }
+
+/* 说明文字收进 ⓘ；长的和声色带默认折叠 */
+.tnbox { position: relative; }
+.tnbox > .chips { padding-right: 34px; }
+.tni { position: absolute; top: 2px; right: 2px; width: 28px; height: 28px; border: 1px solid var(--line); border-radius: 50%; background: var(--bg); color: var(--mute); font-size: 15px; line-height: 1; padding: 0; z-index: 2; }
+.tni.on { color: var(--ink); border-color: var(--ink); }
+.tni.inline { position: static; flex: none; }
+.tnnote, .tninfotxt { margin: 6px 2px; padding: 8px 10px; font-size: 12.5px; line-height: 1.55; color: var(--mute); background: color-mix(in srgb, var(--ink) 5%, transparent); border-radius: 10px; min-height: 0 !important; }
+.tnnote[hidden], .tninfotxt[hidden] { display: none; }
+.tnfloat .tni { top: 0; right: 0; }
+.hsbox > summary { cursor: pointer; list-style: none; padding: 8px 0; font-weight: 600; font-size: 15px; }
+.hsbox > summary::-webkit-details-marker { display: none; }
+.hsbox > summary::before { content: '▸ '; color: var(--mute); }
+.hsbox[open] > summary::before { content: '▾ '; }
+.hsbox > summary small { font-weight: 400; color: var(--mute); font-size: 12px; }

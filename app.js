@@ -11,7 +11,7 @@
   const dayNum = s => Math.round(new Date(s + 'T12:00:00').getTime() / 864e5);
 
   // ---------------- 存储 ----------------
-  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 187; // 和 sw.js 的 hexian-v 号一起改
+  const KEY = 'hexian.v1', SCHEMA = 3, APPV = 189; // 和 sw.js 的 hexian-v 号一起改
   const DEF = { v: SCHEMA, xp: 0, days: {}, units: {}, arp: {}, songs: {}, custom: [], seen: {}, sym: {}, log: [], pk: {} };
   let S;
   function migrate(o) {
@@ -1735,9 +1735,9 @@
     if (tab === 'sheet' && si >= 0) body += logicDetails(s, si);
     if (tab === 'shape') body = `
       ${harmonyStrip(s)}
-      <div class="row tnrow"><button class="chip${TNF.on && TNF.song === s.id ? ' on' : ''}" data-act="tnfloat" data-song="${s.id}">张力浮窗：${TNF.on && TNF.song === s.id ? '开' : '关'}</button><small class="fine">打开后挂在右边，可以拖动；切到「谱」「练」或退出这首歌会自动关掉</small></div>
-      ${(() => { const lp = songLogicParts(s); return `<section class="logic"><p>${lp.keyLine}</p><details class="hlogic"><summary>低音线</summary><p>${lp.bass.join(' ')}</p></details><p class="fine">点每一段下面的「这一段的谱面逻辑」展开；点下划线的词看解释。</p></section>`; })()}
-      ${s.note ? `<p class="fine">${esc(s.note)}</p>` : ''}`;
+      <div class="row tnrow"><button class="chip${TNF.on && TNF.song === s.id ? ' on' : ''}" data-act="tnfloat" data-song="${s.id}">张力浮窗：${TNF.on && TNF.song === s.id ? '开' : '关'}</button><button class="tni inline" data-act="tninfo" aria-label="说明">ⓘ</button><p class="fine tninfotxt" hidden>打开后挂在右边，可以拖动；切到「谱」「练」或退出这首歌会自动关掉。光点只会上下动：旋律停在越「稳」的音越靠近线，越想往下走的音越往下沉。打开声音就是按原曲播放。</p></div>
+      ${(() => { const lp = songLogicParts(s); return `<section class="logic"><p>${lp.keyLine}</p><details class="hlogic"><summary>低音线</summary><p>${lp.bass.join(' ')}</p></details></section>`; })()}
+      ${s.note ? `<div class="row tnrow"><small class="fine">关于这份谱</small><button class="tni inline" data-act="tninfo" aria-label="说明">ⓘ</button><p class="fine tninfotxt" hidden>${esc(s.note)}</p></div>` : ''}`;
     if (tab === 'play') {
       const combos = COMBOS.map(cb => ({ cb, f: cbFind(cb).find(x => x.s.id === s.id) })).filter(x => x.f);
       body = `
@@ -2601,7 +2601,8 @@
   }
   function harmonyStrip(s) {
     const st = sectionStarts(s), parts = songLogicParts(s);
-    return `<div class="hstrip">${colorSeg()}${s.sections.map((sec, i) => `<div class="hsec"><small>${esc(sec.name)}</small><div class="hrow">${parseBars(sec.bars).map((bar, k) => `<div class="hbar" data-act="hstrip" data-n="${st[i] + k}">${bar.map(x => (colorMode() === 'chord' ? `<i class="q" style="${hueVars(cxHue((T.parseChord(x) || {}).q))}" title="${esc(D(x))}">${D(x)}</i>` : `<i class="f${chordFunc(x, s.key)}" title="${esc(D(x))}">${D(x)}</i>`)).join('')}</div>`).join('')}</div>${logicDetails(s, i, parts)}</div>`).join('')}<p class="fine">和声色带：${colorMode() === 'chord' ? '颜色 = 和弦的性质（大三金黄、小三蓝、属七橙……，和「和弦」页一样）' : '<span class="fT">■ 稳</span> <span class="fS">■ 走</span> <span class="fD">■ 紧</span>'} · 一格一小节，点一格看那一小节</p></div>`;
+    const nbars = s.sections.reduce((n, sec) => n + parseBars(sec.bars).length, 0), long = nbars > 16;
+    return `<details class="hsbox"${long ? '' : ' open'}><summary>和声色带 <small>· 共 ${nbars} 小节${long ? '，默认折叠，点开看' : ''}</small></summary><div class="hstrip">${colorSeg()}${s.sections.map((sec, i) => `<div class="hsec"><small>${esc(sec.name)}</small><div class="hrow">${parseBars(sec.bars).map((bar, k) => `<div class="hbar" data-act="hstrip" data-n="${st[i] + k}">${bar.map(x => (colorMode() === 'chord' ? `<i class="q" style="${hueVars(cxHue((T.parseChord(x) || {}).q))}" title="${esc(D(x))}">${D(x)}</i>` : `<i class="f${chordFunc(x, s.key)}" title="${esc(D(x))}">${D(x)}</i>`)).join('')}</div>`).join('')}</div>${logicDetails(s, i, parts)}</div>`).join('')}<p class="fine">和声色带：${colorMode() === 'chord' ? '颜色 = 和弦的性质（大三金黄、小三蓝、属七橙……，和「和弦」页一样）' : '<span class="fT">■ 稳</span> <span class="fS">■ 走</span> <span class="fD">■ 紧</span>'} · 一格一小节，点一格看那一小节</p></div></details>`;
   }
   function rollPanel(id) {
     const maxLv = RL.maxLv || 2, passed = rollPassed();
@@ -4161,7 +4162,7 @@
   // 张力演示：圆点在一条线上（主和弦），离开家就被「拉长」，回到家又缩回去
   const tnMix = (c1, c2, t) => { const p = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16)), x = p(c1), y = p(c2); return '#' + [0, 1, 2].map(i => { const v = Math.round(x[i] + (y[i] - x[i]) * t); return (v < 16 ? '0' : '') + v.toString(16); }).join(''); };
   const tnBoxHtml = (sets, per, extra = '') => `<div class="tnbox" data-sets="${esc(JSON.stringify(sets))}"${per ? ` data-per="${per}"` : ''}><div class="chips scroll">${sets.map((s, i) => `<button class="chip sm${i ? '' : ' on'}" data-act="tnset" data-v="${i}">${s.name}</button>`).join('')}</div>
-        <p class="tnnote"></p>
+        <button class="tni" data-act="tninfo" aria-label="说明">ⓘ</button><p class="tnnote" hidden></p>
         <svg class="tnsvg" viewBox="0 0 300 230" aria-hidden="true"><defs><radialGradient id="tng"><stop offset="0" class="tns" stop-opacity=".6"/><stop offset=".5" class="tns" stop-opacity=".22"/><stop offset="1" class="tns" stop-opacity="0"/></radialGradient><filter id="tnb" x="-60%" y="-10%" width="220%" height="120%"><feGaussianBlur stdDeviation="5"/></filter></defs>
           <line x1="20" y1="34" x2="280" y2="34" class="tnline"/><text x="24" y="24" class="tnhomet">家（一级）</text>
           <g class="tnorb"><line class="tnstr tnstrb" x1="150" y1="34" x2="150" y2="34" filter="url(#tnb)"/><line class="tnstr" x1="150" y1="34" x2="150" y2="34"/><circle class="tnhalo" cx="150" cy="34" r="46"/><circle class="tncore" cx="150" cy="34" r="14"/></g><circle class="tnhome" cx="150" cy="34" r="6"/></svg>
@@ -4265,6 +4266,7 @@
         break;
       }
       case 'tnfloat': { const s = allSongs().find(x => x.id === el.dataset.song); if (!s) break; if (TNF.on && TNF.song === s.id) tnFloatClose(); else tnFloatOpen(s); break; }
+      case 'tninfo': { const box = el.closest('.tnbox') || el.parentElement; const t = box.querySelector('.tnnote, .tninfotxt'); if (t) t.toggleAttribute('hidden'); el.classList.toggle('on'); break; }
       case 'splashsnd': S.splashSnd = el.dataset.v === '1'; save(); vSet(); break;
       case 'splashset': S.splash = el.dataset.v === '1'; save(); vSet(); break;
       case 'splashplay': { sessionStorage.removeItem('hx.splash'); location.href = location.pathname + location.search + location.hash; location.reload(); break; }
